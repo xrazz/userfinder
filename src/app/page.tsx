@@ -1,101 +1,92 @@
-import Image from "next/image";
+import Head from 'next/head'
+import Hero from "@/components/ui/hero"
+import Features from "@/components/ui/Features"
+import HowItWorks from "@/components/ui/howitworks"
+import Pricing from "@/components/ui/pricing"
+import FAQ from "@/components/ui/faq"
+import CallToAction from "@/components/ui/cta"
+import Header from "@/components/ui/header"
+import Script from 'next/script'
+import DemoVideo from '@/components/ui/demoVideo'
+ 
 
-export default function Home() {
+export default function LandingPage() {
+  const description = "UserFinder AI: The ultimate AI-powered user finder and app promotion tool. Discover target users, gain social media insights, and effectively promote your app on platforms like Reddit, Quora, and Twitter. Enhance user discovery, engage potential customers, and maximize your app's visibility with our market research and competitive analysis tools."
+  const keywords = "App Promotion Tool, AI-Powered User Finder, Discover Target Users, Find Potential Customers, Social Media Insights, Market Research Tool, Targeted Marketing Solutions, User Acquisition Platform, Audience Engagement Insights, Promote Your App Effectively, AI Search Engine for Apps, Identify Interested Users, Connect with Your Audience, Enhance User Discovery, Find Your App Users, Engage with Potential Customers, Search Engine for App Users, User Feedback and Insights, Competitive Analysis Tool, Promote Your Fitness App, Target Users on Reddit Quora Twitter, Bookmark User Conversations, Connect with Fitness Enthusiasts, Maximize App Visibility, Find Conversations About Your App"
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    <>
+      <Head>
+        <title>UserFinder AI | AI-Powered App Promotion & User Discovery Tool</title>
+        <meta name="description" content={description} />
+        <meta name="keywords" content={keywords} />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="canonical" href="https://userfinder.online" />
+        <meta property="og:title" content="UserFinder AI | AI-Powered App Promotion & User Discovery Tool" />
+        <meta property="og:description" content={description} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://userfinder.online" />
+        <meta property="og:image" content="https://userfinder.online/og-image.jpg" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="UserFinder AI | AI-Powered App Promotion & User Discovery Tool" />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content="https://userfinder.online/twitter-image.jpg" />
+      </Head>
+      <Script
+        id="structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "UserFinder AI",
+            "applicationCategory": "BusinessApplication",
+            "offers": {
+              "@type": "Offer",
+              "price": "10",
+              "priceCurrency": "USD"
+            },
+            "operatingSystem": "Web",
+            "description": description,
+            "url": "https://userfinder.online",
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": "4.8",
+              "ratingCount": "1024"
+            }
+          })
+        }}
+      />
+      <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+        <Header />
+        <main className="flex-1 pt-16 md:pt-0">
+          <Hero />
+          <DemoVideo />
+          {/* <HeroScrollDemo/> */}
+          <Features />
+          <HowItWorks />
+          <Pricing />
+          <FAQ />
+          <CallToAction />
+        </main>
+        <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
+          <p className="text-xs text-gray-500 dark:text-gray-400">© 2024 UserFinder AI. All rights reserved.</p>
+          <nav className="sm:ml-auto flex gap-4 sm:gap-6">
+            <a className="text-xs hover:underline underline-offset-4" href="/refund">
+              Refund Policy
+            </a>
+            <a className="text-xs hover:underline underline-offset-4" href="/terms">
+              Terms of Service
+            </a>
+            <a className="text-xs hover:underline underline-offset-4" href="/privacy">
+              Privacy Policy
+            </a>
+            <a className="text-xs hover:underline underline-offset-4" href="/about">
+              About Us
+            </a>
+          </nav>
+        </footer>
+      </div>
+    </>
+  )
 }
