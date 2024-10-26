@@ -1,4 +1,4 @@
- 
+export const dynamic = "force-dynamic";  
 import { cookies } from 'next/headers';
 import CheckoutForm from './CheckoutForm'
 import admin from '../firebaseAdmin';
