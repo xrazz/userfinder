@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"; 
 import { cookies } from "next/headers";
 import DashboardUI from "./dashboardUI";
 import admin, { db } from "../firebaseAdmin";
