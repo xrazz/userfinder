@@ -1,5 +1,6 @@
 // lib/firebaseAdmin.ts
 import * as admin from 'firebase-admin';
+console.log("test:", process.env.testVariable);
 console.log("FIREBASE client:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
 console.log("FIREBASE_PROJECT_ID:", process.env.FIREBASE_PROJECT_ID);
 console.log("FIREBASE_CLIENT_EMAIL:", process.env.FIREBASE_CLIENT_EMAIL);
