@@ -25,7 +25,7 @@ import { Separator } from '@/components/ui/separator'
 
 
 import { db } from '@/app/firebaseClient'
-import router, { useRouter } from 'next/router'
+ 
 
 
 enum DateFilter {
@@ -322,7 +322,7 @@ const SearchTab = ({ PremiumCheck, name, userId }: { PremiumCheck: boolean, name
 
 
   return (
-    <main className="flex-grow flex items-start justify-center p-4">
+    <main className="flex-grow flex items-start justify-center ">
       {/* Grid background */}
       <div
         className="absolute inset-0 z-0 pointer-events-none"
@@ -369,7 +369,7 @@ const SearchTab = ({ PremiumCheck, name, userId }: { PremiumCheck: boolean, name
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="pl-10 pr-14 py-2 w-full h-11 font-medium bg-secondary text-secondary-foreground border-secondary shadow-none"
+              className="pl-10 pr-14 py-2 w-full h-11 font-medium bg-gray-100 text-white border-gray-100 shadow-none"
 
               // disabled={true}
               disabled={!isPremium && credits <= 0}
@@ -425,7 +425,7 @@ const SearchTab = ({ PremiumCheck, name, userId }: { PremiumCheck: boolean, name
         {loading && (<SearchLoader />)}
         {queryToSend && (
           <Tabs.Root defaultValue="reddit">
-            <Tabs.List color="gray" highContrast>
+            <Tabs.List size="1" color="gray" highContrast>
               <Tabs.Trigger value="reddit">Reddit</Tabs.Trigger>
               <Tabs.Trigger value="twitter">Twitter</Tabs.Trigger>
               <Tabs.Trigger value="quora">Quora</Tabs.Trigger>
