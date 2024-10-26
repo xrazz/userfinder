@@ -369,7 +369,7 @@ const SearchTab = ({ PremiumCheck, name, userId }: { PremiumCheck: boolean, name
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="pl-10 pr-14 py-2 w-full h-11 font-medium bg-gray-100 text-white border-gray-100 shadow-none"
+              className="pl-10 pr-14 py-2 w-full h-11 font-medium bg-gray-100 border-gray-100 shadow-none"
 
               // disabled={true}
               disabled={!isPremium && credits <= 0}
