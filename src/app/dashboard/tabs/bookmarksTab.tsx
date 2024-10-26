@@ -103,7 +103,7 @@ const BookmarksTab = ({ userId }: { userId: string }) => {
     switch (activeTab) {
       case "reddit":
         return bookmark.url.includes("reddit.com")
-      case "x":
+      case "twitter":
         return bookmark.url.includes("x.com") || bookmark.url.includes("twitter.com")
       case "quora":
         return bookmark.url.includes("quora.com")
@@ -126,7 +126,7 @@ const BookmarksTab = ({ userId }: { userId: string }) => {
   }
 
   return (
-    <main className="flex-grow flex items-start justify-center p-4">
+    <main className="flex-grow flex items-start justify-center ">
       {/* Grid background */}
       <div
         className="absolute inset-0 z-0 pointer-events-none"
@@ -146,15 +146,15 @@ const BookmarksTab = ({ userId }: { userId: string }) => {
           <h1 className="text-4xl font-bold mb-2">Your Bookmarks</h1>
         </div>
 
-        <div className="flex justify-center">
-          <nav className="flex space-x-2 rounded-lg bg-gray-100 p-1">
-            {["all", "reddit", "x", "quora", "ycombinator","dev"].map((tab) => (
+        <div className="flex justify-center overflow-x-auto">
+          <nav className="flex space-x-1 sm:space-x-1 rounded-lg p-1">
+            {["all", "reddit", "x", "quora", "ycombinator", "dev"].map((tab) => (
               <button
                 key={tab}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ease-in-out ${
+                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ease-in-out ${
                   activeTab === tab
-                    ? "bg-black text-white shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
                 onClick={() => setActiveTab(tab)}
               >
