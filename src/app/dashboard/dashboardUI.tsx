@@ -31,6 +31,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
 
 export type IconProps = React.HTMLAttributes<SVGElement>;
 
@@ -42,15 +44,24 @@ interface NavItemProps {
 }
 
 const NavItem = React.memo(({ icon: Icon, label, onClick, isActive }: NavItemProps) => (
-  <Button
-    variant="ghost"
-    size="icon"
-    onClick={onClick}
-    className={isActive ? "text-primary" : "text-muted-foreground"}
-    aria-label={label}
-  >
-    <Icon className="h-5 w-5" />
-  </Button>
+<TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClick}
+          className={isActive ? "text-primary" : "text-muted-foreground"}
+          aria-label={label}
+        >
+          <Icon className="h-5 w-5" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="right" sideOffset={10} className="z-50">
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
 ));
 
 const navItems = [
@@ -98,12 +109,10 @@ export default function Component({
   uid,
 }: DashboardUIProps) {
   const [activeTab, setActiveTab] = useState<TabKey>(() => {
-    return (localStorage.getItem("activeTab") as TabKey) || "search";
+    return "search";
   });
 
-  useEffect(() => {
-    localStorage.setItem("activeTab", activeTab);
-  }, [activeTab]);
+ 
 
   const handleTabClick = (tab: TabKey) => {
     setActiveTab(tab);
@@ -181,33 +190,37 @@ export default function Component({
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="mt-auto">
-                      <Avatar>
-                        <AvatarImage src={profileurl} alt="User Profile" />
+                      <Avatar className="mr-2">
+                        <AvatarImage src={profileurl} alt="User Profile"  />
                         <AvatarFallback>{profileName.charAt(0)}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent side="right" className="w-full mt-3 p-0">
-                    <div className="flex items-center gap-2 p-4">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={profileurl} alt={profileName} />
-                        <AvatarFallback>{profileName.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <p className="text-sm font-medium leading-none">{profileName}</p>
-                        <p className="text-xs leading-none text-clip">{profileEmail}</p>
-                      </div>
-                    </div>
-                    <div className="border-t border-border/40">
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start px-4 py-2 mb-3 text-sm font-normal"
-                        onClick={handleSignOut}
-                      >
-                        Sign Out
-                      </Button>
-                    </div>
-                  </PopoverContent>
+                  <PopoverContent side="right" className="w-64 mt-3 p-0 rounded-lg shadow-lg">
+  <div className="    p-4 rounded-t-lg">
+    <div className="flex items-center gap-3">
+      <Avatar className="w-12 h-12 border-2 border-white">
+        <AvatarImage src={profileurl} alt={profileName} />
+        <AvatarFallback>{profileName.charAt(0)}</AvatarFallback>
+      </Avatar>
+      <div className="flex flex-col">
+        <p className="text-sm font-medium leading-tight">{profileName}</p>
+        <p className="text-xs leading-tight opacity-80">{profileEmail}</p>
+      </div>
+    </div>
+  </div>
+  <Separator className="my-2" />
+  <div className="p-2">
+    <Button
+      variant="outline"
+      className="w-full justify-center px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/50 hover:text-primary"
+      onClick={handleSignOut}
+    >
+      {/* <LogOut className="w-4 h-4 mr-2" /> */}
+      Sign Out
+    </Button>
+  </div>
+</PopoverContent>
                 </Popover>
               </div>
             </div>
