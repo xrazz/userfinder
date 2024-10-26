@@ -4,28 +4,37 @@ import React, { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { signInWithPopup } from "firebase/auth"
-import { Loader2 } from "lucide-react"
+import { Loader2, LogIn } from "lucide-react"
 import Cookies from "js-cookie"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { auth, createUserSettings, googleProvider } from "../../firebaseClient"
+import { auth, createUserSettings, googleProvider } from "@/app/firebaseClient"
+ 
 
+const Navbar = () => (
+  <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <Link href="/" className="flex items-center space-x-2">
+        <Image src="/logo.svg" alt="UserFinder AI Logo" width={20} height={20} />
+        <span className="font-bold text-lg">UserFinder AI</span>
+      </Link>
+    </div>
+  </nav>
+)
 
-
-
-const Navbar = () => {
-  return (
-    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
-        <Link href="/" className="flex items-center space-x-2">
-          <Image src="/logo.svg" alt="UserFinder AI Logo" width={20} height={20} />
-          <span className="font-bold text-lg">Login</span>
-        </Link>
-        {/* <span className="text-lg font-semibold">Login</span> */}
+const Footer = () => (
+  <footer className="bg-muted text-muted-foreground py-4">
+    <div className="max-w-6xl mx-auto px-4 text-center text-sm">
+      <p>&copy; {new Date().getFullYear()} UserFinder AI. All rights reserved.</p>
+      <div className="mt-2 space-x-4">
+        <Link href="/terms" className="hover:underline">Terms of use</Link>
+        <Link href="/privacy" className="hover:underline">Privacy policy</Link>
+        <Link href="/refund" className="hover:underline">Refund policy</Link>
       </div>
-    </nav>
-  )
-}
+    </div>
+  </footer>
+)
+
 const LoginUI = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -40,14 +49,12 @@ const LoginUI = () => {
       await createUserSettings(user)
 
       const token = await user.getIdToken()
+      const expirationTime = (Date.now() + 86400000).toString() // 1 day in milliseconds
 
-      Cookies.set('token', token, { expires: 30 });
-      const expirationTime = (Date.now() + 86400000).toString(); // 1 day in milliseconds
-      Cookies.set('token_expiration', expirationTime);
+      Cookies.set('token', token, { expires: 30, secure: true, sameSite: 'strict' })
+      Cookies.set('token_expiration', expirationTime, { secure: true, sameSite: 'strict' })
 
-      // router.push('/dashboard')
-      window.location.reload();
-
+      window.location.href = '/dashboard'
     } catch (error) {
       console.error('Error during Google login', error)
       setError('An error occurred during sign in. Please try again.')
@@ -57,7 +64,7 @@ const LoginUI = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col   dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       <main className="flex-grow flex items-center justify-center px-4 py-12 mt-16">
         <Card className="w-full max-w-md">
@@ -69,7 +76,7 @@ const LoginUI = () => {
           </CardHeader>
           <CardContent>
             <Button
-              // variant=""
+              variant="default"
               onClick={handleGoogleLogin}
               disabled={loading}
               className="w-full"
@@ -84,7 +91,7 @@ const LoginUI = () => {
               {loading ? "Signing in..." : "Continue with Google"}
             </Button>
             {error && (
-              <p className="mt-4 text-sm text-red-500 text-center">{error}</p>
+              <p className="mt-4 text-sm text-destructive text-center" role="alert">{error}</p>
             )}
           </CardContent>
           <CardFooter className="flex justify-center">
@@ -101,31 +108,15 @@ const LoginUI = () => {
           </CardFooter>
         </Card>
       </main>
-
-      <footer className="bg-gray-100 dark:bg-gray-800 text-muted-foreground p-8">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="space-y-3">
-            <Image src="/logo.png" alt="UserFinder AI Logo" width={50} height={50} />
-            <p className="text-sm">
-              UserFinder AI.
-              <br />
-              Providing reliable tech solutions
-            </p>
-          </div>
-          <nav className="space-y-2">
-            <h6 className="font-semibold text-foreground">Company</h6>
-            <Link href="/about" className="block text-sm hover:underline">About us</Link>
-            <Link href="/contact" className="block text-sm hover:underline">Contact</Link>
-          </nav>
-          <nav className="space-y-2">
-            <h6 className="font-semibold text-foreground">Legal</h6>
-            <Link href="/terms" className="block text-sm hover:underline">Terms of use</Link>
-            <Link href="/privacy" className="block text-sm hover:underline">Privacy policy</Link>
-          </nav>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
 
 export default LoginUI
+
+
+
+
+
+
