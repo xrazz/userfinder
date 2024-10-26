@@ -1,9 +1,4 @@
- 
-
- 
-
- 
- 
+export const dynamic = "force-dynamic";  
 import LoginUI from "./ui/loginUI" 
  
 import admin from "../firebaseAdmin";
