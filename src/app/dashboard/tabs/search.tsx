@@ -168,7 +168,7 @@ const SearchTab = ({ PremiumCheck, name, userId }: { PremiumCheck: boolean, name
       setQuoraData(quoraResults);
       setHnData(ihResults);
       setDevData(devResults);
-
+// console.log(redditResults)
       // Ensure the data is in the state before hiding the loader
       // Stop loading only after setting the data
       await updateCredits()
@@ -259,7 +259,8 @@ const SearchTab = ({ PremiumCheck, name, userId }: { PremiumCheck: boolean, name
         });
       });
     };
-
+    const titles = posts.slice(0, -2).map(post => post.title); // Skip the last 2 titles
+    const links = posts.slice(2).map(post => post.link);   
     return (
       <div className="space-y-4 mx-auto p-4">
         {posts.length === 0 ? (
@@ -274,7 +275,7 @@ const SearchTab = ({ PremiumCheck, name, userId }: { PremiumCheck: boolean, name
             <span className="text-muted-foreground">Seems like this hasn’t caught people’s attention just yet.</span>
           </div>
         ) : (
-          posts.slice(2).map((post, index) => (  // Use slice to skip the first 2 posts
+          titles.map((title, index) => (
             <div key={index}>
               <div className="flex items-start space-x-3">
                 <Image
@@ -290,21 +291,41 @@ const SearchTab = ({ PremiumCheck, name, userId }: { PremiumCheck: boolean, name
                     <span className="text-sm text-muted-foreground">{currentFilter}</span>
                   </div>
                   <h2 className="text-lg font-semibold mt-1">
-                    <a href={decodeUrl(post.link)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                      {post.title}
+                    <a
+                      href={decodeUrl(links[index])}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {title}
                     </a>
                   </h2>
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" className="text-muted-foreground hover:bg-secondary" onClick={() => handleEngage(post.link)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-muted-foreground hover:bg-secondary"
+                        onClick={() => handleEngage(links[index])}
+                      >
                         <MessageSquare className="w-4 h-4 mr-1" />
                         Engage
                       </Button>
-                      <Button variant="outline" size="sm" className="text-muted-foreground hover:bg-secondary" onClick={() => handleCopyUrl(post.link)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-muted-foreground hover:bg-secondary"
+                        onClick={() => handleCopyUrl(links[index])}
+                      >
                         <LinkIcon className="w-4 h-4 mr-1" />
                         Copy URL
                       </Button>
-                      <Button variant="outline" size="sm" className="text-muted-foreground hover:bg-secondary" onClick={() => handleBookmark(post)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-muted-foreground hover:bg-secondary"
+                        onClick={() => handleBookmark(posts[index])}
+                      >
                         <Bookmark className="w-4 h-4 mr-1" />
                         Save
                       </Button>
@@ -312,7 +333,7 @@ const SearchTab = ({ PremiumCheck, name, userId }: { PremiumCheck: boolean, name
                   </div>
                 </div>
               </div>
-              {index < posts.length - 3 && <Separator className="my-4" />} {/* Adjust the separator logic */}
+              {index < titles.length - 1 && <Separator className="my-4" />} {/* Separator logic */}
             </div>
           ))
         )}
@@ -369,7 +390,7 @@ const SearchTab = ({ PremiumCheck, name, userId }: { PremiumCheck: boolean, name
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="pl-10 pr-14 py-2 w-full h-11 font-medium bg-gray-100 border-gray-100 shadow-none"
+              className="pl-10 pr-14 py-2 w-full h-11 font-medium bg-gray-100   border-gray-100 shadow-none"
 
               // disabled={true}
               disabled={!isPremium && credits <= 0}
