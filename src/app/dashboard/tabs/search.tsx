@@ -324,7 +324,7 @@ const SearchTab = ({ PremiumCheck, name, userId }: { PremiumCheck: boolean, name
                         variant="outline"
                         size="sm"
                         className="text-muted-foreground hover:bg-secondary"
-                        onClick={() => handleBookmark(posts[index])}
+                        onClick={() => handleBookmark({ title, link: links[index] })}
                       >
                         <Bookmark className="w-4 h-4 mr-1" />
                         Save
