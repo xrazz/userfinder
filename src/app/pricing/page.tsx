@@ -1,3 +1,5 @@
+'use client'
+
 import React from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -13,9 +15,9 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-type CardProps = React.ComponentProps<typeof Card>
 
-function PricingPlanPage({ className, ...props }: CardProps) {
+function PricingPlanPage({ className, ...props }: React.ComponentProps<typeof Card>) {
+
   return (
     <Card className={cn("w-full max-w-4xl mx-auto", className)} {...props}>
       <CardHeader className="text-center">
@@ -26,7 +28,9 @@ function PricingPlanPage({ className, ...props }: CardProps) {
       <CardContent className="grid gap-6">
         <div className="bg-primary/5 rounded-lg p-6 space-y-4">
           <h2 className="text-2xl font-semibold">Unlimited Plan</h2>
-          <p className="text-3xl font-bold">$10/month</p>
+          <div className="flex items-center justify-between">
+            <p className="text-3xl font-bold">₹825/month<span className="text-2xl font-normal"> ($10 USD/month)</span></p>
+          </div>
           <ul className="space-y-2">
             <li className="flex items-center">
               <Check className="mr-2 h-4 w-4 text-green-500" />
@@ -57,11 +61,6 @@ function PricingPlanPage({ className, ...props }: CardProps) {
               Get Plan
             </Button>
           </Link>
-          {/* <Link href="/" className="block w-full">
-            <Button variant="outline" className="w-full text-lg">
-              Skip for Now
-            </Button>
-          </Link> */}
         </div>
         
         <div className="space-y-4">
@@ -69,7 +68,7 @@ function PricingPlanPage({ className, ...props }: CardProps) {
           <ul className="space-y-2">
             <li className="flex items-center">
               <Check className="mr-2 h-4 w-4 text-green-500" />
-              <span>No Hidden Fees: Just $10/month, no extra charges.</span>
+              <span>No Hidden Fees: Just ₹825/month ($10 USD), no extra charges.</span>
             </li>
             <li className="flex items-center">
               <Check className="mr-2 h-4 w-4 text-green-500" />
@@ -91,16 +90,15 @@ const Navbar = () => {
     <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-2">
-        <Image src="/logo.svg" alt="UserFinder AI Logo" width={20} height={20} />
+          <Image src="/logo.svg" alt="UserFinder AI Logo" width={20} height={20} />
           <span className="font-bold text-lg">Pricing</span>
         </div>
-        
       </div>
     </nav>
   )
 }
 
-const Page = () => {
+export default function Page() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -110,5 +108,3 @@ const Page = () => {
     </div>
   )
 }
-
-export default Page
