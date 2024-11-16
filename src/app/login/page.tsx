@@ -28,7 +28,7 @@ const signIn = async () => {
   const loggedIn = await isUserLoggedIn();
 
   if (loggedIn) {
-    redirect('/dashboard'); // Redirect to dashboard if logged in
+    redirect('/search'); // Redirect to dashboard if logged in
   } else {
     console.log('User not logged in');
   }
