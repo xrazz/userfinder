@@ -713,10 +713,10 @@ const SearchTab = ({ membership = '', name = '', email = '', userId = '' }: { me
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader className="flex flex-row items-center gap-2">
             <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
-            <DialogTitle className="flex-grow">Free Credits Expired</DialogTitle>
+            <DialogTitle className="flex-grow">upgrade for unlimited</DialogTitle>
           </DialogHeader>
           <DialogDescription>
-            Your 5 free credits have been used. Upgrade now to continue enjoying unlimited monthly searches.
+            Upgrade now to continue enjoying unlimited monthly searches.
           </DialogDescription>
           <DialogFooter className="flex flex-col sm:flex-row">
             <Button
