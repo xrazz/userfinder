@@ -21,9 +21,9 @@ function AboutPage({ className, ...props }: CardProps) {
 
  
   return (
-    <Card className={cn("w-full max-w-4xl mx-auto", className)} {...props}>
+    <Card className={cn("w-full max-w-4xl mx-auto shadow-none", className)} {...props}>
       <CardHeader className="text-center">
-        <CardTitle className="text-3xl font-bold">About UserFinder AI</CardTitle>
+        <CardTitle className="text-3xl font-bold">About UserFinder</CardTitle>
         <CardDescription>Your Gateway to SaaS Growth</CardDescription>
       </CardHeader>
       
@@ -49,7 +49,7 @@ function AboutPage({ className, ...props }: CardProps) {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Why Choose UserFinder AI?</h2>
           <div className="grid gap-4 md:grid-cols-3">
-            <Card className="bg-primary/5">
+            <Card className="bg-primary/5 shadow-none border-none">
               <CardHeader>
                 <CardTitle className="text-lg">Simplify Marketing</CardTitle>
               </CardHeader>
@@ -57,7 +57,7 @@ function AboutPage({ className, ...props }: CardProps) {
                 <p className="text-sm">Streamline your process of finding and engaging with potential users.</p>
               </CardContent>
             </Card>
-            <Card className="bg-primary/5">
+            <Card className="bg-primary/5 shadow-none border-none">
               <CardHeader>
                 <CardTitle className="text-lg">Affordable Solution</CardTitle>
               </CardHeader>
@@ -65,12 +65,12 @@ function AboutPage({ className, ...props }: CardProps) {
                 <p className="text-sm">Unlimited searches for a flat monthly fee, with no hidden costs.</p>
               </CardContent>
             </Card>
-            <Card className="bg-primary/5">
+            <Card className="bg-primary/5 shadow-none border-none">
               <CardHeader>
                 <CardTitle className="text-lg">Intuitive Platform</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm">Easy-to-use interface designed for founders and marketers.</p>
+                <p className="text-sm">Easy to use interface designed for founders and marketers.</p>
               </CardContent>
             </Card>
           </div>
@@ -79,7 +79,7 @@ function AboutPage({ className, ...props }: CardProps) {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Get in Touch</h2>
           <div className="flex flex-col md:flex-row gap-4">
-            <Card className="flex-1">
+            <Card className="flex-1 shadow-none ">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Mail className="h-5 w-5" /> Email
@@ -89,7 +89,7 @@ function AboutPage({ className, ...props }: CardProps) {
                 <p className="text-sm">contact@userfinder.online</p>
               </CardContent>
             </Card>
-            <Card className="flex-1">
+            <Card className="flex-1 shadow-none ">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Phone className="h-5 w-5" /> Phone
@@ -99,7 +99,7 @@ function AboutPage({ className, ...props }: CardProps) {
                 <p className="text-sm">+91 81413-71777</p>
               </CardContent>
             </Card>
-            <Card className="flex-1">
+            <Card className="flex-1 shadow-none">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <MapPin className="h-5 w-5" /> Address
@@ -128,10 +128,10 @@ function AboutPage({ className, ...props }: CardProps) {
 
 const Navbar = () => {
   return (
-    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-2">
-        <Image src="/logo.svg" alt="UserFinder AI Logo" width={20} height={20} />
+        <Image src="/logo.svg" alt="UserFinder AI Logo" width={40} height={40} />
           <span className="font-bold text-lg">About Us</span>
         </div>
         {/* <span className="text-lg font-semibold">About Us</span> */}

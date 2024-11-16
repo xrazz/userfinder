@@ -1,16 +1,61 @@
+'use client'
+
+import { useEffect, ReactNode } from 'react'
 import Head from 'next/head'
+import Script from 'next/script'
+import { motion, useAnimation, Variants } from 'framer-motion'
+import { useInView } from 'react-intersection-observer'
+
+import Header from "@/components/ui/header"
 import Hero from "@/components/ui/hero"
+import DemoVideo from '@/components/ui/demoVideo'
 import Features from "@/components/ui/Features"
 import HowItWorks from "@/components/ui/howitworks"
 import Pricing from "@/components/ui/pricing"
 import FAQ from "@/components/ui/faq"
 import CallToAction from "@/components/ui/cta"
-import Header from "@/components/ui/header"
-import Script from 'next/script'
-import DemoVideo from '@/components/ui/demoVideo'
+import Link from 'next/link'
+import { createGoogleDork } from './search/dorkingQuery'
+import WhatWhyHow from '@/components/ui/whatWhyHow'
  
 
+const fadeInUp: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 }
+}
+
+interface AnimatedSectionProps {
+  children: ReactNode;
+}
+
+function AnimatedSection({ children }: AnimatedSectionProps) {
+  const controls = useAnimation()
+  const [ref, inView] = useInView({
+    triggerOnce: true,
+    threshold: 0.1
+  })
+
+  useEffect(() => {
+    if (inView) {
+      controls.start('visible')
+    }
+  }, [controls, inView])
+
+  return (
+    <motion.div
+      ref={ref}
+      animate={controls}
+      initial="hidden"
+      variants={fadeInUp}
+      transition={{ duration: 0.5 }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
 export default function LandingPage() {
+ 
   const description = "UserFinder AI: The ultimate AI-powered user finder and app promotion tool. Discover target users, gain social media insights, and effectively promote your app on platforms like Reddit, Quora, and Twitter. Enhance user discovery, engage potential customers, and maximize your app's visibility with our market research and competitive analysis tools."
   const keywords = "App Promotion Tool, AI-Powered User Finder, Discover Target Users, Find Potential Customers, Social Media Insights, Market Research Tool, Targeted Marketing Solutions, User Acquisition Platform, Audience Engagement Insights, Promote Your App Effectively, AI Search Engine for Apps, Identify Interested Users, Connect with Your Audience, Enhance User Discovery, Find Your App Users, Engage with Potential Customers, Search Engine for App Users, User Feedback and Insights, Competitive Analysis Tool, Promote Your Fitness App, Target Users on Reddit Quora Twitter, Bookmark User Conversations, Connect with Fitness Enthusiasts, Maximize App Visibility, Find Conversations About Your App"
 
@@ -57,36 +102,69 @@ export default function LandingPage() {
           })
         }}
       />
-      <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+      <motion.div
+        className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
         <Header />
         <main className="flex-1 pt-16 md:pt-0">
-          <Hero />
-          <DemoVideo />
-          {/* <HeroScrollDemo/> */}
-          <Features />
-          <HowItWorks />
-          <Pricing />
-          <FAQ />
-          <CallToAction />
+          <AnimatedSection>
+            <Hero />
+          </AnimatedSection>
+          <AnimatedSection>
+            <DemoVideo />
+          </AnimatedSection>
+          <AnimatedSection >
+            <WhatWhyHow />
+          </AnimatedSection>
+          <AnimatedSection >
+            <Features />
+          </AnimatedSection>
+          <AnimatedSection>
+            <HowItWorks />
+          </AnimatedSection>
+          <AnimatedSection>
+            <Pricing />
+          </AnimatedSection>
+          <AnimatedSection>
+            <FAQ />
+          </AnimatedSection>
+          <AnimatedSection>
+            <CallToAction />
+          </AnimatedSection>
         </main>
-        <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
-          <p className="text-xs text-gray-500 dark:text-gray-400">© 2024 UserFinder AI. All rights reserved.</p>
-          <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-            <a className="text-xs hover:underline underline-offset-4" href="/refund">
-              Refund Policy
-            </a>
-            <a className="text-xs hover:underline underline-offset-4" href="/terms">
-              Terms of Service
-            </a>
-            <a className="text-xs hover:underline underline-offset-4" href="/privacy">
-              Privacy Policy
-            </a>
-            <a className="text-xs hover:underline underline-offset-4" href="/about">
-              About Us
-            </a>
-          </nav>
-        </footer>
-      </div>
+        <motion.footer
+          className="border-t"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+        >
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+              <div className="flex flex-col items-center md:items-start space-y-2 md:space-y-0">
+                <p className="text-sm text-muted-foreground">© 2024 UserFinder AI. All rights reserved.</p>
+                <nav className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-2 mt-2 md:mt-0">
+                  <Link className="text-sm hover:underline underline-offset-4" href="/refund">
+                    Refund Policy
+                  </Link>
+                  <Link className="text-sm hover:underline underline-offset-4" href="/terms">
+                    Terms of Service
+                  </Link>
+                  <Link className="text-sm hover:underline underline-offset-4" href="/privacy">
+                    Privacy Policy
+                  </Link>
+                  <Link className="text-sm hover:underline underline-offset-4" href="/about">
+                    About Us
+                  </Link>
+                </nav>
+              </div>
+
+            </div>
+          </div>
+        </motion.footer>
+      </motion.div>
     </>
   )
 }

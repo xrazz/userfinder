@@ -17,7 +17,7 @@ type CardProps = React.ComponentProps<typeof Card>
 
 function RefundPolicyPage({ className, ...props }: CardProps) {
   return (
-    <Card className={cn("w-full max-w-4xl mx-auto", className)} {...props}>
+    <Card className={cn("w-full max-w-4xl shadow-none mx-auto", className)} {...props}>
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-bold">Refund Policy</CardTitle>
         <CardDescription>
@@ -29,7 +29,7 @@ function RefundPolicyPage({ className, ...props }: CardProps) {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <Shield className="h-6 w-6 text-primary" />
-            Our Commitment to You
+            Our Commitment
           </h2>
           <p className="text-sm text-muted-foreground">
             We strive to provide a valuable and reliable service. However, we understand that sometimes things may not work out as expected. Our refund policy is designed to ensure your satisfaction and confidence in using UserFinder.online.
@@ -37,11 +37,11 @@ function RefundPolicyPage({ className, ...props }: CardProps) {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Card className="bg-primary/5">
+          <Card className="bg-primary/5 border-none shadow-none">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Clock className="h-5 w-5 text-primary" />
-                7-Day Satisfaction Guarantee
+                7-Day Guarantee
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -50,7 +50,7 @@ function RefundPolicyPage({ className, ...props }: CardProps) {
               </p>
             </CardContent>
           </Card>
-          <Card className="bg-primary/5">
+          <Card className="bg-primary/5 border-none shadow-none">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Mail className="h-5 w-5 text-primary" />
@@ -68,7 +68,7 @@ function RefundPolicyPage({ className, ...props }: CardProps) {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <AlertCircle className="h-6 w-6 text-primary" />
-            Important Policy Details
+            Important Policy 
           </h2>
           <ul className="space-y-2">
             <li className="flex items-start gap-2">
@@ -103,10 +103,10 @@ function RefundPolicyPage({ className, ...props }: CardProps) {
 
 const Navbar = () => {
   return (
-    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-2">
-        <Image src="/logo.svg" alt="UserFinder AI Logo" width={20} height={20} />
+        <Image src="/logo.svg" alt="UserFinder AI Logo" width={40} height={40} />
           <span className="font-bold text-lg">Refund Policy</span>
         </div>
         {/* <span className="text-lg font-semibold">Refund Policy</span> */}

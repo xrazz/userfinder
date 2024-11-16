@@ -1,14 +1,14 @@
- 
+export const dynamic = "force-dynamic";
 import { cookies } from 'next/headers';
 import CheckoutForm from './CheckoutForm'
 import admin from '../firebaseAdmin';
 import { redirect } from 'next/navigation';
- 
 
 
- 
+
+
 export default async function CheckoutPage() {
-   
+ 
     const isUserLoggedIn = async (): Promise<boolean> => {
         try {
 
@@ -19,8 +19,8 @@ export default async function CheckoutPage() {
 
 
             const decodedToken = await admin.auth().verifyIdToken(token);
-
-            console.log(decodedToken.name)
+        
+         
 
 
 
@@ -40,7 +40,7 @@ export default async function CheckoutPage() {
     return (
         <div className="container mx-auto px-4 py-8">
 
-            <CheckoutForm />
+            <CheckoutForm   />
         </div>
     )
 }

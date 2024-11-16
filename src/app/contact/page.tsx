@@ -81,7 +81,7 @@ function ContactPage({ className, ...props }: CardProps) {
   };
 
   return (
-    <Card className={cn("w-full max-w-4xl mx-auto", className)} {...props}>
+    <Card className={cn("w-full max-w-4xl mx-auto shadow-none", className)} {...props}>
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-bold">Contact UserFinder AI</CardTitle>
         <CardDescription>We&apos;re here to help! Reach out to us through any of these channels.</CardDescription>
@@ -90,7 +90,7 @@ function ContactPage({ className, ...props }: CardProps) {
       <CardContent className="grid gap-6">
         <div className="grid gap-4 md:grid-cols-3">
           {contactInfo.map((info, index) => (
-            <Card key={index} className="bg-primary/5">
+            <Card key={index} className="bg-primary/5 shadow-none border-none">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   {info.icon}
@@ -115,6 +115,7 @@ function ContactPage({ className, ...props }: CardProps) {
                 placeholder="Your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                className="shadow-none"
               />
             </div>
             <div className="grid gap-2">
@@ -126,6 +127,7 @@ function ContactPage({ className, ...props }: CardProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="shadow-none"
               />
             </div>
             <div className="grid gap-2">
@@ -137,6 +139,7 @@ function ContactPage({ className, ...props }: CardProps) {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 required
+                className="shadow-none"
               />
             </div>
             <Button type="submit" className="w-full md:w-auto justify-self-start">
@@ -161,7 +164,7 @@ function ContactPage({ className, ...props }: CardProps) {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">When to Contact Us</h2>
           <div className="grid gap-4 md:grid-cols-2">
-            <Card>
+            <Card className="shadow-none">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <MessageCircle className="h-5 w-5" />
@@ -172,7 +175,7 @@ function ContactPage({ className, ...props }: CardProps) {
                 <p className="text-sm">Feel free to reach out to us anytime for product suggestions or feedback.</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="shadow-none">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <CreditCard className="h-5 w-5" />
@@ -192,15 +195,16 @@ function ContactPage({ className, ...props }: CardProps) {
 
 const Navbar = () => {
   return (
-    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Image src="/logo.svg" alt="UserFinder AI Logo" width={20} height={20} />
-          <span className="font-bold text-lg">Contact Us</span>
+        <Image src="/logo.svg" alt="UserFinder AI Logo" width={20} height={20} />
+          <span className="font-bold text-lg">Contact</span>
         </div>
+        {/* <span className="text-lg font-semibold">Refund Policy</span> */}
       </div>
     </nav>
-  );
+  )
 }
 
 const Page = () => {

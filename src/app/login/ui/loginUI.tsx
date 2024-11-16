@@ -7,26 +7,23 @@ import { signInWithPopup } from "firebase/auth"
 import { Loader2 } from "lucide-react"
 import Cookies from "js-cookie"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { auth, createUserSettings, googleProvider } from "../../firebaseClient"
-
-
-
+import { auth, createUserSettings, googleProvider } from "@/app/firebaseClient"
 
 const Navbar = () => {
   return (
-    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
-        <Link href="/" className="flex items-center space-x-2">
-          <Image src="/logo.svg" alt="UserFinder AI Logo" width={20} height={20} />
+    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+        <Image src="/logo.svg" alt="UserFinder AI Logo" width={40} height={40} />
           <span className="font-bold text-lg">Login</span>
-        </Link>
-        {/* <span className="text-lg font-semibold">Login</span> */}
+        </div>
+        {/* <span className="text-lg font-semibold">Refund Policy</span> */}
       </div>
     </nav>
   )
 }
-const LoginUI = () => {
+
+export default function LoginUI() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,14 +37,12 @@ const LoginUI = () => {
       await createUserSettings(user)
 
       const token = await user.getIdToken()
+      const expirationTime = (Date.now() + 86400000).toString() // 1 day in milliseconds
 
-      Cookies.set('token', token, { expires: 30 });
-      const expirationTime = (Date.now() + 86400000).toString(); // 1 day in milliseconds
-      Cookies.set('token_expiration', expirationTime);
+      Cookies.set('token', token, { expires: 30, secure: true, sameSite: 'strict' })
+      Cookies.set('token_expiration', expirationTime, { secure: true, sameSite: 'strict' })
 
-      // router.push('/dashboard')
-      window.location.reload();
-
+      window.location.href = '/search'
     } catch (error) {
       console.error('Error during Google login', error)
       setError('An error occurred during sign in. Please try again.')
@@ -56,76 +51,58 @@ const LoginUI = () => {
     }
   }
 
-  return (
-    <div className="min-h-screen flex flex-col   dark:bg-gray-900">
-      <Navbar />
-      <main className="flex-grow flex items-center justify-center px-4 py-12 mt-16">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <div className="flex justify-center">
-              <Image src="/logo.svg" alt="UserFinder AI Logo" width={64} height={64} className="mb-4" />
-            </div>
-            <CardTitle className="text-2xl font-bold text-center">Sign in to UserFinder AI</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button
-              // variant=""
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="w-full"
-            >
-              {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <svg className="mr-2" xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="22" height="22" viewBox="0 0 48 48">
-                  <path fill="#fbc02d" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12	s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20	s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#e53935" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039	l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4caf50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36	c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1565c0" d="M43.611,20.083L43.595,20L42,20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571	c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
-                </svg>
-              )}
-              {loading ? "Signing in..." : "Continue with Google"}
-            </Button>
-            {error && (
-              <p className="mt-4 text-sm text-red-500 text-center">{error}</p>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <p className="text-sm text-muted-foreground">
-              By signing in, you agree to our{" "}
-              <Link href="/terms" className="underline hover:text-primary">
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="underline hover:text-primary">
-                Privacy Policy
-              </Link>
-            </p>
-          </CardFooter>
-        </Card>
-      </main>
+   
 
-      <footer className="bg-gray-100 dark:bg-gray-800 text-muted-foreground p-8">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="space-y-3">
-            <Image src="/logo.png" alt="UserFinder AI Logo" width={50} height={50} />
-            <p className="text-sm">
-              UserFinder AI.
-              <br />
-              Providing reliable tech solutions
-            </p>
-          </div>
-          <nav className="space-y-2">
-            <h6 className="font-semibold text-foreground">Company</h6>
-            <Link href="/about" className="block text-sm hover:underline">About us</Link>
-            <Link href="/contact" className="block text-sm hover:underline">Contact</Link>
-          </nav>
-          <nav className="space-y-2">
-            <h6 className="font-semibold text-foreground">Legal</h6>
-            <Link href="/terms" className="block text-sm hover:underline">Terms of use</Link>
-            <Link href="/privacy" className="block text-sm hover:underline">Privacy policy</Link>
-          </nav>
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+      <Navbar />
+      <div className="w-full max-w-[400px] space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight">Think it. Find it.</h1>
+          <p className="text-xl text-muted-foreground">Log in to UserFinder</p>
         </div>
-      </footer>
+        
+        <div className="space-y-4">
+          <Button 
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            variant="default" 
+            className="w-full h-12 text-base font-medium"
+          >
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <svg
+                className="mr-1 h-8 w-8"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  fill="#EA4335"
+                />
+              </svg>
+            )}
+            {loading ? 'Logging in...' : 'Continue with Google'}
+          </Button>
+        </div>
+      </div>
+
+      <p className="text-center text-sm text-muted-foreground mt-8 max-w-[400px]">
+        Your name and photo are displayed to users who invite you to a workspace using your email. By continuing, you acknowledge that you understand and agree to UserFinder's Terms of Service and Privacy Policy.
+      </p>
     </div>
   )
 }
-
-export default LoginUI

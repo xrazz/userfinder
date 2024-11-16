@@ -18,7 +18,7 @@ type CardProps = React.ComponentProps<typeof Card>
 
 function PrivacyPolicyPage({ className, ...props }: CardProps) {
   return (
-    <Card className={cn("w-full max-w-4xl mx-auto", className)} {...props}>
+    <Card className={cn("w-full max-w-4xl mx-auto shadow-none", className)} {...props}>
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-bold">Privacy Policy</CardTitle>
         <CardDescription>Effective Date: October 3, 2024</CardDescription>
@@ -126,10 +126,10 @@ function PrivacyPolicyPage({ className, ...props }: CardProps) {
 
 const Navbar = () => {
   return (
-    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-2">
-        <Image src="/logo.svg" alt="UserFinder AI Logo" width={20} height={20} />
+        <Image src="/logo.svg" alt="UserFinder AI Logo" width={40} height={40} />
           <span className="font-bold text-lg">Privacy Policy</span>
         </div>
          
