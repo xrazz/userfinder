@@ -491,7 +491,8 @@ const SearchTab = ({ membership = '', name = '', email = '', userId = '' }: { me
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="10">10</SelectItem>
-                          {membership !== MEMBERSHIP_LEVELS.PRO ?
+                          <SelectItem value="25">25</SelectItem>
+{/*                           {membership !== MEMBERSHIP_LEVELS.PRO ?
                             <span className="flex items-center p-2 text-sm text-gray-700">
 
                               25
@@ -508,7 +509,7 @@ const SearchTab = ({ membership = '', name = '', email = '', userId = '' }: { me
                               </span>
                             </span>
                             : <SelectItem value="25">25</SelectItem>
-                          }
+                          } */}
                           {membership !== MEMBERSHIP_LEVELS.PRO ?
                             <span className="flex items-center p-2 text-sm text-gray-700">
 
