@@ -674,7 +674,7 @@ const SearchTab = ({ membership = '', name = '', email = '', userId = '' }: { me
 
 
         {loading && (<TabDataSkeleton />)}
-        {membership === MEMBERSHIP_LEVELS.FREE && credits <= 0 ? upgradeView() : (
+        {membership === MEMBERSHIP_LEVELS.FREE && credits <= 0 && showPremiumDialog ? upgradeView() : (
           <TabData
             platform={selectedSite === 'custom' ? customUrl : selectedSite}
             posts={searchData}
