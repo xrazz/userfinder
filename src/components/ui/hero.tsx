@@ -62,7 +62,7 @@ export default function Hero() {
           <div className="flex flex-col sm:flex-row gap-4 mt-8">
             <Button asChild className="bg-black text-white hover:bg-gray-800 group py-8 px-12 rounded-full text-xl font-semibold min-w-[200px]">
               <a href="/search">
-                Get Started
+                Try Free Now
               </a>
             </Button>
           </div>

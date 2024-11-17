@@ -46,7 +46,7 @@ export default function Component() {
   }, [])
 
   return (
-    <div id='growth' className="p-4 max-w-4xl mb-16 mx-auto space-y-5">
+    <div  className="p-4 max-w-4xl mb-16 mx-auto space-y-5">
       <div className="flex justify-center">
       <Badge variant="secondary" className="bg-pink-100 text-pink-700 hover:bg-pink-200">
             Sales

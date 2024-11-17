@@ -13,7 +13,7 @@ export default function Component() {
         </div>
         <Button size="lg" className="px-8">
         <a href="/login">
-                Get Started
+                Get Started Free
               </a>
         </Button>
       </div>

@@ -26,7 +26,7 @@ export default function Header() {
         Pricing
       </a>
       <a className="text-sm font-medium hover:text-primary transition-colors" href="#growth">
-        Sales
+        Examples
       </a>
       <a className="text-sm font-medium hover:text-primary transition-colors" href="/blogs">
         Blogs

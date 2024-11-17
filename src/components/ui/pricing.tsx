@@ -112,7 +112,7 @@ export default function Component() {
               <p className="text-sm text-muted-foreground mt-2">For individuals and small businesses </p>
             </div>
             <a href="/search">   
-            <Button  className="w-full mb-6">Get started</Button>
+            <Button  className="w-full mb-6">Get started for free</Button>
             </a>
             <ul className="space-y-2 list-disc m-4 text-sm">
               <li>Unlimited searches per month</li>
@@ -143,7 +143,7 @@ export default function Component() {
               <p className="text-sm text-muted-foreground mt-2">For growing businesses to enterprises </p>
             </div>
             <a href="/search">   
-            <Button  className="w-full mb-6">Get started</Button>
+            <Button  className="w-full mb-6">Get started for free</Button>
             </a>
             
             <p className="text-sm font-medium mb-2">Everything in Starter +</p>

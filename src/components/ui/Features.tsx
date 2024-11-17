@@ -178,7 +178,7 @@ import { Search, Users, MessageSquare, Banknote } from "lucide-react"
 
 export default function Component() {
   return (
-    <div  className="container mx-auto px-4 py-12 mb-14 w-full md:max-w-4xl">
+    <div id='growth'  className="container mx-auto px-4 py-12 mb-14 w-full md:max-w-4xl">
       <div className="flex justify-center mb-8">
         <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200">
           Example
