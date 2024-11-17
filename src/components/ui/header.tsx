@@ -75,7 +75,7 @@ export default function Header() {
             <nav className="flex flex-col gap-4">
               <NavItems />
               <Button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push('/login')}
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 Log in

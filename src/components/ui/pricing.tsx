@@ -111,7 +111,7 @@ export default function Component() {
               <p className="text-xs text-muted-foreground">per month</p>
               <p className="text-sm text-muted-foreground mt-2">For individuals and small businesses </p>
             </div>
-            <a href="/checkout">   
+            <a href="/search">   
             <Button  className="w-full mb-6">Get started</Button>
             </a>
             <ul className="space-y-2 list-disc m-4 text-sm">
@@ -142,7 +142,7 @@ export default function Component() {
               <p className="text-xs text-muted-foreground">per seat/month</p>
               <p className="text-sm text-muted-foreground mt-2">For growing businesses to enterprises </p>
             </div>
-            <a href="/checkout">   
+            <a href="/search">   
             <Button  className="w-full mb-6">Get started</Button>
             </a>
             
