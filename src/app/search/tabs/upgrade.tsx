@@ -2,12 +2,13 @@ import { Check } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { useRouter } from "next/navigation";
 
 export default function UpgradePage({ premium = false }: { premium?: boolean }) {
   if (premium) {
     return null; // Don't show pricing plans for premium users
   }
-
+  const router = useRouter()
   return (
     <div className="bg-white min-h-screen py-1 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -50,7 +51,7 @@ export default function UpgradePage({ premium = false }: { premium?: boolean }) 
               </ul>
             </CardContent>
             <CardFooter>
-              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">Choose Pro Plan</Button>
+              <Button onClick={() => router.push(`/checkout`)} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">Choose Pro Plan</Button>
             </CardFooter>
           </Card>
           <Card>
@@ -59,11 +60,11 @@ export default function UpgradePage({ premium = false }: { premium?: boolean }) 
               <CardDescription>For small-scale research needs</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold">$11<span className="text-xl font-normal text-gray-500">/month</span></div>
+              <div className="text-4xl font-bold">$10<span className="text-xl font-normal text-gray-500">/month</span></div>
               <ul className="mt-6 space-y-4" role="list">
                 <li className="flex items-center">
                   <Check className="text-green-500 mr-2 h-5 w-5" aria-hidden="true" />
-                  <span>500 searches per month</span>
+                  <span>unlimited searches</span>
                 </li>
                 <li className="flex items-center">
                   <Check className="text-green-500 mr-2 h-5 w-5" aria-hidden="true" />
@@ -80,7 +81,7 @@ export default function UpgradePage({ premium = false }: { premium?: boolean }) 
               </ul>
             </CardContent>
             <CardFooter>
-              <Button className="w-full">Choose Basic Plan</Button>
+              <Button onClick={() => router.push(`/checkout`)} className="w-full">Choose Basic Plan</Button>
             </CardFooter>
           </Card>
         </div>

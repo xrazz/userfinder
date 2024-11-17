@@ -86,8 +86,8 @@ export default function DashUI({ Membership, profileurl, profileName, profileEma
   }
   return (
 
-    <SidebarProvider className="bg-white">
-      <Sidebar collapsible="icon">
+    <SidebarProvider defaultOpen={false} >
+      <Sidebar collapsible="icon" className="bg-black border-r border-gray-50">
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -142,7 +142,7 @@ export default function DashUI({ Membership, profileurl, profileName, profileEma
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
-          <SidebarGroup>
+          {/* <SidebarGroup>
             <SidebarGroupLabel>Help</SidebarGroupLabel>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -158,7 +158,7 @@ export default function DashUI({ Membership, profileurl, profileName, profileEma
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
-          </SidebarGroup>
+          </SidebarGroup> */}
         </SidebarContent>
         <SidebarRail />
         <SidebarFooter>

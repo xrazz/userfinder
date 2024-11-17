@@ -6,18 +6,18 @@ import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { MessageSquare, Bookmark, AlertCircle, Settings2, ArrowUp, Search, Link2,  Plus, Zap } from 'lucide-react'
+import { MessageSquare, Bookmark, AlertCircle, Settings2, ArrowUp, Search, Link2, Plus, Zap, Users, Building } from 'lucide-react'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast, Toaster } from "sonner"
-import { doc,onSnapshot, updateDoc } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
 import { checkAndUpdateMembership, db, reduceUserCredit } from '@/app/firebaseClient'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import TabDataSkeleton from './tabsui/searchProgressUI'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@radix-ui/themes'
-import { Card,CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
 
 
@@ -385,8 +385,8 @@ const SearchTab = ({ membership = '', name = '', email = '', userId = '' }: { me
                 <Button
                   variant="link"
                   className="text-emerald-400 hover:text-emerald-300 p-0 h-auto font-normal text-xs sm:text-sm whitespace-nowrap"
-                // onClick={onUpgrade}
-                onClick={() => router.push(`/checkout`)}
+                  // onClick={onUpgrade}
+                  onClick={() => router.push(`/checkout`)}
                 >
                   Upgrade Plan
                 </Button>
@@ -491,24 +491,8 @@ const SearchTab = ({ membership = '', name = '', email = '', userId = '' }: { me
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="10">10</SelectItem>
-                          {membership !== MEMBERSHIP_LEVELS.PRO ?
-                            <span className="flex items-center p-2 text-sm text-gray-700">
+                          <SelectItem value="25">25</SelectItem>
 
-                              25
-                              <span className="ml-auto flex items-center text-xs font-medium text-emerald-600">
-                                <Zap className="mr-1 h-3 w-3" />
-                                <Button
-                                  variant="link"
-                                  size="sm"
-                                  className="h-auto p-0 text-xs font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
-                                >
-
-                                  Get Pro
-                                </Button>
-                              </span>
-                            </span>
-                            : <SelectItem value="25">25</SelectItem>
-                          }
                           {membership !== MEMBERSHIP_LEVELS.PRO ?
                             <span className="flex items-center p-2 text-sm text-gray-700">
 
@@ -616,29 +600,29 @@ const SearchTab = ({ membership = '', name = '', email = '', userId = '' }: { me
 
                         </RadioGroup>} */}
 
-<RadioGroup value={currentFilter} onValueChange={handleFilterChange}>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="today" id="today" />
-                            <Label htmlFor="today">Today</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="week" id="week" />
-                            <Label htmlFor="week">Last Week</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="newest" id="newest" />
-                            <Label htmlFor="newest">Newest</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="oldest" id="oldest" />
-                            <Label htmlFor="oldest">Oldest</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="lifetime" id="lifetime" />
-                            <Label htmlFor="lifetime">Lifetime</Label>
-                          </div>
+                      <RadioGroup value={currentFilter} onValueChange={handleFilterChange}>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="today" id="today" />
+                          <Label htmlFor="today">Today</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="week" id="week" />
+                          <Label htmlFor="week">Last Week</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="newest" id="newest" />
+                          <Label htmlFor="newest">Newest</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="oldest" id="oldest" />
+                          <Label htmlFor="oldest">Oldest</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="lifetime" id="lifetime" />
+                          <Label htmlFor="lifetime">Lifetime</Label>
+                        </div>
 
-                        </RadioGroup>
+                      </RadioGroup>
 
                     </div>
                   </div>
@@ -668,37 +652,29 @@ const SearchTab = ({ membership = '', name = '', email = '', userId = '' }: { me
             </Button>
           </div>
         </div>
-
-        <div className="flex mt-3 flex-wrap gap-1 justify-center">
+              
+        <div className="flex mt-3 flex-wrap gap-2 justify-center">
           <Button
             variant="outline"
-            className="group text-[10px] text-xs"
+            className="group text-[9px] font-bold h-4 px-2 rounded-full border shadow-none"
             onClick={() => setSearchQuery("Biggest frustrations with [product/competitor]")}
           >
             frustrations with [product/competitor]
-            <ArrowUp className="h-4 w-4 rotate-45 " />
+            <ArrowUp className="h-2 w-2 rotate-45 ml-1" />
           </Button>
           <Button
             variant="outline"
-            className="group text-[10px] text-xs"
+            className="group text-[9px] font-bold h-4 px-2 rounded-full border shadow-none"
             onClick={() => setSearchQuery("Do [target market] need [product idea]?")}
           >
             Do [target market] need [product idea]?
-            <ArrowUp className="h-4 w-4 rotate-45 " />
-          </Button>
-          <Button
-            variant="outline"
-            className="group text-[10px] text-xs"
-            onClick={() => setSearchQuery("How much would you pay for [product/feature]?")}
-          >
-            would you pay for [product/feature]?
-            <ArrowUp className="h-4 w-4 rotate-45 " />
+            <ArrowUp className="h-2 w-2 rotate-45 ml-1" />
           </Button>
         </div>
 
 
         {loading && (<TabDataSkeleton />)}
-        {(
+        {membership === MEMBERSHIP_LEVELS.FREE && credits <= 0 ? upgradeView() : (
           <TabData
             platform={selectedSite === 'custom' ? customUrl : selectedSite}
             posts={searchData}
@@ -706,9 +682,10 @@ const SearchTab = ({ membership = '', name = '', email = '', userId = '' }: { me
           />
 
         )}
+
       </div>
 
-      <Dialog open={showPremiumDialog && membership === MEMBERSHIP_LEVELS.FREE} onOpenChange={setShowPremiumDialog}>
+      {/* <Dialog open={showPremiumDialog && membership === MEMBERSHIP_LEVELS.FREE} onOpenChange={setShowPremiumDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader className="flex flex-row items-center gap-2">
             <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
@@ -734,7 +711,7 @@ const SearchTab = ({ membership = '', name = '', email = '', userId = '' }: { me
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </main>)
 
 
@@ -798,4 +775,77 @@ function getDateFilterString(dateFilter: DateFilter): string {
     default:
       return '';
   }
+}
+
+
+
+
+
+
+function upgradeView() {
+
+  const router = useRouter()
+
+
+
+  const handleUpgrade = () => {
+
+    router.push('/plans')
+
+  }
+
+  return (
+    <section className="bg-background min-h-screen flex flex-col p-4">
+      <div className="container mx-auto flex-grow flex flex-col justify-start items-center">
+        <div className="text-center">
+          <div className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground mb-3">
+            ⚠️ Credits Expired
+          </div>
+          <h1 className="text-xl md:text-xl font-bold mb-2">Upgrade to Unlimited Searches</h1>
+          {/* <p className="text-lg text-muted-foreground mb-6">Choose the plan that fits your needs and never worry about credits again!</p> */}
+        </div>
+
+        <div className="w-full max-w-sm mx-auto">
+          <div className="bg-[#f8f8f8] p-4 rounded-lg shadow-sm relative">
+            <div className="absolute right-2 top-2">
+              <Badge variant="soft" className="text-[10px] px-1.5 py-0.5">Popular</Badge>
+            </div>
+            <div className="mb-3 text-center">
+              <Search className="w-8 h-8 mb-2 text-primary mx-auto" />
+              <h3 className="font-medium mb-1 text-lg">Unlimited Searches</h3>
+              <p className="text-xs text-muted-foreground mt-1">Upgrade to access all features</p>
+            </div>
+            <ul className="space-y-1 mb-4 text-sm">
+              <li className="flex items-center">
+                <Users className="w-3 h-3 mr-2 text-primary" />
+                <span>Unlimited searches per month</span>
+              </li>
+              <li className="flex items-center">
+                <Users className="w-3 h-3 mr-2 text-primary" />
+                <span>Search across popular platforms</span>
+              </li>
+              <li className="flex items-center">
+                <Building className="w-3 h-3 mr-2 text-primary" />
+                <span>Custom domain crawling</span>
+              </li>
+              <li className="flex items-center">
+                <Building className="w-3 h-3 mr-2 text-primary" />
+                <span>Up to 50 results per search</span>
+              </li>
+              <li className="flex items-center">
+                <Building className="w-3 h-3 mr-2 text-primary" />
+                <span>Dedicated support</span>
+              </li>
+            </ul>
+            <Button
+              className="w-full text-sm py-1"
+              onClick={handleUpgrade}
+            >
+              See Plans
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
 }
