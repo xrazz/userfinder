@@ -30,7 +30,7 @@ export default function UpgradePage({ premium = false }: { premium?: boolean }) 
               <CardDescription>For comprehensive research needs</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold">$29<span className="text-xl font-normal text-gray-500">/month</span></div>
+              <div className="text-4xl font-bold">$10<span className="text-xl font-normal text-gray-500">/month</span></div>
               <ul className="mt-6 space-y-4" role="list">
                 <li className="flex items-center">
                   <Check className="text-green-500 mr-2 h-5 w-5" aria-hidden="true" />
@@ -60,7 +60,7 @@ export default function UpgradePage({ premium = false }: { premium?: boolean }) 
               <CardDescription>For small-scale research needs</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold">$10<span className="text-xl font-normal text-gray-500">/month</span></div>
+              <div className="text-4xl font-bold">$3.39<span className="text-xl font-normal text-gray-500">/month</span></div>
               <ul className="mt-6 space-y-4" role="list">
                 <li className="flex items-center">
                   <Check className="text-green-500 mr-2 h-5 w-5" aria-hidden="true" />

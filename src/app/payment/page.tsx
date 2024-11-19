@@ -5,8 +5,8 @@ import { redirect } from 'next/navigation';
 import admin from '../firebaseAdmin';
 import { cookies } from 'next/headers';
 const PLANS = {
-  BASIC: 10,
-  PRO: 29
+  BASIC: 3.39,
+  PRO: 10
 };
 const FEATURES = {
   BASIC:  [

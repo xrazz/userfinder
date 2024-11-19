@@ -107,7 +107,7 @@ export default function Component() {
             <div className="mb-4">
               <Users className="w-8 h-8 mb-2" />
               <h3 className="font-medium mb-1">Starter</h3>
-              <div className="text-2xl font-bold">$10</div>
+              <div className="text-2xl font-bold">$3.39</div>
               <p className="text-xs text-muted-foreground">per month</p>
               <p className="text-sm text-muted-foreground mt-2">For individuals and small businesses </p>
             </div>
@@ -138,7 +138,7 @@ export default function Component() {
             <div className="mb-4">
               <Building className="w-8 h-8 mb-2" />
               <h3 className="font-medium mb-1">Business</h3>
-              <div className="text-2xl font-bold">$29</div>
+              <div className="text-2xl font-bold">$10</div>
               <p className="text-xs text-muted-foreground">per seat/month</p>
               <p className="text-sm text-muted-foreground mt-2">For growing businesses to enterprises </p>
             </div>
