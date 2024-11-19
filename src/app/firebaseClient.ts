@@ -46,7 +46,7 @@ export const createUserSettings = async (user: User) => {
     await setDoc(userDocRef, {
       uid: user.uid,
       email: user.email,
-      credits: 11,
+      credits: 5,
       membershipLevel: 'Free', // Set default membership level
       membership_start: null,  // Initialize membership start date as null
     });
