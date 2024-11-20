@@ -86,7 +86,7 @@ const LoggedOutSettingsPopover: React.FC<LoggedOutSettingsPopoverProps> = ({ sel
                                     </div>
                                     {!['Reddit.com', 'Twitter.com'].includes(site.name) && (
                                          
-                                         <Link href='/login'> 
+                                         <Link href='/checkout'> 
                                          
                                          <ShadcnBadge className="ml-2 text-xs rounded-full">
                                             {badgetext}
@@ -101,7 +101,7 @@ const LoggedOutSettingsPopover: React.FC<LoggedOutSettingsPopoverProps> = ({ sel
                         <SelectItem disabled={true} value="custom" className="border rounded-md">
                             <div className="flex items-center">
                                 <PlusCircle className="w-4 h-4 mr-2" />
-                                <span>Custom Site</span>  <Link href='/login'> 
+                                <span>Custom Site</span>    <Link href='/checkout'> 
                                          
                                          <ShadcnBadge className="ml-2 text-xs rounded-full">
                                             {badgetext}
@@ -123,9 +123,11 @@ const LoggedOutSettingsPopover: React.FC<LoggedOutSettingsPopoverProps> = ({ sel
                             <SelectItem key={count} value={count.toString()} disabled>
                                 <div className="flex items-center justify-between w-full">
                                     <span>{count}</span>
+                                    <Link href='/checkout'> 
                                     <ShadcnBadge className="ml-2 text-xs rounded-full">
                                         {badgetext}
                                     </ShadcnBadge>
+                                    </Link>
                                 </div>
                             </SelectItem>
                         ))}
