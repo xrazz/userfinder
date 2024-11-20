@@ -6,6 +6,7 @@ import { Badge } from "@radix-ui/themes"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import router from "next/router"
+import Link from "next/link"
 
 interface CheckoutFormProps {
   mail: string;
@@ -110,11 +111,10 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center space-x-4 mr-2">
-         
+         <Link href='/search'>
             <Button
               variant="secondary"
             
-              onClick={() => router.push('/search')}
               className="rounded-full"
             >
               
@@ -123,7 +123,7 @@ const Navbar = () => {
 
              
             </Button>
-
+            </Link>
           </div>
       </div>
     </nav>
