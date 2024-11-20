@@ -114,7 +114,7 @@ export default function PremiumSuccessPage() {
         >
           <Button asChild size="lg" className="mt-8 px-8 py-6 text-lg group">
             <Link href="/search">
-              Return to Dashboard
+              Return to Search
               <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
             </Link>
           </Button>

@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import admin, { db } from "../firebaseAdmin";
 import { redirect } from "next/navigation";
 import DashUI from "./dashUI";
+import SearchUI from "./searchUI";
  
 const MEMBERSHIP_LEVELS = {
   FREE: 'Free',
@@ -63,14 +64,18 @@ export default async function Dashboard() {
   }
 
   return (
-    
-    <DashUI  
-    Membership={membership}
-      profileurl={profilePhoto}
-      profileName={profileName}
-      profileEmail={profileEmail}
-      uid={userId}
-    />
+    <SearchUI Membership={membership}
+    imageUrl={profilePhoto}
+    name={profileName}
+    email={profileEmail}
+    userId={userId} />
+    // <DashUI  
+    // Membership={membership}
+    //   profileurl={profilePhoto}
+    //   profileName={profileName}
+    //   profileEmail={profileEmail}
+    //   uid={userId}
+    // />
     // <DashboardUI
     //   isPremium={isPremiumCheck}
     //   profileurl={profilePhoto}

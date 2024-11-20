@@ -51,7 +51,7 @@ function BlogPost() {
 function BlogsPage() {
   return (
     <div className="w-full max-w-4xl mx-auto px-4">
-      <h1 className="text-3xl font-bold text-center mb-8">Our Blog</h1>
+      {/* <h1 className="text-3xl font-bold text-center mb-8">Our Blog</h1> */}
       <BlogPost />
     </div>
   )
@@ -59,7 +59,7 @@ function BlogsPage() {
 
 function Navbar() {
   return (
-    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="w-full border-none fixed top-0 left-0 z-50 px-4 py-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <Link href="/" className="flex items-center space-x-2">
           <Image src="/logo.svg" alt="UserFinder AI Logo" width={32} height={32} />
@@ -77,14 +77,38 @@ export default function Page() {
       <main className="flex-grow flex flex-col items-center justify-center p-6 pt-16">
         <BlogsPage />
       </main>
-      <footer className="py-4 text-center text-sm text-muted-foreground">
-        <p>© 2024 UserFinder AI. All rights reserved.</p>
-        <nav className="flex justify-center gap-x-4 mt-2">
-          <Link className="hover:underline underline-offset-4" href="/refund">Refund Policy</Link>
-          <Link className="hover:underline underline-offset-4" href="/terms">Terms of Service</Link>
-          <Link className="hover:underline underline-offset-4" href="/privacy">Privacy Policy</Link>
-          <Link className="hover:underline underline-offset-4" href="/about">About Us</Link>
-        </nav>
+      <footer>
+        <div className="px-4 md:px-6 lg:px-8 py-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+          <div className="flex flex-col items-center md:items-start space-y-2 md:space-y-0">
+            <p className="text-sm text-muted-foreground">© 2024 UserFinder AI. All rights reserved.</p>
+            <nav className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-2 mt-2 md:mt-0">
+              <Link className="text-sm hover:underline underline-offset-4" href="/refund">
+                Refund Policy
+              </Link>
+              <Link className="text-sm hover:underline underline-offset-4" href="/terms">
+                Terms of Service
+              </Link>
+              <Link className="text-sm hover:underline underline-offset-4" href="/privacy">
+                Privacy Policy
+              </Link>
+            </nav>
+          </div>
+          <Link
+            href="https://x.com/holamejessie"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gray-800 hover:bg-gray-700 transition-colors duration-200"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              className="h-5 w-5 fill-current text-white"
+            >
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
+            <span className="sr-only">Follow on X</span>
+          </Link>
+        </div>
       </footer>
     </div>
   )

@@ -11,7 +11,7 @@ import { auth, createUserSettings, googleProvider } from "@/app/firebaseClient"
 
 const Navbar = () => {
   return (
-    <nav className="w-full border-b fixed top-0 left-0 z-50 px-4 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="w-full border-none fixed top-0 left-0 z-50 px-4 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-2">
         <Image src="/logo.svg" alt="UserFinder AI Logo" width={40} height={40} />
@@ -42,7 +42,7 @@ export default function LoginUI() {
       Cookies.set('token', token, { expires: 30, secure: true, sameSite: 'strict' })
       Cookies.set('token_expiration', expirationTime, { secure: true, sameSite: 'strict' })
 
-      window.location.href = '/search'
+      window.location.href = '/checkout'
     } catch (error) {
       console.error('Error during Google login', error)
       setError('An error occurred during sign in. Please try again.')
@@ -101,7 +101,7 @@ export default function LoginUI() {
       </div>
 
       <p className="text-center text-sm text-muted-foreground mt-8 max-w-[400px]">
-        Your name and photo are displayed to users who invite you to a workspace using your email. By continuing, you acknowledge that you understand and agree to UserFinder's Terms of Service and Privacy Policy.
+      By continuing, you acknowledge that you understand and agree to UserFinder's Terms of Service and Privacy Policy.
       </p>
     </div>
   )

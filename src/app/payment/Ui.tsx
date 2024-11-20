@@ -48,9 +48,9 @@ console.log(mail)
             
                 // Determine membership level based on the amount paid
                 let membershipLevel = '';
-                if (amountPaid === 10) {
+                if (amountPaid === 29) {
                   membershipLevel = 'Pro';
-                } else if (amountPaid === 3.39) {
+                } else if (amountPaid === 10) {
                   membershipLevel = 'Basic';
                 }
             

@@ -1,24 +1,25 @@
 'use client'
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
-import { Users, Building } from "lucide-react"
+import { Users, Building, Search, ArrowRight } from "lucide-react"
 import { Badge } from "@radix-ui/themes"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import router from "next/router"
 
 interface CheckoutFormProps {
   mail: string;
 }
-export default function Component( ) {
+export default function Component() {
   const [isMounted, setIsMounted] = useState(false)
   const router = useRouter()
- 
+
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
   // Function to handle redirection with payment options
-  const handleGetStarted = (plan: string ) => {
+  const handleGetStarted = (plan: string) => {
     if (isMounted) {
       router.push(`/payment?plan=${plan}`)
     }
@@ -44,21 +45,21 @@ export default function Component( ) {
             <div className="mb-4">
               <Users className="w-8 h-8 mb-2" />
               <h3 className="font-medium mb-1">Starter</h3>
-              <div className="text-2xl font-bold">$3.39</div>
+              <div className="text-2xl font-bold">$10</div>
               <p className="text-xs text-muted-foreground">per month</p>
               <p className="text-sm text-muted-foreground mt-2">For individuals and small businesses</p>
             </div>
             <Button
               className="w-full mb-6"
               variant="default"
-              onClick={() => handleGetStarted("BASIC" )}
+              onClick={() => handleGetStarted("BASIC")}
             >
               Get started
             </Button>
             <ul className="space-y-2 list-disc m-4 text-sm">
               <li>Unlimited searches per month</li>
-              <li>Search across popular platforms (Reddit, Quora, Twitter, etc.)</li>
-              <li>Max 10 results per search</li>
+              <li>Search across only popular platforms (Reddit, Quora, Twitter, etc.)</li>
+              <li>Max 25 results per search</li>
               <li>Access to date filters for recent conversations (e.g., last 24 hours, last week)</li>
               <li>Pre-made prompts for validation & research</li>
             </ul>
@@ -74,7 +75,7 @@ export default function Component( ) {
             <div className="mb-4">
               <Building className="w-8 h-8 mb-2" />
               <h3 className="font-medium mb-1">Business</h3>
-              <div className="text-2xl font-bold">$10</div>
+              <div className="text-2xl font-bold">$29</div>
               <p className="text-xs text-muted-foreground">per seat/month</p>
               <p className="text-sm text-muted-foreground mt-2">For growing businesses to enterprises</p>
             </div>
@@ -105,7 +106,25 @@ const Navbar = () => {
         <div className="flex items-center space-x-2">
           <Image src="/logo.svg" alt="UserFinder AI Logo" width={30} height={30} />
           <span className="font-bold text-lg">Checkout</span>
+
         </div>
+
+        <div className="flex items-center space-x-4 mr-2">
+         
+            <Button
+              variant="secondary"
+            
+              onClick={() => router.push('/search')}
+              className="rounded-full"
+            >
+              
+              Go to Search <ArrowRight className="transition-transform group-hover:translate-x-1" />
+          
+
+             
+            </Button>
+
+          </div>
       </div>
     </nav>
   )

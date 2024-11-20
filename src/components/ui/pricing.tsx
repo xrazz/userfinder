@@ -107,17 +107,17 @@ export default function Component() {
             <div className="mb-4">
               <Users className="w-8 h-8 mb-2" />
               <h3 className="font-medium mb-1">Starter</h3>
-              <div className="text-2xl font-bold">$3.39</div>
+              <div className="text-2xl font-bold">$10</div>
               <p className="text-xs text-muted-foreground">per month</p>
               <p className="text-sm text-muted-foreground mt-2">For individuals and small businesses </p>
             </div>
-            <a href="/search">   
-            <Button  className="w-full mb-6">Get started for free</Button>
+            <a href="/checkout">   
+            <Button  className="w-full mb-6">Get started</Button>
             </a>
             <ul className="space-y-2 list-disc m-4 text-sm">
               <li>Unlimited searches per month</li>
-              <li>Search across popular platforms (Reddit, Quora, Twitter, etc.)</li>
-              <li>Max 10 results per search</li>
+              <li>Search only popular platforms (Reddit, Quora, Twitter, etc.)</li>
+              <li>Max 25 results per search</li>
               <li>Access to date filters for recent conversations (e.g., last 24 hours, last week)</li>
               <li>Pre-made prompts for validation & research</li>
               {/* <li>Custom websites</li>
@@ -138,12 +138,12 @@ export default function Component() {
             <div className="mb-4">
               <Building className="w-8 h-8 mb-2" />
               <h3 className="font-medium mb-1">Business</h3>
-              <div className="text-2xl font-bold">$10</div>
+              <div className="text-2xl font-bold">$29</div>
               <p className="text-xs text-muted-foreground">per seat/month</p>
               <p className="text-sm text-muted-foreground mt-2">For growing businesses to enterprises </p>
             </div>
-            <a href="/search">   
-            <Button  className="w-full mb-6">Get started for free</Button>
+            <a href="/checkout">   
+            <Button  className="w-full mb-6">Get started</Button>
             </a>
             
             <p className="text-sm font-medium mb-2">Everything in Starter +</p>
