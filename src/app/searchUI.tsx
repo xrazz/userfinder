@@ -13,8 +13,7 @@ import { toast, Toaster } from "sonner"
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
 import { auth, checkAndUpdateMembership, db, reduceUserCredit } from '@/app/firebaseClient'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import TabDataSkeleton from './tabs/tabsui/searchProgressUI'
-
+import TabDataSkeleton from '@/components/searchProgressUI'
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Cookies from "js-cookie"
@@ -85,14 +84,14 @@ const LoggedOutSettingsPopover: React.FC<LoggedOutSettingsPopoverProps> = ({ sel
                                         {site.name}
                                     </div>
                                     {!['Reddit.com', 'Twitter.com'].includes(site.name) && (
-                                         
-                                         <Link href='/checkout'> 
-                                         
-                                         <ShadcnBadge className="ml-2 text-xs rounded-full">
-                                            {badgetext}
-                                        </ShadcnBadge>
-                                         </Link>
-                                       
+
+                                        <Link href='/checkout'>
+
+                                            <ShadcnBadge className="ml-2 text-xs rounded-full">
+                                                {badgetext}
+                                            </ShadcnBadge>
+                                        </Link>
+
                                     )}
                                 </div>
                             </SelectItem>
@@ -101,12 +100,12 @@ const LoggedOutSettingsPopover: React.FC<LoggedOutSettingsPopoverProps> = ({ sel
                         <SelectItem disabled={true} value="custom" className="border rounded-md">
                             <div className="flex items-center">
                                 <PlusCircle className="w-4 h-4 mr-2" />
-                                <span>Custom Site</span>    <Link href='/checkout'> 
-                                         
-                                         <ShadcnBadge className="ml-2 text-xs rounded-full">
-                                            {badgetext}
-                                        </ShadcnBadge>
-                                         </Link>
+                                <span>Custom Site</span>    <Link href='/checkout'>
+
+                                    <ShadcnBadge className="ml-2 text-xs rounded-full">
+                                        {badgetext}
+                                    </ShadcnBadge>
+                                </Link>
                             </div>
                         </SelectItem>
                     </SelectContent>
@@ -123,10 +122,10 @@ const LoggedOutSettingsPopover: React.FC<LoggedOutSettingsPopoverProps> = ({ sel
                             <SelectItem key={count} value={count.toString()} disabled>
                                 <div className="flex items-center justify-between w-full">
                                     <span>{count}</span>
-                                    <Link href='/checkout'> 
-                                    <ShadcnBadge className="ml-2 text-xs rounded-full">
-                                        {badgetext}
-                                    </ShadcnBadge>
+                                    <Link href='/checkout'>
+                                        <ShadcnBadge className="ml-2 text-xs rounded-full">
+                                            {badgetext}
+                                        </ShadcnBadge>
                                     </Link>
                                 </div>
                             </SelectItem>
@@ -143,12 +142,12 @@ const LoggedOutSettingsPopover: React.FC<LoggedOutSettingsPopoverProps> = ({ sel
                                 <RadioGroupItem value={filter} id={filter} />
                                 <Label htmlFor={filter}>{filter.charAt(0).toUpperCase() + filter.slice(1)}</Label>
                             </div>
-                            <Link href='/login'> 
-                                         
-                                         <ShadcnBadge className="ml-2 text-xs rounded-full">
-                                            {badgetext}
-                                        </ShadcnBadge>
-                                         </Link>
+                            <Link href='/login'>
+
+                                <ShadcnBadge className="ml-2 text-xs rounded-full">
+                                    {badgetext}
+                                </ShadcnBadge>
+                            </Link>
                         </div>
                     ))}
                 </RadioGroup>
@@ -166,120 +165,124 @@ interface LoggedInSettingsPopoverProps {
     handleFilterChange: (filter: string) => void
     customUrl: string
     setCustomUrl: (url: string) => void
-    membership:string
-  }
-  
-  const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = ({ 
-    selectedSite, 
-    setSelectedSite, 
-    resultCount, 
-    setResultCount, 
-    currentFilter, 
+    membership: string
+}
+
+const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = ({
+    selectedSite,
+    setSelectedSite,
+    resultCount,
+    setResultCount,
+    currentFilter,
     handleFilterChange,
     customUrl,
     setCustomUrl,
     membership
-  }) => (
+}) => (
     <PopoverContent className="w-60 ml-5 shadow-none">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="site-select">Site</Label>
-          <Select 
-            value={selectedSite} 
-            onValueChange={(value) => {
-              if (value === 'custom') {
-                // Keep 'custom' as the value when selecting "Custom Site"
-                setSelectedSite('custom');
-              } else {
-                setSelectedSite(value);
-              }
-            }}
-          >
-            <SelectTrigger id="site-select">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {sites.map((site) => (
-                <SelectItem key={site.name} value={site.name}>
-                  <div className="flex items-center">
-                    <Image src={site.icon} alt={site.name} width={16} height={16} className="mr-2" />
-                    {site.name}
-                  </div>
-                </SelectItem>
-              ))}
-              <SelectItem  disabled={ membership !== MEMBERSHIP_LEVELS.PRO } value="custom" className="border rounded-md">
-                <div className="flex items-center">
-                  <PlusCircle className="w-4 h-4 mr-2" />
-                  <span>{customUrl || "Custom Site"}</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-  
-        {selectedSite === 'custom' && (
-          <div className="space-y-2">
-            <Label htmlFor="custom-url">Custom URL</Label>
-            <div className="flex items-center">
-              <Input
-                id="custom-url"
-                value={customUrl}
-                onChange={(e) => setCustomUrl(e.target.value)}
-                placeholder="Enter custom domain"
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="ml-2"
-                onClick={() => {
-                  if (customUrl) {
-                    setSelectedSite(customUrl)
-                    toast.success("Custom domain set")
-                  } else {
-                    toast.error("Please enter a custom domain")
-                  }
-                }}
-              >
-                <Check className="h-4 w-4" />
-              </Button>
+        <div className="space-y-4">
+            <div className="space-y-2">
+                <Label htmlFor="site-select">Site</Label>
+                <Select
+                    value={selectedSite}
+                    onValueChange={(value) => {
+                        if (value === 'custom') {
+                            // Keep 'custom' as the value when selecting "Custom Site"
+                            setSelectedSite('custom');
+                        } else {
+                            setSelectedSite(value);
+                        }
+                    }}
+                >
+                    <SelectTrigger id="site-select">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {sites.map((site) => (
+                            <SelectItem key={site.name} value={site.name}>
+                                <div className="flex items-center">
+                                    <Image src={site.icon} alt={site.name} width={16} height={16} className="mr-2" />
+                                    {site.name}
+                                </div>
+                            </SelectItem>
+                        ))}
+                        <SelectItem
+                            // disabled={ membership !== MEMBERSHIP_LEVELS.PRO } 
+                            value="custom" className="border rounded-md">
+                            <div className="flex items-center">
+                                <PlusCircle className="w-4 h-4 mr-2" />
+                                <span>{customUrl || "Custom Site"}</span>
+                            </div>
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
-          </div>
-        )}
-        <div className="space-y-2">
-          <Label htmlFor="result-count">Result Count</Label>
-          <Select
-            value={resultCount.toString()}
-            onValueChange={(value) => setResultCount(parseInt(value, 10))}
-          >
-            <SelectTrigger id="result-count">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[10, 25, 50].map((count) => (
-                <SelectItem key={count} disabled={count.toString()==='50'? membership !== MEMBERSHIP_LEVELS.PRO:false } value={count.toString()}>
-                  {count}
-                </SelectItem>
-              ))}
-              {/* <SelectItem value={} disabled={ membership === MEMBERSHIP_LEVELS.BASIC } >50</SelectItem> */}
-            </SelectContent>
-          </Select>
+
+            {selectedSite === 'custom' && (
+                <div className="space-y-2">
+                    <Label htmlFor="custom-url">Custom URL</Label>
+                    <div className="flex items-center">
+                        <Input
+                            id="custom-url"
+                            value={customUrl}
+                            onChange={(e) => setCustomUrl(e.target.value)}
+                            placeholder="Enter custom domain"
+                            className="flex-1"
+                        />
+                        <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="ml-2"
+                            onClick={() => {
+                                if (customUrl) {
+                                    setSelectedSite(customUrl)
+                                    toast.success("Custom domain set")
+                                } else {
+                                    toast.error("Please enter a custom domain")
+                                }
+                            }}
+                        >
+                            <Check className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
+            <div className="space-y-2">
+                <Label htmlFor="result-count">Result Count</Label>
+                <Select
+                    value={resultCount.toString()}
+                    onValueChange={(value) => setResultCount(parseInt(value, 10))}
+                >
+                    <SelectTrigger id="result-count">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {[10, 25, 50].map((count) => (
+                            <SelectItem key={count}
+                                // disabled={count.toString()==='50'? membership !== MEMBERSHIP_LEVELS.PRO:false }
+                                value={count.toString()}>
+                                {count}
+                            </SelectItem>
+                        ))}
+                        {/* <SelectItem value={} disabled={ membership === MEMBERSHIP_LEVELS.BASIC } >50</SelectItem> */}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-2">
+                <Label>Filter by</Label>
+                <RadioGroup value={currentFilter} onValueChange={handleFilterChange}>
+                    {['today', 'week', 'newest', 'oldest', 'lifetime'].map((filter) => (
+                        <div key={filter} className="flex items-center space-x-2">
+                            <RadioGroupItem value={filter} id={filter} />
+                            <Label htmlFor={filter}>{filter.charAt(0).toUpperCase() + filter.slice(1)}</Label>
+                        </div>
+                    ))}
+                </RadioGroup>
+            </div>
         </div>
-        <div className="space-y-2">
-          <Label>Filter by</Label>
-          <RadioGroup value={currentFilter} onValueChange={handleFilterChange}>
-            {['today', 'week', 'newest', 'oldest', 'lifetime'].map((filter) => (
-              <div key={filter} className="flex items-center space-x-2">
-                <RadioGroupItem value={filter} id={filter} />
-                <Label htmlFor={filter}>{filter.charAt(0).toUpperCase() + filter.slice(1)}</Label>
-              </div>
-            ))}
-          </RadioGroup>
-        </div>
-      </div>
     </PopoverContent>
-  ) 
+)
 
 interface SearchTabProps {
     Membership?: string
@@ -533,7 +536,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 <div className="flex items-center space-x-4">
                     {userId ? (
                         <>
-                            <Button onClick={() => router.push('/bookmarks')} variant="default" size="icon"   className="rounded-full">
+                            <Button onClick={() => router.push('/bookmarks')} variant="default" size="icon" className="rounded-full">
                                 <Bookmark className="h-5 w-5" />
                                 <span className="sr-only">Bookmarks</span>
                             </Button>
@@ -580,7 +583,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-center mb-6">
                     What can I help you find?
                 </h1>
-                { Membership === MEMBERSHIP_LEVELS.FREE && (
+                {/* {Membership === MEMBERSHIP_LEVELS.FREE && (
                     <div className="mb-2 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-none bg-primary">
                         <div className="flex items-center justify-between px-3 py-2">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center">
@@ -602,7 +605,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                             </div>
                         </div>
                     </div>
-                )}
+                )} */}
 
                 <div className="w-full border border-gray-300 rounded-xl p-2">
                     <div className="flex-grow relative mb-4">
@@ -628,27 +631,27 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                         <span className="sr-only">Settings</span>
                                     </Button>
                                 </PopoverTrigger>
-                                {userId ? (
-                                    Membership === MEMBERSHIP_LEVELS.FREE ?
-                                        <LoggedOutSettingsPopover
-                                            selectedSite={selectedSite}
-                                            badgetext='upgrade'
-                                            setSelectedSite={setSelectedSite}
-                                            resultCount={resultCount}
-                                            currentFilter={currentFilter}
-                                            onValueChange={handleResultCountChange}
-                                        /> :
-                                        <LoggedInSettingsPopover
-                                            selectedSite={selectedSite}
-                                            setSelectedSite={setSelectedSite}
-                                            resultCount={resultCount}
-                                            setResultCount={setResultCount}
-                                            currentFilter={currentFilter}
-                                            handleFilterChange={handleFilterChange}
-                                            customUrl={customUrl}
-                                            setCustomUrl={setCustomUrl}
-                                            membership={Membership}
-                                        />
+                                {/* {userId ? (
+                                    // Membership === MEMBERSHIP_LEVELS.PRO ?
+                                    //     <LoggedOutSettingsPopover
+                                    //         selectedSite={selectedSite}
+                                    //         badgetext='upgrade'
+                                    //         setSelectedSite={setSelectedSite}
+                                    //         resultCount={resultCount}
+                                    //         currentFilter={currentFilter}
+                                    //         onValueChange={handleResultCountChange}
+                                    //     /> :
+                                    <LoggedInSettingsPopover
+                                        selectedSite={selectedSite}
+                                        setSelectedSite={setSelectedSite}
+                                        resultCount={resultCount}
+                                        setResultCount={setResultCount}
+                                        currentFilter={currentFilter}
+                                        handleFilterChange={handleFilterChange}
+                                        customUrl={customUrl}
+                                        setCustomUrl={setCustomUrl}
+                                        membership={Membership}
+                                    />
                                 ) : (
                                     <LoggedOutSettingsPopover
                                         selectedSite={selectedSite}
@@ -658,7 +661,19 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                         currentFilter={currentFilter}
                                         onValueChange={handleResultCountChange}
                                     />
-                                )}
+                                )} */}
+
+                                <LoggedInSettingsPopover
+                                    selectedSite={selectedSite}
+                                    setSelectedSite={setSelectedSite}
+                                    resultCount={resultCount}
+                                    setResultCount={setResultCount}
+                                    currentFilter={currentFilter}
+                                    handleFilterChange={handleFilterChange}
+                                    customUrl={customUrl}
+                                    setCustomUrl={setCustomUrl}
+                                    membership={Membership}
+                                />
                             </Popover>
 
                             <Badge size="1" color="crimson"  >

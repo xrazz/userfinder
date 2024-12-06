@@ -22,9 +22,9 @@ export default function Header() {
       <a className="text-sm font-medium hover:text-primary transition-colors" href="#features">
         Features
       </a>
-      <a className="text-sm font-medium hover:text-primary transition-colors" href="#pricing">
+      {/* <a className="text-sm font-medium hover:text-primary transition-colors" href="#pricing">
         Pricing
-      </a>
+      </a> */}
       <a className="text-sm font-medium hover:text-primary transition-colors" href="#growth">
         Examples
       </a>
