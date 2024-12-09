@@ -42,7 +42,8 @@ export default function LoginUI() {
       Cookies.set('token', token, { expires: 30, secure: true, sameSite: 'strict' })
       Cookies.set('token_expiration', expirationTime, { secure: true, sameSite: 'strict' })
 
-      window.location.href = '/checkout'
+      // window.location.href = '/checkout'
+      window.location.href = '/'
     } catch (error) {
       console.error('Error during Google login', error)
       setError('An error occurred during sign in. Please try again.')
