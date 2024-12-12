@@ -15,7 +15,10 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
   weight: "100 900",
 });
-
+const myFont = localFont({
+  src: './fonts/Iquost-Regular.woff2',
+  display: 'swap',
+})
 export const metadata: Metadata = {
   title: "UserFinder AI",
   description: "Made for Saas",
@@ -30,11 +33,11 @@ export default function RootLayout({
     <html lang="en">
       <body
 
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable}  antialiased`}
       >
 
         
-        <Theme> 
+        <Theme className='font-medium'> 
         
         {children}
         

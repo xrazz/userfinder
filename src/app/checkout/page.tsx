@@ -1,14 +1,19 @@
-export const dynamic = "force-dynamic";  
+export const dynamic = "force-dynamic";
 import { cookies } from 'next/headers';
 import CheckoutForm from './CheckoutForm'
-import admin from '../firebaseAdmin';
+import admin, { db } from '../firebaseAdmin';
 import { redirect } from 'next/navigation';
- 
 
 
- 
+
+const MEMBERSHIP_LEVELS = {
+    FREE: 'Free',
+    BASIC: 'Basic',
+    PRO: 'Pro'
+};
 export default async function CheckoutPage() {
-   
+    let profileEmail = '';
+    let membership = MEMBERSHIP_LEVELS.FREE;
     const isUserLoggedIn = async (): Promise<boolean> => {
         try {
 
@@ -20,8 +25,19 @@ export default async function CheckoutPage() {
 
             const decodedToken = await admin.auth().verifyIdToken(token);
 
-            console.log(decodedToken.name)
 
+            profileEmail = decodedToken.email ?? '';
+
+            // Fetch the user's data from Firestore using the decoded token's UID
+            const userSnapshot = await db.collection('users').doc(profileEmail).get();
+
+            if (!userSnapshot.exists) {
+                console.log('No user found with this UID');
+                //   return null;
+            }
+
+            const userData = userSnapshot.data() ?? {};
+            membership = userData['membershipLevel'] ?? MEMBERSHIP_LEVELS.FREE;
 
 
             return !!decodedToken;
@@ -33,8 +49,13 @@ export default async function CheckoutPage() {
     };
     const loggedIn = await isUserLoggedIn();
     if (!loggedIn) {
+
         redirect('/login')
 
+    }
+
+    if (membership === MEMBERSHIP_LEVELS.PRO) {
+        redirect('/search')
     }
 
     return (

@@ -1,93 +1,71 @@
-import Head from 'next/head'
-import Hero from "@/components/ui/hero"
-import Features from "@/components/ui/Features"
-import HowItWorks from "@/components/ui/howitworks"
-import Pricing from "@/components/ui/pricing"
-import FAQ from "@/components/ui/faq"
-import CallToAction from "@/components/ui/cta"
-import Header from "@/components/ui/header"
-import Script from 'next/script'
-import DemoVideo from '@/components/ui/demoVideo'
- 
+export const dynamic = "force-dynamic";
+import { cookies } from "next/headers";
+import admin, { db } from "./firebaseAdmin";
+import SearchUI from "./searchUI";
 
-export default function LandingPage() {
-  const description = "UserFinder AI: The ultimate AI-powered user finder and app promotion tool. Discover target users, gain social media insights, and effectively promote your app on platforms like Reddit, Quora, and Twitter. Enhance user discovery, engage potential customers, and maximize your app's visibility with our market research and competitive analysis tools."
-  const keywords = "App Promotion Tool, AI-Powered User Finder, Discover Target Users, Find Potential Customers, Social Media Insights, Market Research Tool, Targeted Marketing Solutions, User Acquisition Platform, Audience Engagement Insights, Promote Your App Effectively, AI Search Engine for Apps, Identify Interested Users, Connect with Your Audience, Enhance User Discovery, Find Your App Users, Engage with Potential Customers, Search Engine for App Users, User Feedback and Insights, Competitive Analysis Tool, Promote Your Fitness App, Target Users on Reddit Quora Twitter, Bookmark User Conversations, Connect with Fitness Enthusiasts, Maximize App Visibility, Find Conversations About Your App"
+const MEMBERSHIP_LEVELS = {
+  FREE: 'Free',
+  BASIC: 'Basic',
+  PRO: 'Pro'
+};
+
+
+export default async function Dashboard() {
+  let membership = MEMBERSHIP_LEVELS.FREE;
+  let profilePhoto = '';
+  let profileName = '';
+  let profileEmail = '';
+  let userId = '';
+
+  // const getUserInfo = async () => {
+  //   try {
+  //     // Get the token from cookies
+  //     const cookieStore = cookies();
+  //     const token = cookieStore.get('token')?.value;
+
+  //     if (!token) return null; // No token means the user is not logged in
+
+  //     // Verify the token using Firebase Admin SDK
+  //     const decodedToken = await admin.auth().verifyIdToken(token);
+  //     userId = decodedToken.uid;
+  //     profilePhoto = decodedToken.picture ?? '';
+  //     profileName = decodedToken.name;
+  //     profileEmail = decodedToken.email ?? '';
+
+  //     // Fetch the user's data from Firestore using the decoded token's UID
+  //     const userSnapshot = await db.collection('users').doc(profileEmail).get();
+
+  //     if (!userSnapshot.exists) {
+  //       console.log('No user found with this UID');
+  //       return null;
+  //     }
+
+  //     const userData = userSnapshot.data() ?? {};
+  //     membership = userData['membershipLevel']??MEMBERSHIP_LEVELS.FREE;
+  //     // isPremiumCheck = userData['isPremium'] ?? false; // Default to false if undefined
+
+  //     return true; // User is logged in and info fetched successfully
+  //   } catch (error) {
+  //     console.error('Error verifying token or fetching user data:', error);
+  //     return false; // Return false if there's an error
+  //   }
+  // };
+
+  // // Fetch user information and check if logged in
+  // const loggedIn = await getUserInfo();
+
+  // if (!loggedIn) {
+  //   // If the user is not logged in, redirect to login page
+  //   // redirect('/login');
+  // }
 
   return (
-    <>
-      <Head>
-        <title>UserFinder AI | AI-Powered App Promotion & User Discovery Tool</title>
-        <meta name="description" content={description} />
-        <meta name="keywords" content={keywords} />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="canonical" href="https://userfinder.online" />
-        <meta property="og:title" content="UserFinder AI | AI-Powered App Promotion & User Discovery Tool" />
-        <meta property="og:description" content={description} />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://userfinder.online" />
-        <meta property="og:image" content="https://userfinder.online/og-image.jpg" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="UserFinder AI | AI-Powered App Promotion & User Discovery Tool" />
-        <meta name="twitter:description" content={description} />
-        <meta name="twitter:image" content="https://userfinder.online/twitter-image.jpg" />
-      </Head>
-      <Script
-        id="structured-data"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "UserFinder AI",
-            "applicationCategory": "BusinessApplication",
-            "offers": {
-              "@type": "Offer",
-              "price": "10",
-              "priceCurrency": "USD"
-            },
-            "operatingSystem": "Web",
-            "description": description,
-            "url": "https://userfinder.online",
-            "aggregateRating": {
-              "@type": "AggregateRating",
-              "ratingValue": "4.8",
-              "ratingCount": "1024"
-            }
-          })
-        }}
-      />
-      <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-        <Header />
-        <main className="flex-1 pt-16 md:pt-0">
-          <Hero />
-          <DemoVideo />
-          {/* <HeroScrollDemo/> */}
-          <Features />
-          <HowItWorks />
-          <Pricing />
-          <FAQ />
-          <CallToAction />
-        </main>
-        <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
-          <p className="text-xs text-gray-500 dark:text-gray-400">© 2024 UserFinder AI All rights reserved.</p>
-{/*          <p className="text-xs text-gray-500 dark:text-gray-400">CIN - U62013MP2024PTC069972</p> */}
-          <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-            <a className="text-xs hover:underline underline-offset-4" href="/refund">
-              Refund Policy
-            </a>
-            <a className="text-xs hover:underline underline-offset-4" href="/terms">
-              Terms of Service
-            </a>
-            <a className="text-xs hover:underline underline-offset-4" href="/privacy">
-              Privacy Policy
-            </a>
-            <a className="text-xs hover:underline underline-offset-4" href="/about">
-              About Us
-            </a>
-          </nav>
-        </footer>
-      </div>
-    </>
-  )
+    <SearchUI Membership={membership}
+    imageUrl={profilePhoto}
+    name={profileName}
+    email={profileEmail}
+    userId={userId} />
+    
+     
+  );
 }

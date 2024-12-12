@@ -1,52 +1,68 @@
-import React from 'react'
-import { ArrowRight } from "lucide-react"
+'use client'
+import React, { useEffect, useRef, useState } from 'react'
 import { Button } from "@/components/ui/button"
 
+interface CardProps {
+  avatar: string;
+  text: string;
+  supporters: string;
+  rotation: string;
+}
+
 export default function Hero() {
+  const [inView, setInView] = useState(true);
+  const sectionRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setInView(entry.isIntersecting);
+      },
+      { threshold: 0.05 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, []);
+
+   
+
   return (
-    <section className="relative w-full pt-12 md:py-24 lg:py-32 xl:pt-48 overflow-hidden">
-      {/* Grid background */}
-      <div 
-        className="absolute inset-0" 
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, #e5e5e5 1px, transparent 1px),
-            linear-gradient(to bottom, #e5e5e5 1px, transparent 1px)
-          `,
-          backgroundSize: '40px 40px',
-        }}
-      />
-      
-      {/* Fade overlay */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          background: 'radial-gradient(circle, transparent 30%, white 100%)',
-        }}
-      />
-      
-      <div className="container relative z-10 mx-auto px-4">
+    <section
+      ref={sectionRef}
+      className="relative w-full pt-12 mb-5 md:py-2 lg:py-20 xl:pt-48 overflow-hidden"
+    >
+
+
+
+      <div className="container relative z-10 mx-auto px-4 pt-1">
         <div className="flex flex-col items-center space-y-8 text-center">
-          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl/none">
-            Find Your Perfect{' '}
-            <span className="inline-block bg-black text-white px-4 py-2 rounded-lg mt-2 sm:mt-0">
-              Customers
+          <h1 className="text-4xl font-bold font-sans tracking-tighter sm:text-5xl md:text-4xl lg:text-5xl">
+            <span className="flex">
+              Find Your Perfect Customers
             </span>
+            {/* <span className="inline-block bg-black text-white px-4 py-2 rounded-lg mt-2">
+              Customers
+            </span> */}
+
           </h1>
-          <p className="max-w-[700px] text-lg text-gray-600 md:text-xl lg:text-2xl">
-            Discover target users, find potential customers, and get social media insights to effectively promote your app. Our AI search engine for apps helps you connect with your audience and maximize app visibility.
+
+          <p className="max-w-[700px] text-base font-medium text-gray-700 dark:text-gray-300 md:text-lg lg:text-xl">
+
+            Discover and validate your niche, locate targeted users, introduce your product, and gain new users. All within hours!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 mt-8">
-          <Button asChild className="bg-black text-white hover:bg-gray-800 group">
-              <a href="/login">
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </a>
-            </Button>
-            <Button asChild variant="outline" className="group">
-              <a href="/login">
-                Try Demo
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            <Button asChild className="bg-black text-white hover:bg-gray-800 group py-8 px-12 rounded-full text-xl font-semibold min-w-[200px]">
+              <a href="/search">
+                Try Free Now
               </a>
             </Button>
           </div>
