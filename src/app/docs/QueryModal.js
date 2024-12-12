@@ -91,7 +91,7 @@ const QueryTutorialModal = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="hover:bg-secondary"
+                className="hover:bg-gray-700 "
               >
                 <HelpCircle className="h-6 w-6 text-muted-foreground" />
                 <span className="sr-only">Search Help & Tutorial</span>

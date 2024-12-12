@@ -3,6 +3,8 @@ import { initializeApp, getApps, FirebaseApp, FirebaseOptions } from 'firebase/a
 import { getAuth, GoogleAuthProvider, User } from 'firebase/auth';
 import { doc, getDoc, getFirestore, setDoc, updateDoc } from "firebase/firestore";
 import { Timestamp } from "firebase/firestore";
+import { getAnalytics, logEvent, Analytics } from 'firebase/analytics';
+
 const firebaseConfig: FirebaseOptions = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -23,12 +25,31 @@ export const firebaseClientConfig = {
 
 // Ensure the app is initialized only once
 let firebaseApp: FirebaseApp;
+let analytics: Analytics | undefined;
 
 if (!getApps().length) {
   firebaseApp = initializeApp(firebaseConfig);
+  // Initialize analytics only in the browser
+  if (typeof window !== 'undefined') {
+    analytics = getAnalytics(firebaseApp);
+  }
 } else {
   firebaseApp = getApps()[0]; // If already initialized, use the existing app
+  if (typeof window !== 'undefined') {
+    analytics = getAnalytics(firebaseApp);
+  }
 }
+
+// Utility functions for logging analytics events
+export const firebaseAnalytics = {
+  logPageView: (pagePath: string) => {
+    if (typeof window !== 'undefined' && analytics) {
+      logEvent(analytics, 'page_view', {
+        page_path: pagePath,
+      });
+    }
+  },
+};
 
  
 // const auth = getAuth(firebaseApp);

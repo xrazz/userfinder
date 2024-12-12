@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { toast, Toaster } from "sonner"
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
 import { auth, checkAndUpdateMembership, db, reduceUserCredit } from '@/app/firebaseClient'
+import { firebaseAnalytics } from '@/app/firebaseClient' // Ensure this import is added
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import TabDataSkeleton from '@/components/searchProgressUI'
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -306,6 +307,11 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [customUrl, setCustomUrl] = useState('')
     const [credits, setCredits] = useState(0)
     const router = useRouter()
+
+    useEffect(() => {
+        firebaseAnalytics.logPageView('/');
+        console.log("Firebase Analytics: Page view logged for '/'");
+      }, []);
 
     useEffect(() => {
         if (!email) return
@@ -633,15 +639,13 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-1">
                             <Popover>
-
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="w-9 h-9 rounded-[6px]"
-                                >
-                                    <QueryTutorialModal />
-
-                                </Button>
+                                <PopoverTrigger asChild>
+                                    <div
+                                        className=" rounded-[6px] border border-gray-200 hover:color-white"
+                                    >
+                                        <QueryTutorialModal />
+                                    </div>
+                                </PopoverTrigger>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
