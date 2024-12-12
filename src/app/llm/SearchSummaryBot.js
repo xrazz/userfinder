@@ -26,8 +26,8 @@ const SearchSummaryBot = ({ searchData, searchQuery }) => {
         userPrompt: resultsText,
       };
 
-      // Call the backend API
-      const response = await axios.post('http://localhost:3001/api/prompt', payload);
+      // Call the Next.js API route instead of Express backend
+      const response = await axios.post('/api/prompt', payload);
 
       // Extract and set the summary from the API response
       setSummary(response.data.output);

@@ -64,7 +64,7 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
             The questions should be specific to the article's content and encourage critical thinking.
             Format the response as a JSON array of strings.`;
 
-          const response = await axios.post('http://localhost:3001/api/prompt', {
+          const response = await axios.post('/api/prompt', {
             systemPrompt: "You are an AI assistant helping to generate relevant discussion questions based on article content. Focus on generating specific, contextual questions that encourage critical thinking and deeper analysis.",
             userPrompt: prompt
           });
@@ -135,7 +135,7 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
           Here's a snippet of the article: "${post.snippet}". 
           Previous messages in the conversation: ${messages.map(msg => `${msg.sender}: ${msg.content}`).join('\n')}`;
 
-        const response = await axios.post('http://localhost:3001/api/prompt', {
+        const response = await axios.post('/api/prompt', {
           systemPrompt,
           userPrompt: messageText
         });
