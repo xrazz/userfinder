@@ -239,9 +239,7 @@ const QueryTutorialModal = () => {
                             {example.query}
                           </code>
                         </div>
-                        <Button className="w-full">
-                          Execute Example Query <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
+                      
                       </div>
                     )}
                   </CardContent>
