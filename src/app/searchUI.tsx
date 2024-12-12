@@ -22,6 +22,7 @@ import { Badge as ShadcnBadge } from '@/components/ui/badge'
 import Link from 'next/link'
 import SearchSummaryBot from './llm/SearchSummaryBot'
 import ExpandableSearchResult from './llm/ExpandableSearchResult'
+import QueryTutorialModal from './docs/QueryModal'
 
 const MEMBERSHIP_LEVELS = {
     FREE: 'Free',
@@ -620,13 +621,15 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
                 <div className="w-full border border-gray-300 rounded-xl p-2">
                     <div className="flex-grow relative mb-4">
+                    <QueryTutorialModal/>
+
                         <Input
                             onKeyDown={handleKeyDown}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Let's find people..."
                             className="h-full border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                        />
+                            />
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-2">
