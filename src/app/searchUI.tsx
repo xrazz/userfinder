@@ -621,20 +621,27 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
                 <div className="w-full border border-gray-300 rounded-xl p-2">
                     <div className="flex-grow relative mb-4">
-                    <QueryTutorialModal/>
-
                         <Input
                             onKeyDown={handleKeyDown}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Let's find people..."
                             className="h-full border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                            />
+                        />
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-1">
                             <Popover>
+
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="w-9 h-9 rounded-[6px]"
+                                >
+                                    <QueryTutorialModal />
+
+                                </Button>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
