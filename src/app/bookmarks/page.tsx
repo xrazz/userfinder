@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button"
 import { toast, Toaster } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import ExpandableSearchResult from '../llm/ExpandableSearchResult'
+
 
 interface Bookmark {
   title: string
@@ -77,7 +79,7 @@ export default function BookmarksPage( ) {
           <Button
             variant="default"
             size="icon"
-            onClick={() => router.push('/search')}
+            onClick={() => router.push('/')}
             className="rounded-full"
           >
             <Search className="h-5 w-5" />
@@ -127,15 +129,7 @@ export default function BookmarksPage( ) {
                   </CardHeader>
                   <CardFooter className="flex justify-between items-center">
                     <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="rounded-full"
-                        onClick={() => handleEngage(bookmark.link)}
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        <span className="sr-only">Engage</span>
-                      </Button>
+                     
                       <Button
                         variant="outline"
                         size="icon"

@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast, Toaster } from "sonner"
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
-import { auth, checkAndUpdateMembership, db, reduceUserCredit } from '@/app/firebaseClient'
+import { auth, checkAndUpdateMembership, db } from '@/app/firebaseClient'
 import { firebaseAnalytics } from '@/app/firebaseClient' // Ensure this import is added
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import TabDataSkeleton from '@/components/searchProgressUI'
@@ -385,9 +385,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 localStorage.setItem('searchData', JSON.stringify(Results))
                 localStorage.setItem('history', JSON.stringify({ title: searchQuery, data: Results }))
 
-                if (userId) {
-                    reduceUserCredit(email)
-                }
+                // if (userId) {
+                //     reduceUserCredit(email)
+                // }
             } catch (error) {
                 console.error("Error fetching data:", error)
             } finally {
