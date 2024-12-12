@@ -638,14 +638,14 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-1">
-                            <Popover>
-                                <PopoverTrigger asChild>
+
                                     <div
                                         className=" rounded-[6px] border border-gray-200 hover:color-white"
                                     >
                                         <QueryTutorialModal />
                                     </div>
-                                </PopoverTrigger>
+
+                            <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
