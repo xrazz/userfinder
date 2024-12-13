@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast, Toaster } from "sonner"
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
-import { auth, checkAndUpdateMembership, db, reduceUserCredit } from '@/app/firebaseClient'
+// import { auth, checkAndUpdateMembership, db, reduceUserCredit } from '@/app/firebaseClient'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import TabDataSkeleton from '@/components/searchProgressUI'
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -306,19 +306,19 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [credits, setCredits] = useState(0)
     const router = useRouter()
 
-    useEffect(() => {
-        if (!email) return
+    // useEffect(() => {
+    //     if (!email) return
 
-        const userDocRef = doc(db, 'users', email)
-        const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
-            if (docSnapshot.exists()) {
-                const currentCredits = docSnapshot.data().credits
-                setCredits(currentCredits)
-            }
-        })
+    //     const userDocRef = doc(db, 'users', email)
+    //     const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
+    //         if (docSnapshot.exists()) {
+    //             const currentCredits = docSnapshot.data().credits
+    //             setCredits(currentCredits)
+    //         }
+    //     })
 
-        return () => unsubscribe()
-    }, [email])
+    //     return () => unsubscribe()
+    // }, [email])
 
     useEffect(() => {
         if (searchData.length > 0) {
@@ -329,7 +329,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     useEffect(() => {
         const cachedData = JSON.parse(localStorage.getItem(`searchData`) || '[]')
         setSearchData(cachedData)
-        checkAndUpdateMembership(email)
+        // checkAndUpdateMembership(email)
     }, [email])
 
     const handleResultCountChange = (value: string) => {
@@ -379,7 +379,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 localStorage.setItem('history', JSON.stringify({ title: searchQuery, data: Results }))
 
                 if (userId) {
-                    reduceUserCredit(email)
+                    // reduceUserCredit(email)
                 }
             } catch (error) {
                 console.error("Error fetching data:", error)
@@ -430,7 +430,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     }
 
     const handleLogout = async () => {
-        await auth.signOut()
+        // await auth.signOut()
         Cookies.remove("token")
         window.location.reload()
     }
@@ -465,14 +465,14 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 ) : (
                     <div>
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 space-y-2 sm:space-y-0">
-                            <div className="flex items-center space-x-2">
+                            {/* <div className="flex items-center space-x-2">
                                 <Image src={logo} alt={`${platform} Logo`} width={24} height={24} />
                                 <h1 className="text-xl sm:text-2xl font-bold">{platform}</h1>
-                            </div>
+                            </div> */}
                             <span className="text-sm text-muted-foreground">{currentFilter}</span>
                         </div>
                         <SearchSummaryBot searchData={posts} searchQuery={searchQuery} />
-                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2 mt-6">
+                        <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-1 mt-6">
                             {posts.map((post, index) => (
 
                                 <Card key={index} className="flex shadow-none flex-col h-full">
@@ -483,50 +483,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                         onBookmark={handleBookmark}
                                         onCopyUrl={handleCopyUrl}
                                     />
-                                    {/* <CardHeader className="flex-grow">
-                                        <CardTitle className="text-base font-medium leading-tight mb-2 text-blue-600">
-                                            <a
-                                                href={decodeURIComponent(post.link)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="hover:underline line-clamp-2"
-                                            >
-                                                {post.title}
-                                            </a>
-                                        </CardTitle>
-                                        <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{post.snippet}</p>
-                                    </CardHeader>
-                                    <CardFooter className="flex justify-between items-center">
-                                        <div className="flex space-x-2">
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="rounded-full"
-                                                onClick={() => handleEngage(post.link)}
-                                            >
-                                                <MessageSquare className="w-4 h-4" />
-                                                <span className="sr-only">Engage</span>
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="rounded-full"
-                                                onClick={() => handleCopyUrl(post.link)}
-                                            >
-                                                <Link2 className="w-4 h-4" />
-                                                <span className="sr-only">Copy URL</span>
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="rounded-full"
-                                                onClick={() => handleBookmark(post)}
-                                            >
-                                                <Bookmark className="w-4 h-4" />
-                                                <span className="sr-only">Save</span>
-                                            </Button>
-                                        </div>
-                                    </CardFooter> */}
+                                     
                                 </Card>
                             ))}
                         </div>

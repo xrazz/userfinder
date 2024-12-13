@@ -263,9 +263,20 @@ const ExpandableSearchResult = ({ post, onEngage, onBookmark, onCopyUrl }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   return (
-    <Card className="shadow-none">
+    <Card className="shadow-none border-none">
       <CardHeader>
-        <CardTitle className="text-base font-medium leading-tight mb-2 text-blue-600">
+      <CardTitle className="font-semibold text-xs text-blue-600 flex items-center space-x-2">
+  {/* Favicon */}
+  <img 
+    src={`https://www.google.com/s2/favicons?sz=32&domain_url=${new URL(post.link).hostname}`} 
+    alt="favicon" 
+    className="w-4 h-4"
+  />
+  {/* Domain Name */}
+  <span>{new URL(post.link).hostname}</span>
+</CardTitle>
+
+        <CardTitle className="text-base font-medium leading-tight mb-2 text-gray-800">
           <a
             href={decodeURIComponent(post.link)}
             target="_blank"

@@ -42,7 +42,7 @@ const SearchSummaryBot = ({ searchData, searchQuery }) => {
   if (!searchData.length) return null;
 
   return (
-    <div className="mt-8">
+    <div className="mt-1">
       {!showSummary ? (
         <Button
           onClick={generateSummary}
