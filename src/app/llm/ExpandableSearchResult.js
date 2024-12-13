@@ -166,96 +166,102 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-medium">
-            {post.title}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="flex flex-col h-full space-y-4">
-          {messages.length === 0 && (
-            <div className="grid grid-cols-1 gap-2">
-              <p className="text-sm text-muted-foreground mb-2">Suggested questions:</p>
-              {questionsLoading ? (
-                <QuestionsSkeleton />
-              ) : (
-                presetQuestions.map((question, index) => (
-                  <PresetQuestion
-                    key={index}
-                    question={question}
-                    onClick={() => handleSendMessage(question)}
-                    disabled={loading}
-                  />
-                ))
+    <DialogContent className="max-w-2xl h-[80vh] flex flex-col">
+      <DialogHeader>
+        <DialogTitle className="text-lg font-medium">
+          {post.title}
+        </DialogTitle>
+      </DialogHeader>
+  
+      {/* Contenitore per i messaggi */}
+      <div className="flex-grow flex flex-col space-y-4 overflow-hidden">
+        {messages.length === 0 && (
+          <div className="grid grid-cols-1 gap-2">
+            <p className="text-sm text-muted-foreground mb-2">Suggested questions:</p>
+            {questionsLoading ? (
+              <QuestionsSkeleton />
+            ) : (
+              presetQuestions.map((question, index) => (
+                <PresetQuestion
+                  key={index}
+                  question={question}
+                  onClick={() => handleSendMessage(question)}
+                  disabled={loading}
+                />
+              ))
+            )}
+          </div>
+        )}
+  
+        {/* ScrollArea per i messaggi */}
+        <ScrollArea
+          ref={scrollAreaRef}
+          className="flex-grow overflow-y-auto rounded-md border p-4"
+        >
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex gap-2 mb-4 ${
+                message.sender === 'user' ? 'justify-end' : 'justify-start'
+              }`}
+            >
+              {message.sender === 'ai' && (
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src="/logo.svg" />
+                  <AvatarFallback>AI</AvatarFallback>
+                </Avatar>
+              )}
+              <div
+                className={`px-3 py-2 rounded-lg max-w-[80%] ${
+                  message.sender === 'user'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted'
+                }`}
+              >
+                <p className="text-sm">{message.content}</p>
+              </div>
+              {message.sender === 'user' && (
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src="/placeholder.svg" />
+                  <AvatarFallback>U</AvatarFallback>
+                </Avatar>
               )}
             </div>
+          ))}
+          {loading && <TypingIndicator />}
+        </ScrollArea>
+      </div>
+  
+      {/* Footer con Textarea e pulsante */}
+      <div className="flex gap-2 mt-4">
+        <Textarea
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="Type your message..."
+          className="min-h-[80px] flex-grow"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSendMessage();
+            }
+          }}
+        />
+        <Button
+          onClick={() => handleSendMessage()}
+          className="self-end"
+          size="icon"
+          disabled={loading}
+        >
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <SendHorizontal className="h-4 w-4" />
           )}
-
-          <ScrollArea
-            ref={scrollAreaRef}
-            className="flex-grow rounded-md border p-4"
-          >
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-2 mb-4 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {message.sender === 'ai' && (
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src="/logo.svg" />
-                    <AvatarFallback>AI</AvatarFallback>
-                  </Avatar>
-                )}
-                <div
-                  className={`px-3 py-2 rounded-lg max-w-[80%] ${
-                    message.sender === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}
-                >
-                  <p className="text-sm">{message.content}</p>
-                </div>
-                {message.sender === 'user' && (
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src="/placeholder.svg" />
-                    <AvatarFallback>U</AvatarFallback>
-                  </Avatar>
-                )}
-              </div>
-            ))}
-            {loading && <TypingIndicator />}
-          </ScrollArea>
-
-          <div className="flex gap-2">
-            <Textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type your message..."
-              className="min-h-[80px]"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-            />
-            <Button
-              onClick={() => handleSendMessage()}
-              className="self-end"
-              size="icon"
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <SendHorizontal className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </Button>
+      </div>
+    </DialogContent>
+  </Dialog>
+  
   );
 };
 

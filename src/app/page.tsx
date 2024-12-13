@@ -17,47 +17,47 @@ export default async function Dashboard() {
   let profileEmail = '';
   let userId = '';
 
-  // const getUserInfo = async () => {
-  //   try {
-  //     // Get the token from cookies
-  //     const cookieStore = cookies();
-  //     const token = cookieStore.get('token')?.value;
+  const getUserInfo = async () => {
+    try {
+      // Get the token from cookies
+      const cookieStore = cookies();
+      const token = cookieStore.get('token')?.value;
 
-  //     if (!token) return null; // No token means the user is not logged in
+      if (!token) return null; // No token means the user is not logged in
 
-  //     // Verify the token using Firebase Admin SDK
-  //     const decodedToken = await admin.auth().verifyIdToken(token);
-  //     userId = decodedToken.uid;
-  //     profilePhoto = decodedToken.picture ?? '';
-  //     profileName = decodedToken.name;
-  //     profileEmail = decodedToken.email ?? '';
+      // Verify the token using Firebase Admin SDK
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      userId = decodedToken.uid;
+      profilePhoto = decodedToken.picture ?? '';
+      profileName = decodedToken.name;
+      profileEmail = decodedToken.email ?? '';
 
-  //     // Fetch the user's data from Firestore using the decoded token's UID
-  //     const userSnapshot = await db.collection('users').doc(profileEmail).get();
+      // Fetch the user's data from Firestore using the decoded token's UID
+      const userSnapshot = await db.collection('users').doc(profileEmail).get();
 
-  //     if (!userSnapshot.exists) {
-  //       console.log('No user found with this UID');
-  //       return null;
-  //     }
+      if (!userSnapshot.exists) {
+        console.log('No user found with this UID');
+        return null;
+      }
 
-  //     const userData = userSnapshot.data() ?? {};
-  //     membership = userData['membershipLevel']??MEMBERSHIP_LEVELS.FREE;
-  //     // isPremiumCheck = userData['isPremium'] ?? false; // Default to false if undefined
+      const userData = userSnapshot.data() ?? {};
+      membership = userData['membershipLevel']??MEMBERSHIP_LEVELS.FREE;
+      // isPremiumCheck = userData['isPremium'] ?? false; // Default to false if undefined
 
-  //     return true; // User is logged in and info fetched successfully
-  //   } catch (error) {
-  //     console.error('Error verifying token or fetching user data:', error);
-  //     return false; // Return false if there's an error
-  //   }
-  // };
+      return true; // User is logged in and info fetched successfully
+    } catch (error) {
+      console.error('Error verifying token or fetching user data:', error);
+      return false; // Return false if there's an error
+    }
+  };
 
-  // // Fetch user information and check if logged in
-  // const loggedIn = await getUserInfo();
+  // Fetch user information and check if logged in
+  const loggedIn = await getUserInfo();
 
-  // if (!loggedIn) {
-  //   // If the user is not logged in, redirect to login page
-  //   // redirect('/login');
-  // }
+  if (!loggedIn) {
+    // If the user is not logged in, redirect to login page
+    // redirect('/login');
+  }
 
   return (
     <SearchUI Membership={membership}

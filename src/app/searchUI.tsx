@@ -11,7 +11,12 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast, Toaster } from "sonner"
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
+// <<<<<<< HEAD
 // import { auth, checkAndUpdateMembership, db, reduceUserCredit } from '@/app/firebaseClient'
+// =======
+import { auth, checkAndUpdateMembership, db } from '@/app/firebaseClient'
+import { firebaseAnalytics } from '@/app/firebaseClient' // Ensure this import is added
+// >>>>>>> 0667428c8437a394314975e6668606b11805e7c4
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import TabDataSkeleton from '@/components/searchProgressUI'
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,6 +27,7 @@ import { Badge as ShadcnBadge } from '@/components/ui/badge'
 import Link from 'next/link'
 import SearchSummaryBot from './llm/SearchSummaryBot'
 import ExpandableSearchResult from './llm/ExpandableSearchResult'
+import QueryTutorialModal from './docs/QueryModal'
 
 const MEMBERSHIP_LEVELS = {
     FREE: 'Free',
@@ -44,6 +50,8 @@ interface Post {
 }
 
 const sites = [
+
+    { name: 'web', icon: '/logo.svg' },
     { name: 'Reddit.com', icon: '/reddit.svg' },
     { name: 'Twitter.com', icon: '/twitter.svg' },
     { name: 'Quora.com', icon: '/quora.svg' },
@@ -300,25 +308,35 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [searchData, setSearchData] = useState<Post[]>([])
-    const [selectedSite, setSelectedSite] = useState('Reddit.com')
+    const [selectedSite, setSelectedSite] = useState('web')
     const [resultCount, setResultCount] = useState<number>(10)
     const [customUrl, setCustomUrl] = useState('')
     const [credits, setCredits] = useState(0)
     const router = useRouter()
 
+// <<<<<<< HEAD
     // useEffect(() => {
     //     if (!email) return
+// =======
+    useEffect(() => {
+        firebaseAnalytics.logPageView('/');
+        console.log("Firebase Analytics: Page view logged for '/'");
+      }, []);
 
-    //     const userDocRef = doc(db, 'users', email)
-    //     const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
-    //         if (docSnapshot.exists()) {
-    //             const currentCredits = docSnapshot.data().credits
-    //             setCredits(currentCredits)
-    //         }
-    //     })
+    useEffect(() => {
+        if (!email) return
+// >>>>>>> 0667428c8437a394314975e6668606b11805e7c4
 
-    //     return () => unsubscribe()
-    // }, [email])
+        const userDocRef = doc(db, 'users', email)
+        const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const currentCredits = docSnapshot.data().credits
+                setCredits(currentCredits)
+            }
+        })
+
+        return () => unsubscribe()
+    }, [email])
 
     useEffect(() => {
         if (searchData.length > 0) {
@@ -365,7 +383,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
     const handleSearch = async () => {
         if (searchQuery.trim() !== '') {
-            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite
+            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'web' ? '' :selectedSite
 
             setSearchData([])
             setLoading(true)
@@ -378,9 +396,15 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 localStorage.setItem('searchData', JSON.stringify(Results))
                 localStorage.setItem('history', JSON.stringify({ title: searchQuery, data: Results }))
 
+// <<<<<<< HEAD
                 if (userId) {
                     // reduceUserCredit(email)
                 }
+// =======
+                // if (userId) {
+                //     reduceUserCredit(email)
+                // }
+// >>>>>>> 0667428c8437a394314975e6668606b11805e7c4
             } catch (error) {
                 console.error("Error fetching data:", error)
             } finally {
@@ -588,14 +612,21 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-1">
+
+                                    <div
+                                        // className=" rounded-[6px] border border-gray-200 hover:color-white"
+                                    >
+                                        <QueryTutorialModal />
+                                    </div>
+
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
                                         size="icon"
-                                        className="w-9 h-9 rounded-[6px] hover:bg-gray-700 hover:text-white"
+                                        className="w-7 h-7 rounded-[7px] hover:bg-gray-700 hover:text-white"
                                     >
-                                        <Settings2 className="w-4 h-4 md:w-5 md:h-5 shadow-none" />
+                                        <Settings2 className="w-2 h-2 md:w-2 md:h-2 shadow-none" />
                                         <span className="sr-only">Settings</span>
                                     </Button>
                                 </PopoverTrigger>
@@ -659,9 +690,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                             onClick={handleSearch}
                             variant="secondary"
                             size="icon"
-                            className="w-9 h-9 rounded-full  text-white bg-gray-700  hover:bg-gray-800 hover:text-white"
+                            className="w-8 h-8 rounded-full  text-white bg-gray-700  hover:bg-gray-800 hover:text-white"
                         >
-                            <Search className="w-4 h-4 md:w-5 md:h-5" />
+                            <Search className="w-2 h-2 md:w-2 md:h-2" />
                             <span className="sr-only">Search</span>
                         </Button>
                     </div>
