@@ -520,10 +520,10 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     return (
         <main className="min-h-screen bg-background">
             <Toaster position="bottom-center" />
-            <header className="w-full py-4 px-6 flex justify-between items-center bg-background border-none">
+            <header className="w-full -mt-5 px-6 flex justify-between items-center bg-background border-none">
                 <div className="flex items-center">
-                    <Image src="/logo.svg" alt="Logo" width={32} height={32} />
-                    <h1 className="ml-2 text-xl font-bold hidden sm:block">Search</h1>
+                    <Image src="/logo.png" alt="Logo" width={150} height={150} />
+                    {/* <h1 className="ml-2 text-xl font-bold hidden sm:block">Search</h1> */}
                 </div>
                 <div className="flex items-center space-x-4">
                     {userId ? (
@@ -605,7 +605,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                             onKeyDown={handleKeyDown}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Let's find people..."
+                            placeholder="Let's find..."
                             className="h-full border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                         />
                     </div>
@@ -698,7 +698,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     </div>
                 </div>
 
-                <div className="flex mt-3 flex-wrap gap-2 justify-center">
+                {/* <div className="flex mt-3 flex-wrap gap-2 justify-center">
                     <Button
                         variant="outline"
                         className="group text-[9px] font-bold h-4 px-2 rounded-full border shadow-none"
@@ -715,7 +715,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                         Do [target market] need [product idea]?
                         <ArrowUp className="h-2 w-2 rotate-45 ml-1" />
                     </Button>
-                </div>
+                </div> */}
 
                 {loading && (<TabDataSkeleton />)}
                 <TabData
