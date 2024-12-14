@@ -51,7 +51,7 @@ interface Post {
 
 const sites = [
 
-    { name: 'web', icon: '/logo.svg' },
+    { name: 'Universal search', icon: '/logo.svg' },
     { name: 'Reddit.com', icon: '/reddit.svg' },
     { name: 'Twitter.com', icon: '/twitter.svg' },
     { name: 'Quora.com', icon: '/quora.svg' },
@@ -308,7 +308,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [searchData, setSearchData] = useState<Post[]>([])
-    const [selectedSite, setSelectedSite] = useState('web')
+    const [selectedSite, setSelectedSite] = useState('Universal search')
     const [resultCount, setResultCount] = useState<number>(10)
     const [customUrl, setCustomUrl] = useState('')
     const [credits, setCredits] = useState(0)
@@ -383,7 +383,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
     const handleSearch = async () => {
         if (searchQuery.trim() !== '') {
-            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'web' ? '' :selectedSite
+            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' :selectedSite
 
             setSearchData([])
             setLoading(true)
