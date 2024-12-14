@@ -20,8 +20,8 @@ const myFont = localFont({
   display: 'swap',
 })
 export const metadata: Metadata = {
-  title: "UserFinder AI",
-  description: "Made for Saas",
+  title: "Lexy",
+  description: "Think it. Find it.",
 };
 
 export default function RootLayout({

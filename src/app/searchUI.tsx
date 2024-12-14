@@ -11,7 +11,12 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast, Toaster } from "sonner"
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
-import { auth, checkAndUpdateMembership, db, reduceUserCredit } from '@/app/firebaseClient'
+// <<<<<<< HEAD
+// import { auth, checkAndUpdateMembership, db, reduceUserCredit } from '@/app/firebaseClient'
+// =======
+import { auth, checkAndUpdateMembership, db } from '@/app/firebaseClient'
+import { firebaseAnalytics } from '@/app/firebaseClient' // Ensure this import is added
+// >>>>>>> 0667428c8437a394314975e6668606b11805e7c4
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import TabDataSkeleton from '@/components/searchProgressUI'
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,6 +25,9 @@ import Cookies from "js-cookie"
 import { Badge } from '@radix-ui/themes'
 import { Badge as ShadcnBadge } from '@/components/ui/badge'
 import Link from 'next/link'
+import SearchSummaryBot from './llm/SearchSummaryBot'
+import ExpandableSearchResult from './llm/ExpandableSearchResult'
+import QueryTutorialModal from './docs/QueryModal'
 
 const MEMBERSHIP_LEVELS = {
     FREE: 'Free',
@@ -42,6 +50,8 @@ interface Post {
 }
 
 const sites = [
+
+    { name: 'web', icon: '/logo.svg' },
     { name: 'Reddit.com', icon: '/reddit.svg' },
     { name: 'Twitter.com', icon: '/twitter.svg' },
     { name: 'Quora.com', icon: '/quora.svg' },
@@ -298,14 +308,24 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [searchData, setSearchData] = useState<Post[]>([])
-    const [selectedSite, setSelectedSite] = useState('Reddit.com')
+    const [selectedSite, setSelectedSite] = useState('web')
     const [resultCount, setResultCount] = useState<number>(10)
     const [customUrl, setCustomUrl] = useState('')
     const [credits, setCredits] = useState(0)
     const router = useRouter()
 
+// <<<<<<< HEAD
+    // useEffect(() => {
+    //     if (!email) return
+// =======
+    useEffect(() => {
+        firebaseAnalytics.logPageView('/');
+        console.log("Firebase Analytics: Page view logged for '/'");
+      }, []);
+
     useEffect(() => {
         if (!email) return
+// >>>>>>> 0667428c8437a394314975e6668606b11805e7c4
 
         const userDocRef = doc(db, 'users', email)
         const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
@@ -327,7 +347,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     useEffect(() => {
         const cachedData = JSON.parse(localStorage.getItem(`searchData`) || '[]')
         setSearchData(cachedData)
-        checkAndUpdateMembership(email)
+        // checkAndUpdateMembership(email)
     }, [email])
 
     const handleResultCountChange = (value: string) => {
@@ -363,7 +383,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
     const handleSearch = async () => {
         if (searchQuery.trim() !== '') {
-            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite
+            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'web' ? '' :selectedSite
 
             setSearchData([])
             setLoading(true)
@@ -376,9 +396,15 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 localStorage.setItem('searchData', JSON.stringify(Results))
                 localStorage.setItem('history', JSON.stringify({ title: searchQuery, data: Results }))
 
+// <<<<<<< HEAD
                 if (userId) {
-                    reduceUserCredit(email)
+                    // reduceUserCredit(email)
                 }
+// =======
+                // if (userId) {
+                //     reduceUserCredit(email)
+                // }
+// >>>>>>> 0667428c8437a394314975e6668606b11805e7c4
             } catch (error) {
                 console.error("Error fetching data:", error)
             } finally {
@@ -428,7 +454,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     }
 
     const handleLogout = async () => {
-        await auth.signOut()
+        // await auth.signOut()
         Cookies.remove("token")
         window.location.reload()
     }
@@ -463,59 +489,25 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 ) : (
                     <div>
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 space-y-2 sm:space-y-0">
-                            <div className="flex items-center space-x-2">
+                            {/* <div className="flex items-center space-x-2">
                                 <Image src={logo} alt={`${platform} Logo`} width={24} height={24} />
                                 <h1 className="text-xl sm:text-2xl font-bold">{platform}</h1>
-                            </div>
+                            </div> */}
                             <span className="text-sm text-muted-foreground">{currentFilter}</span>
                         </div>
-                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
+                        <SearchSummaryBot searchData={posts} searchQuery={searchQuery} />
+                        <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-1 mt-6">
                             {posts.map((post, index) => (
+
                                 <Card key={index} className="flex shadow-none flex-col h-full">
-                                    <CardHeader className="flex-grow">
-                                        <CardTitle className="text-base font-medium leading-tight mb-2 text-blue-600">
-                                            <a
-                                                href={decodeURIComponent(post.link)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="hover:underline line-clamp-2"
-                                            >
-                                                {post.title}
-                                            </a>
-                                        </CardTitle>
-                                        <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{post.snippet}</p>
-                                    </CardHeader>
-                                    <CardFooter className="flex justify-between items-center">
-                                        <div className="flex space-x-2">
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="rounded-full"
-                                                onClick={() => handleEngage(post.link)}
-                                            >
-                                                <MessageSquare className="w-4 h-4" />
-                                                <span className="sr-only">Engage</span>
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="rounded-full"
-                                                onClick={() => handleCopyUrl(post.link)}
-                                            >
-                                                <Link2 className="w-4 h-4" />
-                                                <span className="sr-only">Copy URL</span>
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="rounded-full"
-                                                onClick={() => handleBookmark(post)}
-                                            >
-                                                <Bookmark className="w-4 h-4" />
-                                                <span className="sr-only">Save</span>
-                                            </Button>
-                                        </div>
-                                    </CardFooter>
+                                    <ExpandableSearchResult
+                                        key={index}
+                                        post={post}
+                                        onEngage={handleEngage}
+                                        onBookmark={handleBookmark}
+                                        onCopyUrl={handleCopyUrl}
+                                    />
+                                     
                                 </Card>
                             ))}
                         </div>
@@ -528,10 +520,10 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     return (
         <main className="min-h-screen bg-background">
             <Toaster position="bottom-center" />
-            <header className="w-full py-4 px-6 flex justify-between items-center bg-background border-none">
+            <header className="w-full -mt-5 px-6 flex justify-between items-center bg-background border-none">
                 <div className="flex items-center">
-                    <Image src="/logo.svg" alt="Logo" width={32} height={32} />
-                    <h1 className="ml-2 text-xl font-bold hidden sm:block">Search</h1>
+                    <Image src="/logo.png" alt="Logo" width={150} height={150} />
+                    {/* <h1 className="ml-2 text-xl font-bold hidden sm:block">Search</h1> */}
                 </div>
                 <div className="flex items-center space-x-4">
                     {userId ? (
@@ -613,21 +605,28 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                             onKeyDown={handleKeyDown}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Let's find people..."
+                            placeholder="Let's find..."
                             className="h-full border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                         />
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-1">
+
+                                    <div
+                                        // className=" rounded-[6px] border border-gray-200 hover:color-white"
+                                    >
+                                        <QueryTutorialModal />
+                                    </div>
+
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
                                         size="icon"
-                                        className="w-9 h-9 rounded-[6px] hover:bg-gray-700 hover:text-white"
+                                        className="w-7 h-7 rounded-[7px] hover:bg-gray-700 hover:text-white"
                                     >
-                                        <Settings2 className="w-4 h-4 md:w-5 md:h-5 shadow-none" />
+                                        <Settings2 className="w-2 h-2 md:w-2 md:h-2 shadow-none" />
                                         <span className="sr-only">Settings</span>
                                     </Button>
                                 </PopoverTrigger>
@@ -691,15 +690,15 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                             onClick={handleSearch}
                             variant="secondary"
                             size="icon"
-                            className="w-9 h-9 rounded-full  text-white bg-gray-700  hover:bg-gray-800 hover:text-white"
+                            className="w-8 h-8 rounded-full  text-white bg-gray-700  hover:bg-gray-800 hover:text-white"
                         >
-                            <Search className="w-4 h-4 md:w-5 md:h-5" />
+                            <Search className="w-2 h-2 md:w-2 md:h-2" />
                             <span className="sr-only">Search</span>
                         </Button>
                     </div>
                 </div>
 
-                <div className="flex mt-3 flex-wrap gap-2 justify-center">
+                {/* <div className="flex mt-3 flex-wrap gap-2 justify-center">
                     <Button
                         variant="outline"
                         className="group text-[9px] font-bold h-4 px-2 rounded-full border shadow-none"
@@ -716,7 +715,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                         Do [target market] need [product idea]?
                         <ArrowUp className="h-2 w-2 rotate-45 ml-1" />
                     </Button>
-                </div>
+                </div> */}
 
                 {loading && (<TabDataSkeleton />)}
                 <TabData
