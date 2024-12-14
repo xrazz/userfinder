@@ -6,79 +6,70 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { 
+  Globe, 
+  Database, 
+  Layers, 
+  Search, 
+  Zap, 
+  Compass, 
   BookOpen, 
-  Users, 
-  TrendingUp, 
-  HelpCircle, 
-  ArrowRight, 
-  Target, 
-  Lightbulb, 
-  Filter, 
-  Search 
+  PieChart, 
+  Archive,
+  HelpCircle
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-const QueryTutorialModal = () => {
+const UniversalSearchTutorial = () => {
   const [activeExample, setActiveExample] = useState(null);
-  const [activeTab, setActiveTab] = useState("examples");
+  const [activeTab, setActiveTab] = useState("capabilities");
 
-  const examples = [
+  const searchCapabilities = [
     {
-      title: "Community Insights",
-      query: "Top discussions about AI in tech communities",
-      description: "Uncover nuanced perspectives from tech professionals",
-      difficulty: "Beginner",
-      tags: ["AI", "Technology", "Community Trends"]
+      icon: <Globe className="w-6 h-6 text-blue-500" />,
+      title: "Comprehensive Information Retrieval",
+      description: "Search across academic repositories, forums, social platforms, and deep web archives simultaneously",
+      techniques: [
+        "Multi-source aggregation",
+        "Real-time content indexing",
+        "Cross-platform insights"
+      ]
     },
     {
-      title: "User Sentiment",
-      query: "Startup founders' challenges with product development",
-      description: "Explore real-world experiences and pain points",
-      difficulty: "Intermediate",
-      tags: ["Startups", "Product Management", "User Experience"]
+      icon: <Database className="w-6 h-6 text-green-500" />,
+      title: "Advanced Content Exploration",
+      description: "Dive deep into specialized knowledge bases, from research papers to niche community discussions",
+      techniques: [
+        "Semantic search",
+        "Context-aware results",
+        "Intelligent content ranking"
+      ]
     },
     {
-      title: "Market Trends",
-      query: "Developer attitudes towards emerging programming frameworks",
-      description: "Identify cutting-edge technological shifts",
-      difficulty: "Advanced",
-      tags: ["Software Development", "Technology Trends", "Professional Insights"]
+      icon: <Layers className="w-6 h-6 text-purple-500" />,
+      title: "Intelligent Information Synthesis",
+      description: "Transform raw data into actionable insights with advanced analysis and correlation",
+      techniques: [
+        "AI-powered summarization",
+        "Trend detection",
+        "Credibility assessment"
+      ]
     }
   ];
 
-  const useCases = [
+  const searchExamples = [
     {
-      icon: <Users className="w-6 h-6 text-blue-500" />,
-      title: "User Research",
-      description: "Collect authentic user insights, pain points, and experiences across diverse communities",
-      techniques: [
-        "Multi-platform search",
-        "Sentiment analysis",
-        "Contextual filtering"
-      ],
-      example: "Query: 'Remote work challenges for software engineers'"
+      title: "Multidimensional Research",
+      query: "Climate change impact on urban infrastructure",
+      description: "Comprehensive exploration across scientific, policy, and community perspectives",
+      complexity: "Advanced",
+      domains: ["Academic", "Policy", "Community Discourse"]
     },
     {
-      icon: <TrendingUp className="w-6 h-6 text-green-500" />,
-      title: "Trend Analysis",
-      description: "Detect emerging trends, popular discussions, and evolving sentiments in specific domains",
-      techniques: [
-        "Time-based trend tracking",
-        "Cross-platform comparison",
-        "Sentiment tracking"
-      ],
-      example: "Query: 'AI tools transforming startup workflows'"
-    },
-    {
-      icon: <BookOpen className="w-6 h-6 text-purple-500" />,
-      title: "Expert Knowledge Mining",
-      description: "Deep dive into community discussions, expert opinions, and collective wisdom",
-      techniques: [
-        "Expert identification",
-        "Knowledge clustering",
-        "Credibility scoring"
-      ],
-      example: "Query: 'Most recommended learning resources for machine learning'"
+      title: "Professional Ecosystem Insights",
+      query: "Emerging technologies in renewable energy sector",
+      description: "Synthesize insights from research, industry reports, and professional networks",
+      complexity: "Expert",
+      domains: ["Research", "Industry", "Professional Networks"]
     }
   ];
 
@@ -91,105 +82,84 @@ const QueryTutorialModal = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="hover:bg-gray-700 "
+                className="hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <HelpCircle className="h-6 w-6 text-muted-foreground" />
-                <span className="sr-only">Search Help & Tutorial</span>
+                <span className="sr-only">Search Guide</span>
               </Button>
             </DialogTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            Search Tutorial & Advanced Tips
+            Universal Search Guide
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
 
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <Search className="w-7 h-7" />
-            Advanced Audience Search Guide
+            <Compass className="w-7 h-7" />
+            Universal Information Discovery
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-8">
-          {/* Enhanced Hero Section */}
-          <div className="text-center space-y-5 bg-secondary/30 p-6 rounded-lg">
-            <h2 className="text-3xl font-bold flex items-center justify-center gap-3">
-              <Target className="w-8 h-8 text-primary" /> 
-              Precision Insights Across Communities
+        <div className="space-y-6">
+          {/* Hero Section */}
+          <div className="text-center bg-secondary/10 p-6 rounded-lg">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">
+              Beyond Traditional Search: Intelligent Information Retrieval
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Transform raw online discussions into actionable intelligence. Our advanced search empowers you to extract meaningful insights from diverse digital landscapes.
+              Unlock comprehensive insights by searching across multiple knowledge ecosystems. Our universal search transcends traditional boundaries, connecting diverse information sources.
             </p>
           </div>
 
-          {/* Filtering Options with Enhanced Explanation */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <Filter className="w-6 h-6" /> 
-                Intelligent Search Filtering
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <p className="text-lg">Leverage granular filtering to precision-target your research:</p>
-              
-              <div className="grid md:grid-cols-3 gap-4">
-                <div>
-                  <h4 className="font-semibold mb-2">⏰ Temporal Precision</h4>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li>Today's pulse</li>
-                    <li>Last week's conversations</li>
-                    <li>Historical trends (2 years)</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">🌐 Source Diversity</h4>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li>Reddit</li>
-                    <li>Twitter/X</li>
-                    <li>Dev.to, Hacker News</li>
-                    <li>Custom domains</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">📊 Result Calibration</h4>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li>10 targeted results</li>
-                    <li>25 comprehensive insights</li>
-                    <li>50 deep-dive analysis</li>
-                  </ul>
-                </div>
-              </div>
-              
-              <Alert variant="default">
-                <Lightbulb className="h-5 w-5" />
-                <AlertTitle>Pro Insight</AlertTitle>
-                <AlertDescription>
-                  Combine filters strategically to uncover hidden insights that generic searches miss.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-
-          {/* Enhanced Interactive Examples */}
+          {/* Tabs for Exploring Search Capabilities */}
           <Tabs 
             value={activeTab} 
             onValueChange={setActiveTab} 
-            className="space-y-4"
+            className="w-full"
           >
-            <TabsList>
-              <TabsTrigger value="examples">
-                <Search className="mr-2 h-4 w-4" /> Example Queries
+            <TabsList className="flex flex-wrap justify-center mb-6">
+              <TabsTrigger value="capabilities" className="flex-1 min-w-[150px]">
+                <Zap className="mr-2 h-4 w-4" /> Search Capabilities
               </TabsTrigger>
-              <TabsTrigger value="usecases">
-                <Target className="mr-2 h-4 w-4" /> Use Case Strategies
+              <TabsTrigger value="examples" className="flex-1 min-w-[150px]">
+                <BookOpen className="mr-2 h-4 w-4" /> Search Examples
               </TabsTrigger>
             </TabsList>
 
+            {/* Capabilities Tab */}
+            <TabsContent value="capabilities">
+              <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-4">
+                {searchCapabilities.map((capability, index) => (
+                  <Card key={index} className="hover:border-primary transition-colors">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        {capability.icon}
+                        <h3 className="font-semibold text-lg">{capability.title}</h3>
+                      </div>
+                      <p className="text-muted-foreground mb-4">{capability.description}</p>
+                      <div>
+                        <h4 className="font-medium mb-2">Key Techniques:</h4>
+                        <ul className="space-y-1 text-sm">
+                          {capability.techniques.map(tech => (
+                            <li key={tech} className="flex items-center">
+                              <PieChart className="mr-2 h-3 w-3 text-primary" />
+                              {tech}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            {/* Examples Tab */}
             <TabsContent value="examples" className="space-y-4">
-              {examples.map((example, index) => (
+              {searchExamples.map((example, index) => (
                 <Card 
                   key={index} 
                   className={`
@@ -201,28 +171,27 @@ const QueryTutorialModal = () => {
                   onClick={() => setActiveExample(activeExample === index ? null : index)}
                 >
                   <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col md:flex-row justify-between items-start">
                       <div>
                         <h3 className="font-semibold text-lg mb-2">{example.title}</h3>
                         <p className="text-muted-foreground mb-3">{example.description}</p>
-                        <div className="flex gap-2">
-                          {example.tags.map(tag => (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {example.domains.map(domain => (
                             <span 
-                              key={tag} 
+                              key={domain} 
                               className="bg-secondary px-2 py-1 rounded-full text-xs"
                             >
-                              {tag}
+                              {domain}
                             </span>
                           ))}
                           <span className={`
                             px-2 py-1 rounded-full text-xs font-medium
                             ${
-                              example.difficulty === 'Beginner' ? 'bg-green-100 text-green-800' :
-                              example.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                              example.complexity === 'Advanced' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-red-100 text-red-800'
                             }
                           `}>
-                            {example.difficulty}
+                            {example.complexity}
                           </span>
                         </div>
                       </div>
@@ -235,79 +204,49 @@ const QueryTutorialModal = () => {
                             <Search className="mr-2 h-4 w-4" />
                             Example Query:
                           </p>
-                          <code className="bg-secondary-foreground/10 px-3 py-2 rounded-md block">
+                          <code className="bg-secondary-foreground/10 px-3 py-2 rounded-md block w-full overflow-x-auto">
                             {example.query}
                           </code>
                         </div>
-                      
                       </div>
                     )}
                   </CardContent>
                 </Card>
               ))}
             </TabsContent>
-
-            <TabsContent value="usecases" className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {useCases.map((useCase, index) => (
-                <Card key={index} className="hover:border-primary transition-colors">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      {useCase.icon}
-                      <h3 className="font-semibold text-lg">{useCase.title}</h3>
-                    </div>
-                    <p className="text-muted-foreground mb-4">{useCase.description}</p>
-                    <div className="mb-4">
-                      <h4 className="font-medium mb-2">Key Techniques:</h4>
-                      <ul className="space-y-1 text-sm">
-                        {useCase.techniques.map(tech => (
-                          <li key={tech} className="flex items-center">
-                            <ArrowRight className="mr-2 h-3 w-3 text-primary" />
-                            {tech}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <Alert>
-                      <AlertTitle>Example Exploration</AlertTitle>
-                      <AlertDescription>{useCase.example}</AlertDescription>
-                    </Alert>
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
           </Tabs>
 
-          {/* Enhanced Pro Tips */}
+          {/* Pro Tips */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
-                <Lightbulb className="w-6 h-6" /> 
-                Pro Strategies for Intelligent Search
+                <Archive className="w-6 h-6" /> 
+                Advanced Search Strategies
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-semibold mb-3">🎯 Query Crafting</h4>
+                  <h4 className="font-semibold mb-3">🎯 Query Optimization</h4>
                   <ul className="space-y-2 text-sm">
-                    <li>• Precision over breadth</li>
-                    <li>• Use specific, contextual language</li>
+                    <li>• Use precise, contextual language</li>
                     <li>• Incorporate domain-specific terminology</li>
+                    <li>• Leverage advanced search operators</li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-3">🔍 Search Optimization</h4>
+                  <h4 className="font-semibold mb-3">🔍 Content Navigation</h4>
                   <ul className="space-y-2 text-sm">
-                    <li>• Layer multiple filters strategically</li>
-                    <li>• Experiment with result volumes</li>
-                    <li>• Cross-reference diverse sources</li>
+                    <li>• Explore cross-domain connections</li>
+                    <li>• Verify information credibility</li>
+                    <li>• Synthesize insights from multiple sources</li>
                   </ul>
                 </div>
               </div>
               <Alert variant="default">
                 <AlertTitle>Continuous Learning</AlertTitle>
                 <AlertDescription>
-                  Each search is an opportunity to refine your research skills. Adapt and evolve your approach continuously.
+                  Refine your search skills by experimenting with different approaches and exploring diverse knowledge ecosystems.
                 </AlertDescription>
               </Alert>
             </CardContent>
@@ -318,4 +257,4 @@ const QueryTutorialModal = () => {
   );
 };
 
-export default QueryTutorialModal;
+export default UniversalSearchTutorial;
