@@ -5,7 +5,7 @@ import { MessageSquare, ArrowDown, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import axios from 'axios';
 
-const SearchSummaryBot = ({ searchData, searchQuery }) => {
+const SearchSummaryBot = ({ searchData, searchQuery, email }) => {
   const [showSummary, setShowSummary] = useState(false);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState('');
@@ -24,6 +24,7 @@ const SearchSummaryBot = ({ searchData, searchQuery }) => {
       const payload = {
         systemPrompt: `Provide a summary for the following search results related to \"${searchQuery}\":`,
         userPrompt: resultsText,
+        email: email
       };
 
       // Call the Next.js API route instead of Express backend

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { toast, Toaster } from "sonner"
-import { doc, onSnapshot } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore'
 import { auth, db, firebaseAnalytics } from '@/app/firebaseClient'
 import Cookies from "js-cookie"
 import { Header } from '@/components/Header'
@@ -83,18 +83,55 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     }, [])
 
     useEffect(() => {
-        if (!email) return
+        if (!email) {
+            // Handle non-registered users' credits
+            const guestCredits = Cookies.get('guestCredits');
+            const lastResetDate = Cookies.get('guestCreditsLastReset');
+            const today = new Date().toDateString();
 
-        const userDocRef = doc(db, 'users', email)
-        const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
-            if (docSnapshot.exists()) {
-                const currentCredits = docSnapshot.data().credits
-                setCredits(currentCredits)
+            if (!guestCredits || !lastResetDate || lastResetDate !== today) {
+                Cookies.set('guestCredits', '3', { 
+                    expires: new Date(new Date().setHours(24, 0, 0, 0)) // Expires at midnight
+                });
+                Cookies.set('guestCreditsLastReset', today, {
+                    expires: new Date(new Date().setHours(24, 0, 0, 0))
+                });
+                setCredits(3);
+            } else {
+                setCredits(parseInt(guestCredits));
             }
-        })
+            return;
+        }
 
-        return () => unsubscribe()
-    }, [email])
+        // Handle registered users' credits
+        const userDocRef = doc(db, 'users', email);
+        const unsubscribe = onSnapshot(userDocRef, async (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const userData = docSnapshot.data();
+                const lastReset = userData.lastCreditReset?.toDate();
+                const now = new Date();
+                
+                // Check if we need to reset credits (new day)
+                if (!lastReset || lastReset.toDateString() !== now.toDateString()) {
+                    // Reset credits to 10 at the start of each day
+                    await updateDoc(userDocRef, {
+                        credits: 10,
+                        lastCreditReset: now
+                    });
+                } else {
+                    setCredits(userData.credits || 0);
+                }
+            } else {
+                // Initialize new user with 10 credits
+                await setDoc(userDocRef, {
+                    credits: 10,
+                    lastCreditReset: new Date()
+                });
+            }
+        });
+
+        return () => unsubscribe();
+    }, [email]);
 
     useEffect(() => {
         if (searchData.length > 0) {
@@ -292,6 +329,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     onBookmark={handleBookmark}
                     onEngage={handleEngage}
                     onCopyUrl={handleCopyUrl}
+                    email={email}
                 />
             </div>
         </main>

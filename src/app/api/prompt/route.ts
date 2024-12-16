@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import axios from 'axios';
 import { db } from '@/app/firebaseClient';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
   try {
@@ -14,8 +15,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // If email is provided (user is logged in), deduct credit
+    // Handle credits check and deduction
     if (email) {
+      // Registered user
       const userRef = doc(db, 'users', email);
       const userDoc = await getDoc(userRef);
 
@@ -24,7 +26,7 @@ export async function POST(request: Request) {
         
         if (currentCredits <= 0) {
           return NextResponse.json(
-            { error: 'No credits remaining.' },
+            { error: 'No credits remaining. Credits reset daily.' },
             { status: 403 }
           );
         }
@@ -33,10 +35,23 @@ export async function POST(request: Request) {
         await updateDoc(userRef, {
           credits: currentCredits - 1
         });
-
-        // Add console log to track credit deduction
-        console.log(`Credit deducted for user ${email}. Credits remaining: ${currentCredits - 1}`);
       }
+    } else {
+      // Guest user - handle credits through cookies
+      const cookieStore = cookies();
+      const guestCredits = parseInt(cookieStore.get('guestCredits')?.value || '3');
+      
+      if (guestCredits <= 0) {
+        return NextResponse.json(
+          { error: 'No guest credits remaining. Please sign up for more credits.' },
+          { status: 403 }
+        );
+      }
+
+      // Deduct guest credit and update cookie
+      cookieStore.set('guestCredits', (guestCredits - 1).toString(), {
+        expires: new Date(new Date().setHours(24, 0, 0, 0)) // Expires at midnight
+      });
     }
 
     const payload = {

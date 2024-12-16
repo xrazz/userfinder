@@ -19,6 +19,7 @@ interface SearchResultsProps {
     onBookmark: (post: Post) => void
     onEngage: (link: string) => void
     onCopyUrl: (link: string) => void
+    email?: string
 }
 
 export const SearchResults: React.FC<SearchResultsProps> = ({
@@ -29,7 +30,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     currentFilter,
     onBookmark,
     onEngage,
-    onCopyUrl
+    onCopyUrl,
+    email
 }) => {
     if (posts.length === 0) {
         return <div></div>
@@ -40,7 +42,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 space-y-2 sm:space-y-0">
                 <span className="text-sm text-muted-foreground">{currentFilter}</span>
             </div>
-            <SearchSummaryBot searchData={posts} searchQuery={searchQuery} />
+            <SearchSummaryBot searchData={posts} searchQuery={searchQuery} email={email} />
             <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-1 mt-6">
                 {posts.map((post, index) => (
                     <Card key={index} className="flex shadow-none flex-col h-full">
@@ -50,6 +52,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                             onEngage={onEngage}
                             onBookmark={onBookmark}
                             onCopyUrl={onCopyUrl}
+                            email={email}
                         />
                     </Card>
                 ))}

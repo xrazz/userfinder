@@ -95,7 +95,6 @@ export default function SubscriptionPage({ userId, email }: { userId: string, em
         </Card>
 
         <div className="text-center text-sm text-muted-foreground">
-          <p>Free plan: 3 credits per day</p>
           <p>Pro plan: 100 credits per day</p>
         </div>
       </div>

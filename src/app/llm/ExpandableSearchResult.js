@@ -55,7 +55,7 @@ const QuestionsSkeleton = () => (
   </div>
 );
 
-const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post }) => {
+const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post, email }) => {
   const [aiSummary, setAiSummary] = useState('');
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(!isCollapsed);
@@ -72,7 +72,8 @@ const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post }) => {
             Title: "${pageContent?.summary?.title || post?.title}"
             Content: "${pageContent?.summary?.mainContent || post?.snippet}"
             
-            Focus on the main takeaways and why they matter.`
+            Focus on the main takeaways and why they matter.`,
+          email: email
         });
 
         setAiSummary(response.data.output);
@@ -87,7 +88,7 @@ const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post }) => {
     if (pageContent?.summary || post?.snippet) {
       generateSummary();
     }
-  }, [pageContent, post]);
+  }, [pageContent, post, email]);
 
   if (!pageContent?.summary && !post?.snippet) return null;
 
@@ -155,7 +156,7 @@ const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post }) => {
   );
 };
 
-const DiscussionDialog = ({ post, isOpen, onClose }) => {
+const DiscussionDialog = ({ post, isOpen, onClose, email }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -288,7 +289,6 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
       setLoading(true);
 
       try {
-        // Construct a comprehensive system prompt using scraped content
         const systemPrompt = pageContent 
           ? `You are having a detailed discussion about the article:
              Title: "${pageContent.summary.title}"
@@ -302,7 +302,8 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
 
         const response = await axios.post('/api/prompt', {
           systemPrompt,
-          userPrompt: messageText
+          userPrompt: messageText,
+          email: email
         });
 
         const aiMessage = {
@@ -342,6 +343,7 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
               post={post}
               isLoading={summaryLoading}
               isCollapsed={hasChatStarted}
+              email={email}
             />
           </DialogHeader>
         </div>
@@ -475,7 +477,7 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
   );
 };
 
-const ExpandableSearchResult = ({ post, onEngage, onBookmark, onCopyUrl }) => {
+const ExpandableSearchResult = ({ post, onEngage, onBookmark, onCopyUrl, email }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   return (
@@ -540,6 +542,7 @@ const ExpandableSearchResult = ({ post, onEngage, onBookmark, onCopyUrl }) => {
         post={post}
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
+        email={email}
       />
     </Card>
   );
