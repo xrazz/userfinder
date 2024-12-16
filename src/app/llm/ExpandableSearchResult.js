@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MessageSquare, Bookmark, Link2, SendHorizontal, Loader2, CalendarIcon, UserIcon, SparklesIcon, FileTextIcon } from 'lucide-react';
+import { MessageSquare, Bookmark, Link2, SendHorizontal, Loader2, CalendarIcon, UserIcon, SparklesIcon, FileTextIcon, ChevronUpIcon, ChevronDownIcon } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -58,6 +58,7 @@ const QuestionsSkeleton = () => (
 const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post }) => {
   const [aiSummary, setAiSummary] = useState('');
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(!isCollapsed);
 
   useEffect(() => {
     const generateSummary = async () => {
@@ -113,9 +114,29 @@ const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post }) => {
 
         {/* AI Summary Section */}
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <SparklesIcon className="w-4 h-4 text-primary" />
-            <h4 className="text-sm font-medium">AI Summary</h4>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <SparklesIcon className="w-4 h-4 text-primary" />
+              <h4 className="text-sm font-medium">AI Summary</h4>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs"
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
+              {isExpanded ? (
+                <div className="flex items-center gap-1">
+                  <span>Show Less</span>
+                  <ChevronUpIcon className="w-4 h-4" />
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <span>Show More</span>
+                  <ChevronDownIcon className="w-4 h-4" />
+                </div>
+              )}
+            </Button>
           </div>
           
           {summaryLoading ? (
@@ -124,7 +145,7 @@ const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post }) => {
               <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground leading-relaxed">
+            <div className={`text-sm text-muted-foreground leading-relaxed ${!isExpanded ? 'line-clamp-2' : ''}`}>
               {aiSummary}
             </div>
           )}
