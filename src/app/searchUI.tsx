@@ -1,25 +1,21 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { MessageSquare, Bookmark, Settings2, ArrowUp, Search, Link2, LogOut, Check, PlusCircle } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowUpRight, Bookmark, Settings2, Search, LogOut, PlusCircle } from 'lucide-react'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast, Toaster } from "sonner"
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
-// <<<<<<< HEAD
-// import { auth, checkAndUpdateMembership, db, reduceUserCredit } from '@/app/firebaseClient'
-// =======
-import { auth, checkAndUpdateMembership, db } from '@/app/firebaseClient'
-import { firebaseAnalytics } from '@/app/firebaseClient' // Ensure this import is added
-// >>>>>>> 0667428c8437a394314975e6668606b11805e7c4
+import { doc, onSnapshot } from 'firebase/firestore'
+import { auth, db, firebaseAnalytics } from '@/app/firebaseClient'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import TabDataSkeleton from '@/components/searchProgressUI'
-import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Cookies from "js-cookie"
 import { Badge } from '@radix-ui/themes'
@@ -28,6 +24,8 @@ import Link from 'next/link'
 import SearchSummaryBot from './llm/SearchSummaryBot'
 import ExpandableSearchResult from './llm/ExpandableSearchResult'
 import QueryTutorialModal from './docs/QueryModal'
+
+
 
 const MEMBERSHIP_LEVELS = {
     FREE: 'Free',
@@ -253,7 +251,7 @@ const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = ({
                                 }
                             }}
                         >
-                            <Check className="h-4 w-4" />
+
                         </Button>
                     </div>
                 </div>
@@ -313,19 +311,38 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [customUrl, setCustomUrl] = useState('')
     const [credits, setCredits] = useState(0)
     const router = useRouter()
+    const [typingQuery, setTypingQuery] = useState('')
+    const searchInputRef = useRef<HTMLInputElement>(null)
+    const [isSearchFocused, setIsSearchFocused] = useState(false)
+    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
 
-// <<<<<<< HEAD
+
+
+    // Typing effect for search input
+    useEffect(() => {
+        if (searchQuery.length > typingQuery.length) {
+            const timer = setTimeout(() => {
+                setTypingQuery(searchQuery.slice(0, typingQuery.length + 1))
+            }, 50)
+            return () => clearTimeout(timer)
+        } else if (searchQuery.length < typingQuery.length) {
+            setTypingQuery(searchQuery)
+        }
+    }, [searchQuery, typingQuery])
+
+    // <<<<<<< HEAD
     // useEffect(() => {
     //     if (!email) return
-// =======
+    // =======
     useEffect(() => {
         firebaseAnalytics.logPageView('/');
         console.log("Firebase Analytics: Page view logged for '/'");
-      }, []);
+    }, []);
 
     useEffect(() => {
         if (!email) return
-// >>>>>>> 0667428c8437a394314975e6668606b11805e7c4
+        // >>>>>>> 0667428c8437a394314975e6668606b11805e7c4
 
         const userDocRef = doc(db, 'users', email)
         const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
@@ -350,9 +367,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         // checkAndUpdateMembership(email)
     }, [email])
 
-    const handleResultCountChange = (value: string) => {
-        setResultCount(parseInt(value, 10))
-    }
+
 
     const fetchResult = async (query: string): Promise<any[]> => {
         try {
@@ -381,9 +396,24 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         }
     }
 
+ 
+
+    useEffect(() => {
+        const handleKeyboardShortcut = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault()
+                searchInputRef.current?.focus()
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyboardShortcut)
+        return () => window.removeEventListener('keydown', handleKeyboardShortcut)
+    }, [])
+
+
     const handleSearch = async () => {
         if (searchQuery.trim() !== '') {
-            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' :selectedSite
+            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
 
             setSearchData([])
             setLoading(true)
@@ -396,15 +426,15 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 localStorage.setItem('searchData', JSON.stringify(Results))
                 localStorage.setItem('history', JSON.stringify({ title: searchQuery, data: Results }))
 
-// <<<<<<< HEAD
+                // <<<<<<< HEAD
                 if (userId) {
                     // reduceUserCredit(email)
                 }
-// =======
+                // =======
                 // if (userId) {
                 //     reduceUserCredit(email)
                 // }
-// >>>>>>> 0667428c8437a394314975e6668606b11805e7c4
+                // >>>>>>> 0667428c8437a394314975e6668606b11805e7c4
             } catch (error) {
                 console.error("Error fetching data:", error)
             } finally {
@@ -436,6 +466,58 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             default: return DateFilter.Lifetime
         }
     }
+
+    // Mock function to generate suggestions based on input
+    const generateSuggestions = async (query: string) => {
+        if (!query.trim()) {
+            setSuggestions([]);
+            return;
+        }
+
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Generate mock suggestions based on input
+        const mockSuggestions = [
+            `${query} best practices`,
+            `${query} tutorial`,
+            `${query} examples`,
+            `${query} alternatives`,
+            `${query} reviews`,
+            `how to use ${query}`,
+            `why ${query}`,
+            `${query} vs`
+        ].slice(0, 5);
+
+        setSuggestions(mockSuggestions);
+    };
+
+    // Debounce function for search suggestions
+    const debounce = (func: Function, wait: number) => {
+        let timeout: NodeJS.Timeout;
+        return (...args: any[]) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), wait);
+        };
+    };
+
+    // Debounced suggestion generator
+    const debouncedGenerateSuggestions = debounce(generateSuggestions, 300);
+
+    const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSearchQuery(value);
+        setTypingQuery(value);
+        debouncedGenerateSuggestions(value);
+    };
+
+    // Handle suggestion click
+    const handleSuggestionClick = (suggestion: string) => {
+        setSearchQuery(suggestion);
+        setTypingQuery(suggestion);
+        setShowSuggestions(false);
+        handleSearch();
+    };
 
     const handleBookmark = async (post: Post) => {
         try {
@@ -481,6 +563,28 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     })
                 })
         }
+        const handleScrape = async (link: string) => {
+            try {
+              const response = await fetch('/api/scrape', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url: decodeUrl(link) }),
+              });
+        
+              if (response.ok) {
+                const data = await response.json();
+                console.log('Scraped data:', data);
+                toast('Scraping successful!');
+              } else {
+                toast('Failed to scrape the content.');
+              }
+            } catch (error) {
+              console.error('Error during scraping:', error);
+              toast('An error occurred while scraping the content.');
+            }
+          };
 
         return (
             <div className="container mx-auto py-6">
@@ -507,7 +611,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                         onBookmark={handleBookmark}
                                         onCopyUrl={handleCopyUrl}
                                     />
-                                     
                                 </Card>
                             ))}
                         </div>
@@ -572,52 +675,75 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 </div>
             </header>
             <div className="w-full max-w-3xl mx-auto px-3 py-8">
-                <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-center mb-6">
+                <motion.h1
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-2xl md:text-3xl font-medium tracking-tight text-center mb-6"
+                >
                     What can I help you find?
-                </h1>
-                {/* {Membership === MEMBERSHIP_LEVELS.FREE && (
-                    <div className="mb-2 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-none bg-primary">
-                        <div className="flex items-center justify-between px-3 py-2">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center">
-                                <p className="text-xs sm:text-sm text-foreground mr-1">
-                                    <a href="/checkout">
-                                        Upgrade now to find your perfect audience
+                </motion.h1>
 
-                                    </a>
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-1 sm:gap-1 ml-2 sm:ml-1">
-                                <Button
-                                    variant="link"
-                                    className="text-emerald-600 underline hover:text-emerald-300 p-0 h-auto font-normal text-xs sm:text-sm whitespace-nowrap"
-                                    onClick={() => router.push(`/checkout`)}
-                                >
-                                    Upgrade Plan
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )} */}
-
-                <div className="w-full border border-gray-300 rounded-xl p-2">
+                <div
+                    className={`w-full border rounded-xl p-2 transition-all duration-300 ${isSearchFocused
+                            ? 'border-primary shadow-lg'
+                            : 'border-gray-300 shadow-sm'
+                        }`}
+                >
                     <div className="flex-grow relative mb-4">
                         <Input
+                            ref={searchInputRef}
                             onKeyDown={handleKeyDown}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            value={typingQuery}
+                            onChange={handleSearchInputChange}
+                            onFocus={() => {
+                                setIsSearchFocused(true);
+                                setShowSuggestions(true);
+                            }}
+                            onBlur={() => {
+                                setTimeout(() => {
+                                    setIsSearchFocused(false);
+                                    setShowSuggestions(false);
+                                }, 200);
+                            }}
                             placeholder="Let's find..."
                             className="h-full border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                         />
                     </div>
+                    <AnimatePresence>
+                        {showSuggestions && suggestions.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="absolute w-3/4 mt-10 bg-white rounded-lg shadow-lg border z-50"
+                            >
+                                {suggestions.map((suggestion, index) => (
+                                    <motion.div
+                                        key={suggestion}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        className="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                        onClick={() => handleSuggestionClick(suggestion)}
+                                    >
+                                        <Search className="w-4 h-4 mr-2 text-gray-400" />
+                                        <span>{suggestion}</span>
+                                        <ArrowUpRight className="w-4 h-4 ml-auto text-gray-400" />
+                                    </motion.div>
+                                ))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-1">
 
-                                    <div
-                                        // className=" rounded-[6px] border border-gray-200 hover:color-white"
-                                    >
-                                        <QueryTutorialModal />
-                                    </div>
+                            <div
+                            // className=" rounded-[6px] border border-gray-200 hover:color-white"
+                            >
+                                <QueryTutorialModal />
+                            </div>
 
                             <Popover>
                                 <PopoverTrigger asChild>

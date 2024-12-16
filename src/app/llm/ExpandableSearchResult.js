@@ -52,15 +52,36 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const [presetQuestions, setPresetQuestions] = useState([]);
+  const [pageContent, setPageContent] = useState(null);
   const scrollAreaRef = React.useRef(null);
 
+  // Fetch full page content when dialog opens
   useEffect(() => {
-    if (isOpen) {
+    const fetchPageContent = async () => {
+      if (isOpen && post.link) {
+        try {
+          const response = await axios.post('/api/scrape', { url: post.link });
+          setPageContent(response.data);
+        } catch (error) {
+          console.error('Error fetching page content:', error);
+        }
+      }
+    };
+
+    fetchPageContent();
+  }, [isOpen, post.link]);
+
+  // Generate AI questions based on fetched content
+  useEffect(() => {
+    if (isOpen && pageContent) {
       const generateAIQuestions = async () => {
         setQuestionsLoading(true);
         try {
-          const prompt = `Based on this article titled "${post.title}" with the following snippet: "${post.snippet}", 
-            generate 5 relevant, thought-provoking questions that would help someone better understand or analyze this content. 
+          // Use the more comprehensive semantic content for generating questions
+          const prompt = `Based on this article titled "${pageContent.summary.title}", 
+            with the following content: "${pageContent.summary.mainContent}", 
+            generate 5 relevant, thought-provoking questions that would help someone 
+            better understand or analyze this content. 
             The questions should be specific to the article's content and encourage critical thinking.
             Format the response as a JSON array of strings.`;
 
@@ -81,7 +102,7 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
           }
 
           const fallbackQuestions = [
-            `What are the key implications of "${post.title}"?`,
+            `What are the key implications of "${pageContent.summary.title}"?`,
             "How might this information impact your field or industry?",
             "What potential challenges or opportunities does this present?",
             "How does this compare to existing solutions or approaches?",
@@ -92,7 +113,7 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
         } catch (error) {
           console.error('Error generating AI questions:', error);
           setPresetQuestions([
-            `What are the main points discussed in "${post.title}"?`,
+            `What are the main points discussed in "${pageContent.summary.title}"?`,
             "What are the potential implications of this information?",
             "How might this affect current practices or understanding?",
             "What questions does this raise for future research or development?",
@@ -105,8 +126,9 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
 
       generateAIQuestions();
     }
-  }, [isOpen, post]);
+  }, [isOpen, pageContent]);
 
+  // Scroll to bottom when messages change
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
       const scrollArea = scrollAreaRef.current;
@@ -118,6 +140,7 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
     scrollToBottom();
   }, [messages, loading]);
 
+  // Handle sending messages
   const handleSendMessage = async (messageText = newMessage) => {
     if (messageText.trim()) {
       const userMessage = {
@@ -131,9 +154,17 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
       setLoading(true);
 
       try {
-        const systemPrompt = `You are having a discussion about the article titled: "${post.title}". 
-          Here's a snippet of the article: "${post.snippet}". 
-          Previous messages in the conversation: ${messages.map(msg => `${msg.sender}: ${msg.content}`).join('\n')}`;
+        // Construct a comprehensive system prompt using scraped content
+        const systemPrompt = pageContent 
+          ? `You are having a detailed discussion about the article:
+             Title: "${pageContent.summary.title}"
+             Meta Description: "${pageContent.summary.metaDescription}"
+             Main Content: "${pageContent.summary.mainContent}"
+             
+             Previous conversation context: ${messages.map(msg => `${msg.sender}: ${msg.content}`).join('\n')}`
+          : `You are having a discussion about the article titled: "${post.title}". 
+             Here's a snippet of the article: "${post.snippet}". 
+             Previous messages in the conversation: ${messages.map(msg => `${msg.sender}: ${msg.content}`).join('\n')}`;
 
         const response = await axios.post('/api/prompt', {
           systemPrompt,
@@ -166,100 +197,99 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-    <DialogContent className="max-w-2xl h-[80vh] flex flex-col">
-      <DialogHeader>
-        <DialogTitle className="text-lg font-medium">
-          {post.title}
-        </DialogTitle>
-      </DialogHeader>
+      <DialogContent className="max-w-2xl h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-medium">
+            {pageContent ? pageContent.summary.title : post.title}
+          </DialogTitle>
+        </DialogHeader>
   
-      {/* Contenitore per i messaggi */}
-      <div className="flex-grow flex flex-col space-y-4 overflow-hidden">
-        {messages.length === 0 && (
-          <div className="grid grid-cols-1 gap-2">
-            <p className="text-sm text-muted-foreground mb-2">Suggested questions:</p>
-            {questionsLoading ? (
-              <QuestionsSkeleton />
-            ) : (
-              presetQuestions.map((question, index) => (
-                <PresetQuestion
-                  key={index}
-                  question={question}
-                  onClick={() => handleSendMessage(question)}
-                  disabled={loading}
-                />
-              ))
-            )}
-          </div>
-        )}
-  
-        {/* ScrollArea per i messaggi */}
-        <ScrollArea
-          ref={scrollAreaRef}
-          className="flex-grow overflow-y-auto rounded-md border p-4"
-        >
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-2 mb-4 ${
-                message.sender === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              {message.sender === 'ai' && (
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src="/logo.svg" />
-                  <AvatarFallback>AI</AvatarFallback>
-                </Avatar>
-              )}
-              <div
-                className={`px-3 py-2 rounded-lg max-w-[80%] ${
-                  message.sender === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
-                }`}
-              >
-                <p className="text-sm">{message.content}</p>
-              </div>
-              {message.sender === 'user' && (
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src="/placeholder.svg" />
-                  <AvatarFallback>U</AvatarFallback>
-                </Avatar>
+        <div className="flex-grow flex flex-col space-y-4 overflow-hidden">
+          {messages.length === 0 && (
+            <div className="grid grid-cols-1 gap-2">
+              <p className="text-sm text-muted-foreground mb-2">Suggested questions:</p>
+              {questionsLoading ? (
+                <QuestionsSkeleton />
+              ) : (
+                presetQuestions.map((question, index) => (
+                  <PresetQuestion
+                    key={index}
+                    question={question}
+                    onClick={() => handleSendMessage(question)}
+                    disabled={loading}
+                  />
+                ))
               )}
             </div>
-          ))}
-          {loading && <TypingIndicator />}
-        </ScrollArea>
-      </div>
-  
-      {/* Footer con Textarea e pulsante */}
-      <div className="flex gap-2 mt-4">
-        <Textarea
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type your message..."
-          className="min-h-[80px] flex-grow"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-        />
-        <Button
-          onClick={() => handleSendMessage()}
-          className="self-end"
-          size="icon"
-          disabled={loading}
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <SendHorizontal className="h-4 w-4" />
           )}
-        </Button>
-      </div>
-    </DialogContent>
+  
+          <ScrollArea
+            ref={scrollAreaRef}
+            className="flex-grow overflow-y-auto rounded-md border p-4"
+          >
+            {/* Message rendering remains the same */}
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex gap-2 mb-4 ${
+                  message.sender === 'user' ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                {message.sender === 'ai' && (
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src="/logo.svg" />
+                    <AvatarFallback>AI</AvatarFallback>
+                  </Avatar>
+                )}
+                <div
+                  className={`px-3 py-2 rounded-lg max-w-[80%] ${
+                    message.sender === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
+                >
+                  <p className="text-sm">{message.content}</p>
+                </div>
+                {message.sender === 'user' && (
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src="/placeholder.svg" />
+                    <AvatarFallback>U</AvatarFallback>
+                  </Avatar>
+                )}
+              </div>
+            ))}
+            {loading && <TypingIndicator />}
+          </ScrollArea>
+        </div>
+  
+        {/* Footer with Textarea and send button remains the same */}
+        <div className="flex gap-2 mt-4">
+          <Textarea
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type your message..."
+            className="min-h-[80px] flex-grow"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+          />
+          <Button
+            onClick={() => handleSendMessage()}
+            className="self-end"
+            size="icon"
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <SendHorizontal className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </DialogContent>
   </Dialog>
   
   );
