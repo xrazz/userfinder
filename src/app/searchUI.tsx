@@ -241,6 +241,11 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             })
     }
 
+    const handleSearchInputChange = (value: string) => {
+        setTypingQuery(value)
+        setSearchQuery(value)
+    }
+
     return (
         <main className="min-h-screen bg-background">
             <Toaster position="bottom-center" />
@@ -264,7 +269,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 <SearchBar
                     onSearch={handleSearch}
                     typingQuery={typingQuery}
-                    setTypingQuery={setTypingQuery}
+                    setTypingQuery={handleSearchInputChange}
                 />
 
                 <div className="flex items-center justify-between gap-2 mt-2">

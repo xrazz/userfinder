@@ -45,9 +45,8 @@ async function runApifyActor(query: string, numSearches: number): Promise<any[]>
  */
 export async function POST(req: Request) {
   try {
-   
-    const { site,query, num  } = await req.json(); // Extract query and num from the request body
- const finalQuery = `site:${site} ${query}`
+    const { query, num } = await req.json(); // Extract query and num from the request body
+    
     // Run the Apify actor with the provided query and num
     const result = await runApifyActor(query, num);
 
@@ -55,6 +54,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, data: result });
   } catch (error: any) {
     // Handle any errors and return an error response
+    console.error('Search API error:', error);
     return NextResponse.json({ success: false, error: error.message });
   }
 }
