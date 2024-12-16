@@ -283,9 +283,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                 <Button
                                     variant="outline"
                                     size="icon"
-                                    className="w-7 h-7 rounded-[7px] hover:bg-gray-700 hover:text-white"
+                                    className="w-8 h-8 rounded-lg hover:bg-gray-100 hover:text-gray-900"
                                 >
-                                    <Settings2 className="w-2 h-2 md:w-2 md:h-2 shadow-none" />
+                                    <Settings2 className="w-4 h-4" />
                                     <span className="sr-only">Settings</span>
                                 </Button>
                             </PopoverTrigger>

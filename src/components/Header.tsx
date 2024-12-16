@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
             if (guestCredits <= 1 && !hasShownToast.current) {
                 hasShownToast.current = true;
                 toast("Credits running low!", {
-                    description: "Sign up to get 10 free credits daily.",
+                    description: "Sign up to get 5 free credits daily.",
                     duration: 10000,
                     action: {
                         label: "Sign up now",

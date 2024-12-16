@@ -38,32 +38,33 @@ export const LoggedOutSettingsPopover: React.FC<LoggedOutSettingsPopoverProps> =
     currentFilter,
     onValueChange
 }) => (
-    <PopoverContent className="w-60 ml-5 shadow-none">
-        <div className="space-y-4">
+    <PopoverContent className="w-80 shadow-md">
+        <div className="space-y-4 p-2">
             <div className="space-y-2">
-                <Label htmlFor="site-select">Site</Label>
+                <Label htmlFor="site-select" className="text-sm font-medium">Site</Label>
                 <Select
                     value={selectedSite}
                     onValueChange={(value) => ['Reddit.com', 'Twitter.com'].includes(value) && setSelectedSite(value)}
                 >
-                    <SelectTrigger id="site-select">
+                    <SelectTrigger id="site-select" className="w-full">
                         <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[300px]">
                         {sites.map((site) => (
                             <SelectItem
                                 key={site.name}
                                 value={site.name}
                                 disabled={!['Reddit.com', 'Twitter.com'].includes(site.name)}
+                                className="py-2"
                             >
                                 <div className="flex items-center justify-between w-full">
                                     <div className="flex items-center">
-                                        <Image src={site.icon} alt={site.name} width={16} height={16} className="mr-2" />
+                                        <Image src={site.icon} alt={site.name} width={20} height={20} className="mr-3" />
                                         {site.name}
                                     </div>
                                     {!['Reddit.com', 'Twitter.com'].includes(site.name) && (
-                                        <Link href='/checkout'>
-                                            <ShadcnBadge className="ml-2 text-xs rounded-full">
+                                        <Link href='/subscription'>
+                                            <ShadcnBadge className="ml-2 text-xs">
                                                 {badgetext}
                                             </ShadcnBadge>
                                         </Link>
@@ -71,12 +72,12 @@ export const LoggedOutSettingsPopover: React.FC<LoggedOutSettingsPopoverProps> =
                                 </div>
                             </SelectItem>
                         ))}
-                        <SelectItem disabled={true} value="custom" className="border rounded-md">
+                        <SelectItem disabled={true} value="custom" className="border-t py-2">
                             <div className="flex items-center">
-                                <PlusCircle className="w-4 h-4 mr-2" />
+                                <PlusCircle className="w-5 h-5 mr-3" />
                                 <span>Custom Site</span>
-                                <Link href='/checkout'>
-                                    <ShadcnBadge className="ml-2 text-xs rounded-full">
+                                <Link href='/subscription'>
+                                    <ShadcnBadge className="ml-2 text-xs">
                                         {badgetext}
                                     </ShadcnBadge>
                                 </Link>
@@ -152,10 +153,10 @@ export const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = (
     setCustomUrl,
     membership
 }) => (
-    <PopoverContent className="w-60 ml-5 shadow-none">
-        <div className="space-y-4">
+    <PopoverContent className="w-80 shadow-md">
+        <div className="space-y-4 p-2">
             <div className="space-y-2">
-                <Label htmlFor="site-select">Site</Label>
+                <Label htmlFor="site-select" className="text-sm font-medium">Site</Label>
                 <Select
                     value={selectedSite}
                     onValueChange={(value) => {
@@ -166,21 +167,21 @@ export const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = (
                         }
                     }}
                 >
-                    <SelectTrigger id="site-select">
+                    <SelectTrigger id="site-select" className="w-full">
                         <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[300px]">
                         {sites.map((site) => (
-                            <SelectItem key={site.name} value={site.name}>
+                            <SelectItem key={site.name} value={site.name} className="py-2">
                                 <div className="flex items-center">
-                                    <Image src={site.icon} alt={site.name} width={16} height={16} className="mr-2" />
+                                    <Image src={site.icon} alt={site.name} width={20} height={20} className="mr-3" />
                                     {site.name}
                                 </div>
                             </SelectItem>
                         ))}
-                        <SelectItem value="custom" className="border rounded-md">
+                        <SelectItem value="custom" className="border-t py-2">
                             <div className="flex items-center">
-                                <PlusCircle className="w-4 h-4 mr-2" />
+                                <PlusCircle className="w-5 h-5 mr-3" />
                                 <span>{customUrl || "Custom Site"}</span>
                             </div>
                         </SelectItem>
@@ -190,8 +191,8 @@ export const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = (
 
             {selectedSite === 'custom' && (
                 <div className="space-y-2">
-                    <Label htmlFor="custom-url">Custom URL</Label>
-                    <div className="flex items-center">
+                    <Label htmlFor="custom-url" className="text-sm font-medium">Custom URL</Label>
+                    <div className="flex items-center gap-2">
                         <Input
                             id="custom-url"
                             value={customUrl}
@@ -201,9 +202,8 @@ export const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = (
                         />
                         <Button
                             type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="ml-2"
+                            size="sm"
+                            variant="secondary"
                             onClick={() => {
                                 if (customUrl) {
                                     setSelectedSite(customUrl)
@@ -212,22 +212,24 @@ export const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = (
                                     toast.error("Please enter a custom domain")
                                 }
                             }}
-                        />
+                        >
+                            Set
+                        </Button>
                     </div>
                 </div>
             )}
             <div className="space-y-2">
-                <Label htmlFor="result-count">Result Count</Label>
+                <Label htmlFor="result-count" className="text-sm font-medium">Result Count</Label>
                 <Select
                     value={resultCount.toString()}
                     onValueChange={(value) => setResultCount(parseInt(value, 10))}
                 >
-                    <SelectTrigger id="result-count">
+                    <SelectTrigger id="result-count" className="w-full">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                         {[10, 25, 50].map((count) => (
-                            <SelectItem key={count} value={count.toString()}>
+                            <SelectItem key={count} value={count.toString()} className="py-2">
                                 {count}
                             </SelectItem>
                         ))}
@@ -235,12 +237,14 @@ export const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = (
                 </Select>
             </div>
             <div className="space-y-2">
-                <Label>Filter by</Label>
-                <RadioGroup value={currentFilter} onValueChange={handleFilterChange}>
+                <Label className="text-sm font-medium">Filter by</Label>
+                <RadioGroup value={currentFilter} onValueChange={handleFilterChange} className="space-y-2">
                     {['today', 'week', 'newest', 'oldest', 'lifetime'].map((filter) => (
-                        <div key={filter} className="flex items-center space-x-2">
-                            <RadioGroupItem value={filter} id={filter} />
-                            <Label htmlFor={filter}>{filter.charAt(0).toUpperCase() + filter.slice(1)}</Label>
+                        <div key={filter} className="flex items-center space-x-3">
+                            <RadioGroupItem value={filter} id={filter} className="w-4 h-4" />
+                            <Label htmlFor={filter} className="text-sm">
+                                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                            </Label>
                         </div>
                     ))}
                 </RadioGroup>
