@@ -115,7 +115,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 if (!lastReset || lastReset.toDateString() !== now.toDateString()) {
                     // Reset credits to 10 at the start of each day
                     await updateDoc(userDocRef, {
-                        credits: 10,
+                        credits: 5,
                         lastCreditReset: now
                     });
                 } else {
