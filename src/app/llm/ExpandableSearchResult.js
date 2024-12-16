@@ -80,7 +80,7 @@ const DiscussionDialog = ({ post, isOpen, onClose }) => {
           // Use the more comprehensive semantic content for generating questions
           const prompt = `Based on this article titled "${pageContent.summary.title}", 
             with the following content: "${pageContent.summary.mainContent}", 
-            generate 5 relevant, thought-provoking questions that would help someone 
+            generate 5 relevant, thought-provoking and short questions that would help someone 
             better understand or analyze this content. 
             The questions should be specific to the article's content and encourage critical thinking.
             Format the response as a JSON array of strings.`;
