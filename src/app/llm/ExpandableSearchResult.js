@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bookmark, Link2, SendHorizontal, Loader2, CalendarIcon, UserIcon, SparklesIcon, FileTextIcon, ChevronUpIcon, ChevronDownIcon, MessageSquare, ThumbsUp } from 'lucide-react';
+import { Bookmark, Link2, SendHorizontal, Loader2, CalendarIcon, UserIcon, SparklesIcon, MessageSquareIcon, ChevronUpIcon, ChevronDownIcon, MessageSquare, ThumbsUp, XIcon } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -57,10 +57,26 @@ const QuestionsSkeleton = () => (
   </div>
 );
 
+const ThinkingAnimation = () => (
+  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="relative w-5 h-5">
+      <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      <div className="absolute inset-0 rounded-full border-2 border-primary opacity-20" />
+    </div>
+    <div className="inline-flex items-center gap-1.5">
+      <span>I'm thinking</span>
+      <span className="animate-pulse">.</span>
+      <span className="animate-pulse animation-delay-200">.</span>
+      <span className="animate-pulse animation-delay-400">.</span>
+    </div>
+  </div>
+);
+
 const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post, email }) => {
   const [aiSummary, setAiSummary] = useState('');
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(!isCollapsed);
+  const [isThinking, setIsThinking] = useState(false);
 
   useEffect(() => {
     const generateSummary = async () => {
@@ -68,6 +84,7 @@ const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post, email }) =>
       if (!email) return;
       
       setSummaryLoading(true);
+      setIsThinking(true);
       try {
         const response = await axios.post('/api/prompt', {
           systemPrompt: "You are a skilled content summarizer. Create a concise, informative summary that captures the key points and main insights of the article. Focus on what makes this content valuable to the reader.",
@@ -89,6 +106,7 @@ const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post, email }) =>
         setAiSummary(error.response?.status === 403 ? 'Please sign in to use AI features' : '');
       } finally {
         setSummaryLoading(false);
+        setIsThinking(false);
       }
     };
 
@@ -147,7 +165,9 @@ const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post, email }) =>
             </Button>
           </div>
           
-          {summaryLoading ? (
+          {isThinking ? (
+            <ThinkingAnimation />
+          ) : summaryLoading ? (
             <div className="space-y-2">
               <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
               <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
@@ -173,6 +193,12 @@ const DiscussionDialog = ({ post, isOpen, onClose, email }) => {
   const scrollAreaRef = React.useRef(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [hasChatStarted, setHasChatStarted] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  const [showCustomPrompt, setShowCustomPrompt] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [summary, setSummary] = useState('');
+  const [quickSummaryThinking, setQuickSummaryThinking] = useState(false);
+  const [customAnalysisThinking, setCustomAnalysisThinking] = useState(false);
 
   // Fetch full page content when dialog opens
   useEffect(() => {
@@ -197,164 +223,62 @@ const DiscussionDialog = ({ post, isOpen, onClose, email }) => {
     fetchPageContent();
   }, [isOpen, post.link, email]);
 
-  // First, add this helper function at the top of the DiscussionDialog component
-  const generateQuestionsFromContent = async (title, content) => {
-    if (!email) return [];
-    
-    try {
-      const prompt = `Based on this content titled "${title}":
-        "${content}"
-        Generate 5 brief, engaging questions that a curious reader might ask. Each question should:
-        - Be no longer than 10-12 words
-        - Be conversational in tone
-        - Focus on one clear aspect
-        - Encourage exploration of the topic
-        Format the response as a JSON array of strings.`;
+  const generateSummary = async (prompt) => {
+    if (!email) {
+      setSummary('Please sign in to use AI features');
+      setIsThinking(false);
+      return;
+    }
 
+    try {
       const response = await axios.post('/api/prompt', {
-        systemPrompt: "You are a helpful discussion facilitator who excels at creating engaging, bite-sized questions that spark curiosity and conversation. Keep questions short, clear, and conversational.",
-        userPrompt: prompt,
+        systemPrompt: "You are a skilled content analyzer providing clear, structured insights.",
+        userPrompt: prompt || `Please analyze these search results for "${post.title}" and provide a clear, concise summary of the main findings and trends: ${post.snippet}`,
         email: email
       }, {
-        headers: {
+        headers: { 
           'Authorization': `Bearer ${email}`
         }
       });
 
-      let questions;
-      try {
-        const parsedResponse = typeof response.data.output === 'string' 
-          ? JSON.parse(response.data.output) 
-          : response.data.output;
-        return Array.isArray(parsedResponse) ? parsedResponse : [];
-      } catch (error) {
-        console.error('Error parsing AI response:', error);
-        return [];
-      }
+      setSummary(response.data.output);
+      setShowCustomPrompt(false);
     } catch (error) {
-      console.error('Error generating questions:', error);
-      return [];
-    }
-  };
-
-  // Replace the existing questions generation useEffect with this:
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const generateAIQuestions = async () => {
-      setQuestionsLoading(true);
-      try {
-        let questions;
-        if (pageContent) {
-          questions = await generateQuestionsFromContent(
-            pageContent.summary.title,
-            pageContent.summary.mainContent
-          );
-        } else {
-          questions = await generateQuestionsFromContent(
-            post.title,
-            post.snippet
-          );
-        }
-
-        const fallbackQuestions = [
-          "What's the most surprising insight from this?",
-          "How could this affect everyday life?",
-          "What are the practical applications?",
-          "What challenges might this face?",
-          "Where do you see this heading in the future?"
-        ];
-
-        setPresetQuestions(questions.length > 0 ? questions : fallbackQuestions);
-      } catch (error) {
-        console.error('Error generating AI questions:', error);
-        setPresetQuestions([
-          "What caught your attention in this article?",
-          "How might this impact your work?",
-          "What's your take on the main idea?",
-          "See any potential drawbacks?",
-          "What should happen next with this?"
-        ]);
-      } finally {
-        setQuestionsLoading(false);
-      }
-    };
-
-    generateAIQuestions();
-  }, [isOpen, pageContent, post]);
-
-  // Scroll to bottom when messages change
-  const scrollToBottom = () => {
-    if (scrollAreaRef.current) {
-      const scrollArea = scrollAreaRef.current;
-      scrollArea.scrollTop = scrollArea.scrollHeight;
-    }
-  };
-
-  React.useEffect(() => {
-    scrollToBottom();
-  }, [messages, loading]);
-
-  // Handle sending messages
-  const handleSendMessage = async (messageText = newMessage) => {
-    if (!messageText.trim() || !email) return;
-
-    setHasChatStarted(true);
-    const userMessage = {
-      id: Date.now(),
-      content: messageText,
-      sender: 'user',
-      timestamp: new Date().toISOString(),
-    };
-    setMessages([...messages, userMessage]);
-    setNewMessage('');
-    setLoading(true);
-
-    try {
-      const systemPrompt = pageContent 
-        ? `You are having a detailed discussion about the article:
-           Title: "${pageContent.summary.title}"
-           Meta Description: "${pageContent.summary.metaDescription}"
-           Main Content: "${pageContent.summary.mainContent}"
-           
-           Previous conversation context: ${messages.map(msg => `${msg.sender}: ${msg.content}`).join('\n')}`
-        : `You are having a discussion about the article titled: "${post.title}". 
-           Here's a snippet of the article: "${post.snippet}". 
-           Previous messages in the conversation: ${messages.map(msg => `${msg.sender}: ${msg.content}`).join('\n')}`;
-
-      const response = await axios.post('/api/prompt', {
-        systemPrompt,
-        userPrompt: messageText,
-        email: email
-      }, {
-        headers: {
-          'Authorization': `Bearer ${email}`
-        }
-      });
-
-      const aiMessage = {
-        id: Date.now(),
-        content: response.data.output,
-        sender: 'ai',
-        timestamp: new Date().toISOString(),
-      };
-
-      setMessages(prev => [...prev, aiMessage]);
-    } catch (error) {
-      console.error('Error fetching AI response:', error);
-      const errorMessage = error.response?.status === 403 
-        ? 'Please sign in to use AI features'
-        : error.response?.data?.error || 'Failed to get a response. Please try again.';
-
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        content: errorMessage,
-        sender: 'ai',
-        timestamp: new Date().toISOString(),
-      }]);
+      console.error('Error generating content:', error);
+      setSummary(error.response?.status === 403 ? 'Please sign in to use AI features' : 'Failed to generate content. Please try again.');
     } finally {
-      setLoading(false);
+      setIsThinking(false);
     }
+  };
+
+  const handleQuickSummary = async () => {
+    setQuickSummaryThinking(true);
+    try {
+      await generateSummary();
+    } finally {
+      setQuickSummaryThinking(false);
+    }
+  };
+
+  const handleCustomAnalysis = () => {
+    setCustomAnalysisThinking(true);
+    setShowCustomPrompt(true);
+  };
+
+  const handleCustomPromptSubmit = async () => {
+    if (!customPrompt.trim()) return;
+    setCustomAnalysisThinking(true);
+    try {
+      await generateSummary(customPrompt);
+    } finally {
+      setCustomAnalysisThinking(false);
+    }
+  };
+
+  const handleCloseCustomPrompt = () => {
+    setShowCustomPrompt(false);
+    setCustomAnalysisThinking(false);
+    setCustomPrompt('');
   };
 
   return (
@@ -365,13 +289,107 @@ const DiscussionDialog = ({ post, isOpen, onClose, email }) => {
             <DialogTitle className="text-lg font-medium">
               {pageContent ? pageContent.summary.title : post.title}
             </DialogTitle>
-            <ArticleSummary 
-              pageContent={pageContent} 
-              post={post}
-              isLoading={summaryLoading}
-              isCollapsed={hasChatStarted}
-              email={email}
-            />
+            {!summary ? (
+              <div className="relative">
+                {/* Main Analysis Options */}
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+                  <div className="grid grid-cols-2 divide-x divide-gray-200 dark:divide-gray-700">
+                    <button
+                      onClick={handleQuickSummary}
+                      disabled={quickSummaryThinking || customAnalysisThinking}
+                      className="flex items-center justify-center gap-2 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
+                    >
+                      {quickSummaryThinking ? (
+                        <div className="flex items-center gap-2">
+                          <div className="relative w-4 h-4">
+                            <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                          </div>
+                          <span>I'm thinking...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <SparklesIcon className="w-4 h-4 text-primary" />
+                          <span className="font-medium">Quick Summary</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={handleCustomAnalysis}
+                      disabled={quickSummaryThinking || customAnalysisThinking}
+                      className="flex items-center justify-center gap-2 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
+                    >
+                      {customAnalysisThinking ? (
+                        <div className="flex items-center gap-2">
+                          <div className="relative w-4 h-4">
+                            <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                          </div>
+                          <span>I'm thinking...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <MessageSquareIcon className="w-4 h-4 text-primary" />
+                          <span className="font-medium">Custom Analysis</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Custom Prompt Panel */}
+                {showCustomPrompt && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-lg z-10">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-sm font-medium">Custom Analysis Prompt</h3>
+                      <button 
+                        onClick={handleCloseCustomPrompt}
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <XIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <Textarea
+                      value={customPrompt}
+                      onChange={(e) => setCustomPrompt(e.target.value)}
+                      placeholder="Ask anything about these search results..."
+                      className="min-h-[100px] mb-3 resize-none text-sm"
+                    />
+                    <Button
+                      onClick={handleCustomPromptSubmit}
+                      disabled={!customPrompt.trim() || customAnalysisThinking}
+                      className="w-full"
+                    >
+                      {customAnalysisThinking ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>I'm thinking...</span>
+                        </div>
+                      ) : (
+                        <span>Analyze</span>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="prose dark:prose-invert max-w-none mt-4">
+                {summary.split('\n').map((paragraph, idx) => (
+                  paragraph.trim() && <p key={idx} className="text-sm">{paragraph}</p>
+                ))}
+                <Button
+                  onClick={() => {
+                    setSummary('');
+                    setIsThinking(false);
+                    setShowCustomPrompt(false);
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                >
+                  New Analysis
+                </Button>
+              </div>
+            )}
           </DialogHeader>
         </div>
 
