@@ -40,7 +40,7 @@ const parseHtmlContent = (content: string): React.ReactNode => {
 
     // Split content by HTML tags
     const parts = content.split(/(<a[^>]*>.*?<\/a>)/);
-    
+
     return parts.map((part, index) => {
         // Check if part is a link
         if (part.startsWith('<a')) {
@@ -49,21 +49,20 @@ const parseHtmlContent = (content: string): React.ReactNode => {
             const textMatch = part.match(/>([^<]*)</) || [];
             const href = hrefMatch[1];
             const text = textMatch[1];
-            
+
             // Check if the text is a citation number (e.g., [1], [2], etc.)
             const isCitation = /^\[\d+\]$/.test(text);
-            
+
             return (
-                <a 
+                <a
                     key={index}
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`hover:underline ${
-                        isCitation 
-                            ? 'text-blue-500 hover:text-blue-600 font-medium px-1 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:text-blue-300' 
-                            : 'text-primary'
-                    }`}
+                    className={`hover:underline ${isCitation
+                        ? 'text-blue-500 hover:text-blue-600 font-medium px-1 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:text-blue-300'
+                        : 'text-primary'
+                        }`}
                 >
                     {text}
                 </a>
@@ -111,12 +110,12 @@ const PresetQuestionButton = ({ question, onClick, disabled }: PresetQuestion) =
     </Button>
 )
 
-const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: { 
-    post: Post, 
-    isOpen: boolean, 
-    onClose: () => void, 
+const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
+    post: Post,
+    isOpen: boolean,
+    onClose: () => void,
     email?: string,
-    onEngage?: (link: string) => void 
+    onEngage?: (link: string) => void
 }) => {
     const [messages, setMessages] = React.useState<Message[]>([])
     const [newMessage, setNewMessage] = React.useState('')
@@ -133,9 +132,9 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
         const fetchPageContent = async () => {
             if (isOpen && post.link) {
                 try {
-                    const response = await axios.post('/api/scrape', { 
+                    const response = await axios.post('/api/scrape', {
                         url: post.link,
-                        email: email 
+                        email: email
                     }, {
                         headers: {
                             'Authorization': `Bearer ${email}`
@@ -174,7 +173,7 @@ Content: ${content.summary?.mainContent || post.snippet}
 Format each question on a new line, numbered 1-5.`,
                 email: email
             }, {
-                headers: { 
+                headers: {
                     'Authorization': `Bearer ${email}`
                 }
             })
@@ -230,7 +229,7 @@ Previous messages:
 ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
                 email: email
             }, {
-                headers: { 
+                headers: {
                     'Authorization': `Bearer ${email}`
                 }
             })
@@ -265,7 +264,7 @@ ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
                         <DialogTitle className="text-lg font-medium">
                             {pageContent ? pageContent.summary?.title : post.title}
                         </DialogTitle>
-                        
+
                         {/* Content Summary Section */}
                         <div className="mt-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-800">
                             <button
@@ -292,7 +291,7 @@ ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
                                     <div className="space-y-3">
                                         {/* Source Info */}
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                            <img 
+                                            <img
                                                 src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
                                                 alt=""
                                                 className="w-4 h-4"
@@ -304,14 +303,14 @@ ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
                                                 </span>
                                             )}
                                         </div>
-                                        
+
                                         {/* Content */}
                                         <ScrollArea className="max-h-[200px]">
                                             <p className="text-sm text-muted-foreground leading-relaxed">
                                                 {pageContent?.summary?.mainContent || post.snippet}
                                             </p>
                                         </ScrollArea>
-                                        
+
                                         {/* Actions */}
                                         <div className="flex items-center gap-2 pt-2">
                                             <a
@@ -369,9 +368,8 @@ ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
                                 {messages.map((message) => (
                                     <div
                                         key={message.id}
-                                        className={`flex gap-2 ${
-                                            message.sender === 'user' ? 'justify-end' : 'justify-start'
-                                        }`}
+                                        className={`flex gap-2 ${message.sender === 'user' ? 'justify-end' : 'justify-start'
+                                            }`}
                                     >
                                         {message.sender === 'ai' && (
                                             <Avatar className="h-6 w-6">
@@ -380,11 +378,10 @@ ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
                                             </Avatar>
                                         )}
                                         <div
-                                            className={`px-3 py-2 rounded-lg max-w-[80%] ${
-                                                message.sender === 'user'
-                                                    ? 'bg-primary text-primary-foreground'
-                                                    : 'bg-muted'
-                                            }`}
+                                            className={`px-3 py-2 rounded-lg max-w-[80%] ${message.sender === 'user'
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'bg-muted'
+                                                }`}
                                         >
                                             <div className="text-sm whitespace-pre-wrap">
                                                 {parseHtmlContent(message.content)}
@@ -715,288 +712,295 @@ Create an enhanced version that requires proper clickable citation numbers and r
     return (
         <div className="max-w-3xl mx-auto px-4 md:px-0 mt-3">
             {/* AI Analysis Section */}
-            <div className="mb-8">
-                {!summary ? (
-                    <div className="relative">
-                        {/* Main Analysis Options */}
-                        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-                            <div className="grid grid-cols-2 divide-x divide-gray-200 dark:divide-gray-700">
-                                <button
-                                    onClick={() => generateSummary()}
-                                    disabled={isGenerating}
-                                    className="flex items-center justify-center gap-2 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
-                                >
-                                    {isGenerating ? (
-                                        <div className="flex items-center gap-2">
-                                            <div className="relative w-4 h-4">
-                                                <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                                            </div>
-                                            <span>I'm thinking...</span>
+            <div className="mb-8 max-w-3xl mx-auto">
+            {!summary ? (
+                <div className="relative">
+                    <div className="bg-gradient-to-br from-purple-50 via-gray-100 to-purple-100 dark:from-gray-800 dark:via-purple-900 dark:to-gray-900 rounded-xl overflow-hidden transition-all duration-300 hover:from-purple-100 hover:via-gray-50 hover:to-purple-50 dark:hover:from-gray-900 dark:hover:via-purple-800 dark:hover:to-gray-800">
+                        <div className="grid grid-cols-2">
+                            <Button
+                                onClick={() => generateSummary()}
+                                disabled={isGenerating}
+                                className="flex items-center justify-center sm:gap-2 gap-1 sm:py-4 py-2 hover:bg-purple-100/50 dark:hover:bg-purple-800/30 transition-colors text-sm font-medium text-gray-800 dark:text-gray-200"
+                                variant="ghost"
+                            >
+                                {isGenerating ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative w-5 h-5">
+                                            <div className="absolute inset-0 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
                                         </div>
-                                    ) : (
-                                        <>
-                                            <SparklesIcon className="w-4 h-4 text-primary" />
-                                            <span className="font-medium">Quick Summary</span>
-                                        </>
-                                    )}
-                                </button>
+                                        <span>Analyzing...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <SparklesIcon className="sm:w-5 sm:h-5 w-4 h-4 text-gray-800 dark:text-gray-200" />
+                                        <span className="sm:text-sm text-xs whitespace-nowrap">Quick Summary</span>
+                                    </>
+                                )}
+                            </Button>
 
-                                <button
-                                    onClick={() => setShowCustomPrompt(true)}
-                                    disabled={isGenerating}
-                                    className="flex items-center justify-center gap-2 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
-                                >
-                                    {isGenerating ? (
-                                        <div className="flex items-center gap-2">
-                                            <div className="relative w-4 h-4">
-                                                <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                                            </div>
-                                            <span>I'm thinking...</span>
+                            <Button
+                                onClick={() => setShowCustomPrompt(true)}
+                                disabled={isGenerating}
+                                className="flex items-center justify-center sm:gap-2 gap-1 sm:py-4 py-2 hover:bg-purple-100/50 dark:hover:bg-purple-800/30 transition-colors text-sm font-medium text-gray-800 dark:text-gray-200"
+                                variant="ghost"
+                            >
+                                {isGenerating ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative w-5 h-5">
+                                            <div className="absolute inset-0 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
                                         </div>
-                                    ) : (
-                                        <>
-                                            <MessageSquareIcon className="w-4 h-4 text-primary" />
-                                            <span className="font-medium">Custom Analysis</span>
-                                        </>
-                                    )}
-                                </button>
+                                        <span>Analyzing...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <MessageSquareIcon className="sm:w-5 sm:h-5 w-4 h-4 text-gray-800 dark:text-gray-200" />
+                                        <span className="sm:text-sm text-xs whitespace-nowrap">Custom Analysis</span>
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+
+                    {showCustomPrompt && (
+                        <div className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-gray-800 rounded-xl border border-purple-200 dark:border-purple-700 p-4 shadow-lg z-10 transition-all duration-300 ease-in-out">
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="text-sm font-medium text-purple-700 dark:text-purple-300">Custom Analysis Prompt</h3>
+                                <Button
+                                    onClick={() => setShowCustomPrompt(false)}
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                >
+                                    <XIcon className="w-4 h-4" />
+                                </Button>
+                            </div>
+                            <Textarea
+                                value={customPrompt}
+                                onChange={(e) => setCustomPrompt(e.target.value)}
+                                placeholder="Ask anything about these search results..."
+                                className="min-h-[100px] mb-3 resize-none text-sm"
+                            />
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={enhancePrompt}
+                                    disabled={!customPrompt.trim() || isGenerating}
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex items-center gap-1.5 border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300"
+                                >
+                                    <SparklesIcon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                                    <span>Enhance</span>
+                                </Button>
+                                <Button
+                                    onClick={() => generateSummary(customPrompt)}
+                                    disabled={!customPrompt.trim() || isGenerating}
+                                    size="sm"
+                                    className="flex-1 flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white"
+                                >
+                                    <MessageSquareIcon className="w-3.5 h-3.5" />
+                                    <span>Analyze</span>
+                                </Button>
                             </div>
                         </div>
-
-                        {/* Custom Prompt Panel */}
-                        {showCustomPrompt && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-lg z-10">
-                                <div className="flex justify-between items-center mb-3">
-                                    <h3 className="text-sm font-medium">Custom Analysis Prompt</h3>
-                                    <button
-                                        onClick={() => setShowCustomPrompt(false)}
-                                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                                    >
-                                        <XIcon className="w-4 h-4" />
-                                    </button>
-                                </div>
-                                <Textarea
-                                    value={customPrompt}
-                                    onChange={(e) => setCustomPrompt(e.target.value)}
-                                    placeholder="Ask anything about these search results..."
-                                    className="min-h-[100px] mb-3 resize-none text-sm"
-                                />
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={enhancePrompt}
-                                        disabled={!customPrompt.trim() || isGenerating}
-                                        className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 transition-colors disabled:opacity-50"
-                                    >
-                                        <SparklesIcon className="w-3.5 h-3.5 text-primary" />
-                                        <span>Enhance</span>
-                                    </button>
-                                    <button
-                                        onClick={() => generateSummary(customPrompt)}
-                                        disabled={!customPrompt.trim() || isGenerating}
-                                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
-                                    >
-                                        <MessageSquareIcon className="w-3.5 h-3.5" />
-                                        <span>Analyze</span>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-                        {!isChatMode ? (
-                            <div className="p-4">
-                                <div className="prose dark:prose-invert max-w-none">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <SparklesIcon className={`w-4 h-4 ${isGenerating ? 'animate-pulse' : ''}`} />
-                                            <span>AI Analysis</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => {
-                                                    setIsChatMode(true);
-                                                    // Initialize chat with the summary
-                                                    setMessages([{
-                                                        id: Date.now(),
-                                                        content: summary,
-                                                        sender: 'ai',
-                                                        timestamp: new Date().toISOString(),
-                                                    }]);
-                                                }}
-                                                className="text-xs px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
-                                            >
-                                                <div className="flex items-center gap-1.5">
-                                                    <MessageSquare className="w-3.5 h-3.5" />
-                                                    <span>Continue in Chat</span>
-                                                </div>
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setSummary('');
-                                                    setCustomPrompt('');
-                                                    setEnhancedPrompt('');
-                                                }}
-                                                className="text-xs px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-muted-foreground hover:text-foreground transition-colors"
-                                                disabled={isGenerating}
-                                            >
-                                                New Analysis
-                                            </button>
-                                        </div>
+                    )}
+                </div>
+            ) : (
+                <div className="bg-gradient-to-br from-purple-50 via-gray-100 to-purple-100 dark:from-gray-800 dark:via-purple-900 dark:to-gray-900 rounded-xl overflow-hidden transition-all duration-300 hover:from-purple-100 hover:via-gray-50 hover:to-purple-50 dark:hover:from-gray-900 dark:hover:via-purple-800 dark:hover:to-gray-800">
+                    {!isChatMode ? (
+                        <div className="p-6">
+                            <div className="prose dark:prose-invert max-w-none">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
+                                        <SparklesIcon className={`w-5 h-5 ${isGenerating ? 'animate-pulse' : ''}`} />
+                                        <span className="font-medium">AI Analysis</span>
                                     </div>
-                                    {enhancedPrompt && (
-                                        <div className="mb-4 text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
-                                            <div className="font-medium mb-1">Enhanced Prompt:</div>
-                                            <div>{enhancedPrompt}</div>
-                                        </div>
-                                    )}
-                                    {isGenerating ? (
-                                        <div className="space-y-4">
-                                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                                                <div className="relative w-5 h-5">
-                                                    <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                                                    <div className="absolute inset-0 rounded-full border-2 border-primary opacity-20" />
-                                                </div>
-                                                <div className="inline-flex items-center gap-1.5">
-                                                    <span>AI is analyzing</span>
-                                                    <span className="animate-pulse">.</span>
-                                                    <span className="animate-pulse animation-delay-200">.</span>
-                                                    <span className="animate-pulse animation-delay-400">.</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="relative overflow-hidden rounded-lg bg-muted/30 p-4">
-                                                <div className="space-y-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 rounded-full bg-primary/10 animate-pulse" />
-                                                        <div className="h-4 bg-muted animate-pulse rounded-full w-32" />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <div className="h-3 bg-muted animate-pulse rounded-full w-full" />
-                                                        <div className="h-3 bg-muted animate-pulse rounded-full w-[90%]" />
-                                                        <div className="h-3 bg-muted animate-pulse rounded-full w-[95%]" />
-                                                        <div className="h-3 bg-muted animate-pulse rounded-full w-[85%]" />
-                                                    </div>
-                                                </div>
-                                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        summary.split('\n').map((paragraph, idx) => (
-                                            paragraph.trim() && (
-                                                <p key={idx} className="text-sm">
-                                                    {parseHtmlContent(paragraph)}
-                                                </p>
-                                            )
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col h-[500px]">
-                                {/* Chat Header */}
-                                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                                    <button
-                                        onClick={() => setIsChatMode(false)}
-                                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                        <ArrowLeft className="w-4 h-4" />
-                                        <span>Back to Summary</span>
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setSummary('');
-                                            setCustomPrompt('');
-                                            setEnhancedPrompt('');
-                                            setMessages([]);
-                                            setIsChatMode(false);
-                                        }}
-                                        className="text-xs px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                        New Analysis
-                                    </button>
-                                </div>
-
-                                {/* Chat Messages */}
-                                <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-                                    <div className="space-y-4">
-                                        {messages.map((message) => (
-                                            <div
-                                                key={message.id}
-                                                className={`flex gap-2 ${message.sender === 'user' ? 'justify-end' : 'justify-start'
-                                                    }`}
-                                            >
-                                                {message.sender === 'ai' && (
-                                                    <Avatar className="h-6 w-6">
-                                                        <AvatarImage src="/logo.svg" />
-                                                        <AvatarFallback>AI</AvatarFallback>
-                                                    </Avatar>
-                                                )}
-                                                <div
-                                                    className={`px-3 py-2 rounded-lg max-w-[80%] ${message.sender === 'user'
-                                                            ? 'bg-primary text-primary-foreground'
-                                                            : 'bg-muted'
-                                                        }`}
-                                                >
-                                                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                                                </div>
-                                                {message.sender === 'user' && (
-                                                    <Avatar className="h-6 w-6">
-                                                        <AvatarImage src="/placeholder.svg" />
-                                                        <AvatarFallback>U</AvatarFallback>
-                                                    </Avatar>
-                                                )}
-                                            </div>
-                                        ))}
-                                        {isGenerating && (
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                <Avatar className="h-6 w-6">
-                                                    <AvatarImage src="/logo.svg" />
-                                                    <AvatarFallback>AI</AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex gap-1">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "300ms" }} />
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </ScrollArea>
-
-                                {/* Chat Input */}
-                                <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                                    <div className="flex gap-2">
-                                        <Textarea
-                                            value={newMessage}
-                                            onChange={(e) => setNewMessage(e.target.value)}
-                                            placeholder="Ask a follow-up question..."
-                                            className="min-h-[44px] max-h-32"
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' && !e.shiftKey) {
-                                                    e.preventDefault();
-                                                    handleSendMessage();
-                                                }
-                                            }}
-                                        />
+                                    <div className="flex items-center gap-2">
                                         <Button
-                                            onClick={handleSendMessage}
-                                            disabled={isGenerating || !newMessage.trim()}
-                                            className="px-3"
+                                            onClick={() => {
+                                                setIsChatMode(true);
+                                                setMessages([{
+                                                    id: Date.now(),
+                                                    content: summary,
+                                                    sender: 'ai',
+                                                    timestamp: new Date().toISOString(),
+                                                }]);
+                                            }}
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-xs border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300"
                                         >
-                                            {isGenerating ? (
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                            ) : (
-                                                <SendHorizontal className="w-4 h-4" />
-                                            )}
+                                            <MessageSquareIcon className="w-3.5 h-3.5 mr-1.5" />
+                                            Continue in Chat
+                                        </Button>
+                                        <Button
+                                            onClick={() => {
+                                                setSummary('');
+                                                setCustomPrompt('');
+                                                setEnhancedPrompt('');
+                                            }}
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-xs text-purple-700 dark:text-purple-300"
+                                            disabled={isGenerating}
+                                        >
+                                            New Analysis
                                         </Button>
                                     </div>
                                 </div>
+                                {enhancedPrompt && (
+                                    <div className="mb-4 text-xs text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 rounded-lg p-3">
+                                        <div className="font-medium mb-1">Enhanced Prompt:</div>
+                                        <div>{enhancedPrompt}</div>
+                                    </div>
+                                )}
+                                {isGenerating ? (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3 text-sm text-purple-700 dark:text-purple-300">
+                                            <div className="relative w-5 h-5">
+                                                <div className="absolute inset-0 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+                                                <div className="absolute inset-0 rounded-full border-2 border-purple-500 opacity-20" />
+                                            </div>
+                                            <div className="inline-flex items-center gap-1.5">
+                                                <span>AI is analyzing</span>
+                                                <span className="animate-pulse">.</span>
+                                                <span className="animate-pulse animation-delay-200">.</span>
+                                                <span className="animate-pulse animation-delay-400">.</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="relative overflow-hidden rounded-lg bg-purple-100/50 dark:bg-purple-900/30 p-4">
+                                            <div className="space-y-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-full bg-purple-300 dark:bg-purple-700 animate-pulse" />
+                                                    <div className="h-4 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-32" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <div className="h-3 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-full" />
+                                                    <div className="h-3 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-[90%]" />
+                                                    <div className="h-3 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-[95%]" />
+                                                    <div className="h-3 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-[85%]" />
+                                                </div>
+                                            </div>
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-200/10 dark:via-purple-700/10 to-transparent animate-shimmer" />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    summary.split('\n').map((paragraph, idx) => (
+                                        paragraph.trim() && (
+                                            <p key={idx} className="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
+                                                {parseHtmlContent(paragraph)}
+                                            </p>
+                                        )
+                                    ))
+                                )}
                             </div>
-                        )}
-                    </div>
-                )}
-            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col h-[500px]">
+                            <div className="flex items-center justify-between p-4 border-b border-purple-200 dark:border-purple-700">
+                                <Button
+                                    onClick={() => setIsChatMode(false)}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-sm text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 transition-colors"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Back to Summary
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        setSummary('');
+                                        setCustomPrompt('');
+                                        setEnhancedPrompt('');
+                                        setMessages([]);
+                                        setIsChatMode(false);
+                                    }}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-xs text-purple-700 dark:text-purple-300"
+                                >
+                                    New Analysis
+                                </Button>
+                            </div>
+
+                            <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+                                <div className="space-y-4">
+                                    {messages.map((message) => (
+                                        <div
+                                            key={message.id}
+                                            className={`flex gap-2 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                                        >
+                                            {message.sender === 'ai' && (
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarImage src="/logo.svg" />
+                                                    <AvatarFallback>AI</AvatarFallback>
+                                                </Avatar>
+                                            )}
+                                            <div
+                                                className={`px-4 py-2 rounded-lg max-w-[80%] ${message.sender === 'user'
+                                                    ? 'bg-purple-600 text-white'
+                                                    : 'bg-purple-100 dark:bg-purple-900 text-gray-800 dark:text-gray-200'
+                                                }`}
+                                            >
+                                                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                            </div>
+                                            {message.sender === 'user' && (
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarImage src="/placeholder.svg" />
+                                                    <AvatarFallback>U</AvatarFallback>
+                                                </Avatar>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {isGenerating && (
+                                        <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src="/logo.svg" />
+                                                <AvatarFallback>AI</AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex gap-1">
+                                                <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: "0ms" }} />
+                                                <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: "150ms" }} />
+                                                <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </ScrollArea>
+
+                            <div className="p-4 border-t border-purple-200 dark:border-purple-700">
+                                <div className="flex gap-2">
+                                    <Textarea
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        placeholder="Ask a follow-up question..."
+                                        className="min-h-[44px] max-h-32 resize-none"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleSendMessage();
+                                            }
+                                        }}
+                                    />
+                                    <Button
+                                        onClick={handleSendMessage}
+                                        disabled={isGenerating || !newMessage.trim()}
+                                        className="px-3 bg-purple-600 hover:bg-purple-700 text-white"
+                                    >
+                                        {isGenerating ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <SendHorizontal className="w-4 h-4" />
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+
 
             {/* Results Count & Filter */}
             <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6">
@@ -1020,7 +1024,7 @@ Create an enhanced version that requires proper clickable citation numbers and r
                             {/* URL and Domain Section */}
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-full">
-                                    <img 
+                                    <img
                                         src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
                                         alt=""
                                         className="w-4 h-4"
