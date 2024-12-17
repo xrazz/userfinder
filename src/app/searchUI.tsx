@@ -90,7 +90,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             const today = new Date().toDateString();
 
             if (!guestCredits || !lastResetDate || lastResetDate !== today) {
-                Cookies.set('guestCredits', '3', { 
+                Cookies.set('guestCredits', '3', {
                     expires: new Date(new Date().setHours(24, 0, 0, 0)) // Expires at midnight
                 });
                 Cookies.set('guestCreditsLastReset', today, {
@@ -110,7 +110,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 const userData = docSnapshot.data();
                 const lastReset = userData.lastCreditReset?.toDate();
                 const now = new Date();
-                
+
                 // Check if we need to reset credits (new day)
                 if (!lastReset || lastReset.toDateString() !== now.toDateString()) {
                     // Reset credits to 10 at the start of each day
@@ -275,10 +275,10 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 <div className="flex items-center justify-between gap-2 mt-2">
                     <div className="flex flex-wrap items-center gap-1">
                         <div>
-                            <QueryTutorialModal />
+                            {/* <QueryTutorialModal /> */}
                         </div>
 
-                        <Popover>
+                        {/* <Popover>
                             <PopoverTrigger asChild>
                                 <Button
                                     variant="outline"
@@ -300,7 +300,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                 setCustomUrl={setCustomUrl}
                                 membership={Membership}
                             />
-                        </Popover>
+                        </Popover> */}
 
                         <Badge size="1" color="crimson">
                             {selectedSite === 'custom' ? (customUrl || 'Custom Site') : selectedSite}
@@ -312,16 +312,30 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                         )}
                         <Badge color="cyan" variant="soft">{resultCount}</Badge>
                     </div>
-
-                    <Button
-                        onClick={handleSearch}
-                        variant="secondary"
-                        size="icon"
-                        className="w-8 h-8 rounded-full text-white bg-gray-700 hover:bg-gray-800 hover:text-white"
-                    >
-                        <Search className="w-3 h-3" />
-                        <span className="sr-only">Search</span>
-                    </Button>
+                    <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="w-8 h-8 rounded-lg hover:bg-gray-100 hover:text-gray-900"
+                                >
+                                    <Settings2 className="w-4 h-4" />
+                                    <span className="sr-only">Settings</span>
+                                </Button>
+                            </PopoverTrigger>
+                            <LoggedInSettingsPopover
+                                selectedSite={selectedSite}
+                                setSelectedSite={setSelectedSite}
+                                resultCount={resultCount}
+                                setResultCount={setResultCount}
+                                currentFilter={currentFilter}
+                                handleFilterChange={handleFilterChange}
+                                customUrl={customUrl}
+                                setCustomUrl={setCustomUrl}
+                                membership={Membership}
+                            />
+                        </Popover>
+                    
                 </div>
 
                 {loading && <TabDataSkeleton />}

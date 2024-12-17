@@ -107,29 +107,43 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
         }
     }
 
+    const handleSearch = () => {
+        if (typingQuery.trim() !== '') {
+            onSearch(typingQuery)
+        }
+    }
+
     return (
         <div className={`w-full border rounded-xl overflow-hidden transition-all duration-300 ${
             isSearchFocused ? 'border-primary shadow-lg' : 'border-gray-200 dark:border-gray-800'
         }`}>
-            <div className="flex-grow relative">
-                <Input
-                    ref={searchInputRef}
-                    onKeyDown={handleKeyDown}
-                    value={typingQuery}
-                    onChange={handleSearchInputChange}
-                    onFocus={() => {
-                        setIsSearchFocused(true)
-                        setShowSuggestions(true)
-                    }}
-                    onBlur={() => {
-                        setTimeout(() => {
-                            setIsSearchFocused(false)
-                            setShowSuggestions(false)
-                        }, 200)
-                    }}
-                    placeholder={currentPlaceholder}
-                    className="h-12 px-4 border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
-                />
+            <div className="flex items-center">
+                <div className="flex-grow relative">
+                    <Input
+                        ref={searchInputRef}
+                        onKeyDown={handleKeyDown}
+                        value={typingQuery}
+                        onChange={handleSearchInputChange}
+                        onFocus={() => {
+                            setIsSearchFocused(true)
+                            setShowSuggestions(true)
+                        }}
+                        onBlur={() => {
+                            setTimeout(() => {
+                                setIsSearchFocused(false)
+                                setShowSuggestions(false)
+                            }, 200)
+                        }}
+                        placeholder={currentPlaceholder}
+                        className="h-12 px-4 border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+                    />
+                </div>
+                <button
+                    onClick={handleSearch}
+                    className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-r-xl transition-colors duration-200"
+                >
+                    <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                </button>
             </div>
             <AnimatePresence>
                 {showSuggestions && suggestions.length > 0 && (
@@ -158,4 +172,5 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
             </AnimatePresence>
         </div>
     )
-} 
+}
+
