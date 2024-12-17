@@ -111,7 +111,13 @@ const PresetQuestionButton = ({ question, onClick, disabled }: PresetQuestion) =
     </Button>
 )
 
-const DiscussionDialog = ({ post, isOpen, onClose, email }: { post: Post, isOpen: boolean, onClose: () => void, email?: string }) => {
+const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: { 
+    post: Post, 
+    isOpen: boolean, 
+    onClose: () => void, 
+    email?: string,
+    onEngage?: (link: string) => void 
+}) => {
     const [messages, setMessages] = React.useState<Message[]>([])
     const [newMessage, setNewMessage] = React.useState('')
     const [loading, setLoading] = React.useState(false)
@@ -459,6 +465,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     const [summary, setSummary] = React.useState('');
     const [showCustomPrompt, setShowCustomPrompt] = React.useState(false);
     const [customPrompt, setCustomPrompt] = React.useState('');
+    const [enhancedPrompt, setEnhancedPrompt] = React.useState('');
     const [isDialogOpen, setIsDialogOpen] = React.useState(false);
     const [selectedPost, setSelectedPost] = React.useState<Post | null>(null);
     const [isChatMode, setIsChatMode] = React.useState(false);
@@ -1081,6 +1088,7 @@ Create an enhanced version that requires proper clickable citation numbers and r
                         setSelectedPost(null);
                     }}
                     email={email}
+                    onEngage={onEngage}
                 />
             )}
 
