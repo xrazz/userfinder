@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
-import { Bookmark, LogOut, Sparkles, Crown, Search } from 'lucide-react'
+import { Bookmark, LogOut, Sparkles, Crown } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { doc, onSnapshot } from 'firebase/firestore'
@@ -19,6 +19,11 @@ interface HeaderProps {
     imageUrl?: string
     onLogout: () => void
     subscriptionStatus?: string
+}
+
+const gradientTextStyle = {
+    backgroundSize: '200% auto',
+    animation: 'shine 3s linear infinite',
 }
 
 export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, onLogout, subscriptionStatus }) => {
@@ -59,13 +64,13 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
     return (
         <header className="w-full px-4 md:px-6 py-4 flex justify-between items-center bg-background border-none">
             <div className="flex items-center">
-                {/* Logo image commented out for now */}
-                {/* <Image src="/logo.png" alt="Logo" width={150} height={150} /> */}
-                
-                {/* Stylish LEXY text logo */}
-                <Link href="/" className="flex items-center gap-1.5 select-none">
-                    <Search className="w-5 h-5 text-primary" />
-                    <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary/80 to-primary/60">
+                <Link href="/" className="flex items-center gap-1.5 select-none group">
+                    <span 
+                        className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-indigo-500 to-primary"
+                        style={{
+                            ...gradientTextStyle,
+                        }}
+                    >
                         LEXY
                     </span>
                 </Link>

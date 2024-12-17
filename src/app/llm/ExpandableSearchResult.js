@@ -232,8 +232,29 @@ const DiscussionDialog = ({ post, isOpen, onClose, email }) => {
 
     try {
       const response = await axios.post('/api/prompt', {
-        systemPrompt: "You are a skilled content analyzer providing clear, structured insights.",
-        userPrompt: prompt || `Please analyze these search results for "${post.title}" and provide a clear, concise summary of the main findings and trends: ${post.snippet}`,
+        systemPrompt: `You are a content analyzer focused on providing clear, structured insights based STRICTLY on the provided search results.
+- ONLY use information from the provided search results and snippets
+- ALWAYS cite your sources by referencing the specific result or snippet you're drawing information from
+- Format source references as markdown links: "[Main Result](URL)" or "[Related Result #](URL)"
+- Every piece of information must have a clickable source link
+- Keep your analysis focused and relevant to the search context
+- If you cannot answer something from the provided context, explicitly state that
+- Structure your response with clear sections and bullet points when appropriate
+- Begin each major point with the source reference as a clickable link
+- Use markdown formatting for better readability`,
+        userPrompt: prompt || `Please analyze these search results and provide a clear, structured analysis with source references:
+
+Search Context: "${post.title}"
+
+Available Sources:
+[Main Result]
+Title: ${post.title}
+URL: ${post.link}
+Content: ${post.snippet}
+
+${post.relatedSnippets ? `Related Sources:\n${post.relatedSnippets.map((s, i) => 
+  `[Related Result ${i + 1}]\nURL: ${post.relatedLinks?.[i] || 'N/A'}\nContent: ${s}`
+).join('\n\n')}` : ''}`,
         email: email
       }, {
         headers: { 
@@ -263,13 +284,43 @@ const DiscussionDialog = ({ post, isOpen, onClose, email }) => {
   const handleCustomAnalysis = () => {
     setCustomAnalysisThinking(true);
     setShowCustomPrompt(true);
+    setCustomPrompt(`Please provide your specific analysis request for the following search results:
+
+Search Query: "${post.searchQuery}"
+
+Available Sources:
+[Main Result]
+Title: ${post.title}
+URL: ${post.link}
+Content: ${post.snippet}
+
+${post.relatedSnippets ? `Related Sources:\n${post.relatedSnippets.map((s, i) => 
+  `[Related Result ${i + 1}]\nURL: ${post.relatedLinks?.[i] || 'N/A'}\nContent: ${s}`
+).join('\n\n')}` : ''}
+
+Your analysis request (be specific about what aspects you want analyzed):`);
   };
 
   const handleCustomPromptSubmit = async () => {
     if (!customPrompt.trim()) return;
     setCustomAnalysisThinking(true);
     try {
-      await generateSummary(customPrompt);
+      await generateSummary(`Analysis Request with Full Context:
+
+Search Query: "${post.searchQuery}"
+
+Available Sources:
+[Main Result]
+Title: ${post.title}
+URL: ${post.link}
+Content: ${post.snippet}
+
+${post.relatedSnippets ? `Related Sources:\n${post.relatedSnippets.map((s, i) => 
+  `[Related Result ${i + 1}]\nURL: ${post.relatedLinks?.[i] || 'N/A'}\nContent: ${s}`
+).join('\n\n')}` : ''}
+
+User's Analysis Request:
+${customPrompt}`);
     } finally {
       setCustomAnalysisThinking(false);
     }
@@ -861,7 +912,7 @@ const ExpandableSearchResult = ({ post, onEngage, onBookmark, onCopyUrl, email }
   // Format the URL for display
   const formatUrl = (url) => {
     const urlObj = new URL(url);
-    return `${urlObj.hostname}${urlObj.pathname.length > 1 ? urlObj.pathname : ''}`;
+    return urlObj.hostname.replace('www.', '');
   };
 
   // Create a safe document ID from URL
@@ -931,36 +982,38 @@ const ExpandableSearchResult = ({ post, onEngage, onBookmark, onCopyUrl, email }
   };
 
   return (
-    <div className="px-4">
+    <div className="space-y-4">
       {/* URL and Domain Section */}
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-          <img 
-            src={`https://www.google.com/s2/favicons?sz=16&domain_url=${domain}`}
-            alt=""
-            className="w-4 h-4 mr-2"
-          />
-          <span>{formatUrl(post.link)}</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-full">
+            <img 
+              src={`https://www.google.com/s2/favicons?sz=16&domain_url=${domain}`}
+              alt=""
+              className="w-4 h-4"
+            />
+            <span>{formatUrl(post.link)}</span>
+          </div>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 px-2"
+          className="h-8 px-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
           onClick={handleUpvote}
           disabled={isLoading}
         >
-          <ThumbsUp className={`h-4 w-4 mr-1 ${isUpvoted ? 'fill-primary' : ''}`} />
-          <span className="text-xs">{upvoteCount}</span>
+          <ThumbsUp className={`h-4 w-4 mr-1.5 ${isUpvoted ? 'fill-primary text-primary' : ''}`} />
+          <span className="text-sm font-medium">{upvoteCount}</span>
         </Button>
       </div>
 
       {/* Title Section */}
-      <h3 className="text-xl mb-2">
+      <h3 className="text-lg font-medium leading-tight">
         <a
           href={decodeURIComponent(post.link)}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[#1a0dab] dark:text-[#8ab4f8] hover:underline font-normal"
+          className="text-gray-900 dark:text-white hover:text-primary dark:hover:text-primary transition-colors"
           onClick={() => onEngage(post.link)}
         >
           {post.title}
@@ -968,31 +1021,31 @@ const ExpandableSearchResult = ({ post, onEngage, onBookmark, onCopyUrl, email }
       </h3>
 
       {/* Snippet Section */}
-      <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
+      <p className="text-sm text-muted-foreground leading-relaxed">
         {post.snippet}
       </p>
 
       {/* Action Buttons */}
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2 pt-2">
         <button
           onClick={() => setIsDialogOpen(true)}
-          className="text-xs px-4 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center gap-1.5 transition-colors font-medium"
+          className="text-sm px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center gap-2 transition-colors font-medium"
         >
-          <SparklesIcon className="w-3.5 h-3.5" />
+          <SparklesIcon className="w-4 h-4" />
           <span>Discuss</span>
         </button>
         <button
           onClick={() => onBookmark(post)}
-          className="text-xs px-4 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-1.5 transition-colors"
+          className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
         >
-          <Bookmark className="w-3.5 h-3.5" />
+          <Bookmark className="w-4 h-4" />
           <span>Save</span>
         </button>
         <button
           onClick={() => onCopyUrl(post.link)}
-          className="text-xs px-4 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-1.5 transition-colors"
+          className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
         >
-          <Link2 className="w-3.5 h-3.5" />
+          <Link2 className="w-4 h-4" />
           <span>Share</span>
         </button>
       </div>

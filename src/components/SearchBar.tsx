@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, ArrowUpRight } from 'lucide-react'
@@ -9,11 +9,59 @@ interface SearchBarProps {
     setTypingQuery: (query: string) => void
 }
 
+const placeholderQueries = [
+    "Let's find your next inspiration...",
+    "Let's find groundbreaking discoveries...",
+    "Let's find innovative solutions...",
+    "Let's find expert insights...",
+    "Let's find cutting-edge research...",
+    "Let's find hidden knowledge..."
+]
+
 export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, setTypingQuery }) => {
     const searchInputRef = useRef<HTMLInputElement>(null)
     const [isSearchFocused, setIsSearchFocused] = useState(false)
     const [suggestions, setSuggestions] = useState<string[]>([])
     const [showSuggestions, setShowSuggestions] = useState(false)
+    const [placeholderIndex, setPlaceholderIndex] = useState(0)
+    const [currentPlaceholder, setCurrentPlaceholder] = useState('')
+    const [isTyping, setIsTyping] = useState(true)
+
+    useEffect(() => {
+        let currentText = placeholderQueries[placeholderIndex]
+        let currentIndex = 0
+        let typingInterval: NodeJS.Timeout
+        let deletingTimeout: NodeJS.Timeout
+
+        if (isTyping) {
+            typingInterval = setInterval(() => {
+                if (currentIndex <= currentText.length) {
+                    setCurrentPlaceholder(currentText.slice(0, currentIndex))
+                    currentIndex++
+                } else {
+                    clearInterval(typingInterval)
+                    deletingTimeout = setTimeout(() => {
+                        const deleteInterval = setInterval(() => {
+                            setCurrentPlaceholder(prev => {
+                                if (prev.length <= 0) {
+                                    clearInterval(deleteInterval)
+                                    setIsTyping(true)
+                                    setPlaceholderIndex(prevIndex => (prevIndex + 1) % placeholderQueries.length)
+                                    return ''
+                                }
+                                return prev.slice(0, -1)
+                            })
+                        }, 50)
+                    }, 1000)
+                }
+            }, 100)
+        }
+
+        return () => {
+            clearInterval(typingInterval)
+            clearTimeout(deletingTimeout)
+        }
+    }, [placeholderIndex, isTyping])
 
     const generateSuggestions = async (query: string) => {
         if (!query.trim()) {
@@ -79,7 +127,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
                             setShowSuggestions(false)
                         }, 200)
                     }}
-                    placeholder="Let's find..."
+                    placeholder={currentPlaceholder}
                     className="h-12 px-4 border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                 />
             </div>
