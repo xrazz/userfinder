@@ -319,7 +319,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                         size="icon"
                         className="w-8 h-8 rounded-full text-white bg-gray-700 hover:bg-gray-800 hover:text-white"
                     >
-                        <Search className="w-2 h-2 md:w-2 md:h-2" />
+                        <Search className="w-3 h-3" />
                         <span className="sr-only">Search</span>
                     </Button>
                 </div>
