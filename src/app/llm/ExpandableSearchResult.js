@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MessageSquare, Bookmark, Link2, SendHorizontal, Loader2, CalendarIcon, UserIcon, SparklesIcon, FileTextIcon, ChevronUpIcon, ChevronDownIcon } from 'lucide-react';
+import { Bookmark, Link2, SendHorizontal, Loader2, CalendarIcon, UserIcon, SparklesIcon, FileTextIcon, ChevronUpIcon, ChevronDownIcon, MessageSquare, ThumbsUp } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getFirestore, doc, collection, addDoc, updateDoc, deleteDoc, query, where, getDocs, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/app/firebaseClient';
 import axios from 'axios';
 
 const TypingIndicator = () => (
@@ -63,6 +65,7 @@ const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post, email }) =>
   useEffect(() => {
     const generateSummary = async () => {
       if (!pageContent?.summary && !post?.snippet) return;
+      if (!email) return;
       
       setSummaryLoading(true);
       try {
@@ -74,12 +77,16 @@ const ArticleSummary = ({ pageContent, isLoading, isCollapsed, post, email }) =>
             
             Focus on the main takeaways and why they matter.`,
           email: email
+        }, {
+          headers: {
+            'Authorization': `Bearer ${email}`
+          }
         });
 
         setAiSummary(response.data.output);
       } catch (error) {
         console.error('Error generating AI summary:', error);
-        setAiSummary('');
+        setAiSummary(error.response?.status === 403 ? 'Please sign in to use AI features' : '');
       } finally {
         setSummaryLoading(false);
       }
@@ -172,7 +179,14 @@ const DiscussionDialog = ({ post, isOpen, onClose, email }) => {
     const fetchPageContent = async () => {
       if (isOpen && post.link) {
         try {
-          const response = await axios.post('/api/scrape', { url: post.link });
+          const response = await axios.post('/api/scrape', { 
+            url: post.link,
+            email: email 
+          }, {
+            headers: {
+              'Authorization': `Bearer ${email}`
+            }
+          });
           setPageContent(response.data);
         } catch (error) {
           console.error('Error fetching page content:', error);
@@ -181,10 +195,12 @@ const DiscussionDialog = ({ post, isOpen, onClose, email }) => {
     };
 
     fetchPageContent();
-  }, [isOpen, post.link]);
+  }, [isOpen, post.link, email]);
 
   // First, add this helper function at the top of the DiscussionDialog component
   const generateQuestionsFromContent = async (title, content) => {
+    if (!email) return [];
+    
     try {
       const prompt = `Based on this content titled "${title}":
         "${content}"
@@ -197,7 +213,12 @@ const DiscussionDialog = ({ post, isOpen, onClose, email }) => {
 
       const response = await axios.post('/api/prompt', {
         systemPrompt: "You are a helpful discussion facilitator who excels at creating engaging, bite-sized questions that spark curiosity and conversation. Keep questions short, clear, and conversational.",
-        userPrompt: prompt
+        userPrompt: prompt,
+        email: email
+      }, {
+        headers: {
+          'Authorization': `Bearer ${email}`
+        }
       });
 
       let questions;
@@ -276,57 +297,63 @@ const DiscussionDialog = ({ post, isOpen, onClose, email }) => {
 
   // Handle sending messages
   const handleSendMessage = async (messageText = newMessage) => {
-    if (messageText.trim()) {
-      setHasChatStarted(true);
-      const userMessage = {
+    if (!messageText.trim() || !email) return;
+
+    setHasChatStarted(true);
+    const userMessage = {
+      id: Date.now(),
+      content: messageText,
+      sender: 'user',
+      timestamp: new Date().toISOString(),
+    };
+    setMessages([...messages, userMessage]);
+    setNewMessage('');
+    setLoading(true);
+
+    try {
+      const systemPrompt = pageContent 
+        ? `You are having a detailed discussion about the article:
+           Title: "${pageContent.summary.title}"
+           Meta Description: "${pageContent.summary.metaDescription}"
+           Main Content: "${pageContent.summary.mainContent}"
+           
+           Previous conversation context: ${messages.map(msg => `${msg.sender}: ${msg.content}`).join('\n')}`
+        : `You are having a discussion about the article titled: "${post.title}". 
+           Here's a snippet of the article: "${post.snippet}". 
+           Previous messages in the conversation: ${messages.map(msg => `${msg.sender}: ${msg.content}`).join('\n')}`;
+
+      const response = await axios.post('/api/prompt', {
+        systemPrompt,
+        userPrompt: messageText,
+        email: email
+      }, {
+        headers: {
+          'Authorization': `Bearer ${email}`
+        }
+      });
+
+      const aiMessage = {
         id: Date.now(),
-        content: messageText,
-        sender: 'user',
+        content: response.data.output,
+        sender: 'ai',
         timestamp: new Date().toISOString(),
       };
-      setMessages([...messages, userMessage]);
-      setNewMessage('');
-      setLoading(true);
 
-      try {
-        const systemPrompt = pageContent 
-          ? `You are having a detailed discussion about the article:
-             Title: "${pageContent.summary.title}"
-             Meta Description: "${pageContent.summary.metaDescription}"
-             Main Content: "${pageContent.summary.mainContent}"
-             
-             Previous conversation context: ${messages.map(msg => `${msg.sender}: ${msg.content}`).join('\n')}`
-          : `You are having a discussion about the article titled: "${post.title}". 
-             Here's a snippet of the article: "${post.snippet}". 
-             Previous messages in the conversation: ${messages.map(msg => `${msg.sender}: ${msg.content}`).join('\n')}`;
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error fetching AI response:', error);
+      const errorMessage = error.response?.status === 403 
+        ? 'Please sign in to use AI features'
+        : error.response?.data?.error || 'Failed to get a response. Please try again.';
 
-        const response = await axios.post('/api/prompt', {
-          systemPrompt,
-          userPrompt: messageText,
-          email: email
-        });
-
-        const aiMessage = {
-          id: Date.now(),
-          content: response.data.output,
-          sender: 'ai',
-          timestamp: new Date().toISOString(),
-        };
-
-        setMessages(prev => [...prev, aiMessage]);
-      } catch (error) {
-        console.error('Error fetching AI response:', error);
-        const errorMessage = error.response?.data?.error || 'Failed to get a response. Please try again.';
-
-        setMessages(prev => [...prev, {
-          id: Date.now(),
-          content: errorMessage,
-          sender: 'ai',
-          timestamp: new Date().toISOString(),
-        }]);
-      } finally {
-        setLoading(false);
-      }
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        content: errorMessage,
+        sender: 'ai',
+        timestamp: new Date().toISOString(),
+      }]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -477,66 +504,480 @@ const DiscussionDialog = ({ post, isOpen, onClose, email }) => {
   );
 };
 
-const ExpandableSearchResult = ({ post, onEngage, onBookmark, onCopyUrl, email }) => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+const CommentSection = ({ post, email }) => {
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+
+  useEffect(() => {
+    fetchComments();
+  }, [post.link]);
+
+  const fetchComments = async () => {
+    try {
+      const commentsRef = collection(db, 'comments');
+      const q = query(commentsRef, where('postLink', '==', post.link));
+      const querySnapshot = await getDocs(q);
+      
+      const commentsData = [];
+      const commentMap = new Map();
+      
+      // First pass: collect all comments
+      for (const docSnapshot of querySnapshot.docs) {
+        const comment = docSnapshot.data();
+        const userDocRef = doc(db, 'users', comment.userEmail);
+        const userDocSnapshot = await getDoc(userDocRef);
+        const userData = userDocSnapshot.exists() ? userDocSnapshot.data() : null;
+        
+        const commentData = {
+          id: docSnapshot.id,
+          ...comment,
+          userName: userData?.name || comment.userEmail.split('@')[0],
+          userAvatar: userData?.imageUrl || null,
+          replies: [],
+        };
+        
+        commentMap.set(docSnapshot.id, commentData);
+      }
+      
+      // Second pass: organize into threads
+      commentMap.forEach(comment => {
+        if (comment.parentId) {
+          const parentComment = commentMap.get(comment.parentId);
+          if (parentComment) {
+            parentComment.replies.push(comment);
+          }
+        } else {
+          commentsData.push(comment);
+        }
+      });
+      
+      // Sort comments and their replies by timestamp
+      const sortByTimestamp = (a, b) => b.timestamp - a.timestamp;
+      commentsData.sort(sortByTimestamp);
+      commentsData.forEach(comment => {
+        comment.replies.sort(sortByTimestamp);
+      });
+      
+      setComments(commentsData);
+      setCommentCount(querySnapshot.size);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !email) return;
+    
+    setIsLoading(true);
+    try {
+      await addDoc(collection(db, 'comments'), {
+        postLink: post.link,
+        userEmail: email,
+        content: newComment.trim(),
+        timestamp: Date.now(),
+        upvotes: 0,
+      });
+      
+      setNewComment('');
+      await fetchComments();
+      setIsExpanded(true);
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <Card className="shadow-none border-none">
-      <CardHeader>
-      <CardTitle className="font-semibold text-xs text-blue-600 flex items-center space-x-2">
-  {/* Favicon */}
-  <img 
-    src={`https://www.google.com/s2/favicons?sz=32&domain_url=${new URL(post.link).hostname}`} 
-    alt="favicon" 
-    className="w-4 h-4"
-  />
-  {/* Domain Name */}
-  <span>{new URL(post.link).hostname}</span>
-</CardTitle>
+    <div className="mt-4">
+      {/* Comment Count and Expand Button */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+      >
+        <MessageSquare className="w-4 h-4" />
+        <span>{commentCount} {commentCount === 1 ? 'comment' : 'comments'}</span>
+        {commentCount > 0 && (
+          <ChevronDownIcon
+            className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          />
+        )}
+      </button>
 
-        <CardTitle className="text-base font-medium leading-tight mb-2 text-gray-800">
-          <a
-            href={decodeURIComponent(post.link)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:underline line-clamp-2"
-          >
-            {post.title}
-          </a>
-        </CardTitle>
-        <p className="text-xs text-muted-foreground mt-2 line-clamp-3">
-          {post.snippet}
-        </p>
-      </CardHeader>
-
-      <CardFooter className="flex justify-between items-center">
-        <div className="flex space-x-2">
+      {/* Comment Input */}
+      <div className={`space-y-4 ${isExpanded ? '' : 'hidden'}`}>
+        <div className="flex items-center gap-2">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={`https://avatar.vercel.sh/${email}`} />
+            <AvatarFallback>{email?.[0]?.toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <Textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Add a comment..."
+              className="min-h-[60px] resize-none"
+            />
+          </div>
           <Button
-            variant="outline"
-            size="icon"
-            className="rounded-full"
-            onClick={() => setIsDialogOpen(true)}
+            onClick={handleAddComment}
+            disabled={!newComment.trim() || isLoading}
+            size="sm"
+            className="self-end"
           >
-            <MessageSquare className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-full"
-            onClick={() => onCopyUrl(post.link)}
-          >
-            <Link2 className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-full"
-            onClick={() => onBookmark(post)}
-          >
-            <Bookmark className="w-4 h-4" />
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
           </Button>
         </div>
-      </CardFooter>
+
+        {/* Comments List */}
+        <div className="space-y-4">
+          {comments.map((comment) => (
+            <CommentThread
+              key={comment.id}
+              comment={comment}
+              email={email}
+              onUpdate={fetchComments}
+              level={0}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CommentThread = ({ comment, email, onUpdate, level = 0 }) => {
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(level < 2);
+  const hasReplies = comment.replies && comment.replies.length > 0;
+
+  return (
+    <div className={`${level > 0 ? 'ml-8' : ''}`}>
+      <CommentCard
+        comment={comment}
+        email={email}
+        onUpdate={onUpdate}
+        onReply={() => setShowReplyInput(!showReplyInput)}
+        showReplyInput={showReplyInput}
+      />
+      
+      {hasReplies && (
+        <div className="mt-2">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-8 mb-2"
+          >
+            <ChevronDownIcon className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+            <span>{comment.replies.length} {comment.replies.length === 1 ? 'reply' : 'replies'}</span>
+          </button>
+          
+          {isExpanded && (
+            <div className="space-y-4 border-l-2 border-gray-100 dark:border-gray-800">
+              {comment.replies.map((reply) => (
+                <CommentThread
+                  key={reply.id}
+                  comment={reply}
+                  email={email}
+                  onUpdate={onUpdate}
+                  level={level + 1}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const CommentCard = ({ comment, email, onUpdate, onReply, showReplyInput }) => {
+  const [isUpvoted, setIsUpvoted] = useState(false);
+  const [replyContent, setReplyContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    checkUpvoteStatus();
+  }, [comment.id, email]);
+
+  const checkUpvoteStatus = async () => {
+    if (!email) return;
+    try {
+      const upvoteRef = doc(db, 'upvotes', `${comment.id}_${email}`);
+      const upvoteDoc = await getDoc(upvoteRef);
+      setIsUpvoted(upvoteDoc.exists());
+    } catch (error) {
+      console.error('Error checking upvote status:', error);
+    }
+  };
+
+  const handleUpvote = async () => {
+    if (!email) return;
+    setIsLoading(true);
+    
+    try {
+      const upvoteRef = doc(db, 'upvotes', `${comment.id}_${email}`);
+      const commentRef = doc(db, 'comments', comment.id);
+      
+      if (isUpvoted) {
+        await deleteDoc(upvoteRef);
+        await updateDoc(commentRef, {
+          upvotes: comment.upvotes - 1
+        });
+      } else {
+        await setDoc(upvoteRef, {
+          commentId: comment.id,
+          userEmail: email,
+          timestamp: Date.now()
+        });
+        await updateDoc(commentRef, {
+          upvotes: comment.upvotes + 1
+        });
+      }
+      
+      setIsUpvoted(!isUpvoted);
+      onUpdate();
+    } catch (error) {
+      console.error('Error handling upvote:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddReply = async () => {
+    if (!replyContent.trim() || !email) return;
+    setIsLoading(true);
+    
+    try {
+      await addDoc(collection(db, 'comments'), {
+        postLink: comment.postLink,
+        userEmail: email,
+        content: replyContent.trim(),
+        parentId: comment.id,
+        timestamp: Date.now(),
+        upvotes: 0,
+      });
+      
+      setReplyContent('');
+      onReply();
+      onUpdate();
+    } catch (error) {
+      console.error('Error adding reply:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-start gap-2">
+        <Avatar className="h-6 w-6">
+          <AvatarImage src={comment.userAvatar || `https://avatar.vercel.sh/${comment.userEmail}`} />
+          <AvatarFallback>{comment.userName[0].toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{comment.userName}</span>
+            <span className="text-xs text-muted-foreground">
+              {new Date(comment.timestamp).toLocaleDateString()}
+            </span>
+          </div>
+          <p className="text-sm">{comment.content}</p>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={handleUpvote}
+              disabled={isLoading}
+            >
+              <ThumbsUp className={`h-4 w-4 mr-1 ${isUpvoted ? 'fill-primary' : ''}`} />
+              <span className="text-xs">{comment.upvotes || 0}</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={onReply}
+            >
+              <MessageSquare className="h-4 w-4 mr-1" />
+              <span className="text-xs">Reply</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {showReplyInput && (
+        <div className="mt-2 ml-8 flex items-center gap-2">
+          <Textarea
+            value={replyContent}
+            onChange={(e) => setReplyContent(e.target.value)}
+            placeholder="Write a reply..."
+            className="min-h-[60px] resize-none"
+          />
+          <Button
+            onClick={handleAddReply}
+            disabled={!replyContent.trim() || isLoading}
+            size="sm"
+            className="self-end"
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ExpandableSearchResult = ({ post, onEngage, onBookmark, onCopyUrl, email }) => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isUpvoted, setIsUpvoted] = useState(false);
+  const [upvoteCount, setUpvoteCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Extract and format the domain
+  const domain = new URL(post.link).hostname.replace('www.', '');
+  
+  // Format the URL for display
+  const formatUrl = (url) => {
+    const urlObj = new URL(url);
+    return `${urlObj.hostname}${urlObj.pathname.length > 1 ? urlObj.pathname : ''}`;
+  };
+
+  // Create a safe document ID from URL
+  const createSafeDocId = (url, email) => {
+    // Create a hash of the URL using a simple string manipulation
+    const urlHash = url
+      .split('')
+      .map(char => char.charCodeAt(0).toString(16))
+      .join('');
+    
+    // Combine with email but replace special characters
+    return `${urlHash}_${email.replace(/[.@]/g, '_')}`;
+  };
+
+  useEffect(() => {
+    fetchUpvoteStatus();
+  }, [post.link, email]);
+
+  const fetchUpvoteStatus = async () => {
+    if (!email) return;
+    try {
+      const resultId = createSafeDocId(post.link, email);
+      const upvoteRef = doc(db, 'result_upvotes', resultId);
+      const upvoteDoc = await getDoc(upvoteRef);
+      setIsUpvoted(upvoteDoc.exists());
+
+      // Get total upvotes for this result
+      const upvotesQuery = query(
+        collection(db, 'result_upvotes'),
+        where('resultLink', '==', post.link)
+      );
+      const upvotesSnapshot = await getDocs(upvotesQuery);
+      setUpvoteCount(upvotesSnapshot.size);
+    } catch (error) {
+      console.error('Error checking upvote status:', error);
+    }
+  };
+
+  const handleUpvote = async () => {
+    if (!email) return;
+    setIsLoading(true);
+    
+    try {
+      const resultId = createSafeDocId(post.link, email);
+      const upvoteRef = doc(db, 'result_upvotes', resultId);
+      
+      if (isUpvoted) {
+        await deleteDoc(upvoteRef);
+        setUpvoteCount(prev => prev - 1);
+      } else {
+        await setDoc(upvoteRef, {
+          resultLink: post.link,
+          userEmail: email,
+          timestamp: Date.now(),
+          title: post.title,
+          snippet: post.snippet
+        });
+        setUpvoteCount(prev => prev + 1);
+      }
+      
+      setIsUpvoted(!isUpvoted);
+    } catch (error) {
+      console.error('Error handling upvote:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="px-4">
+      {/* URL and Domain Section */}
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+          <img 
+            src={`https://www.google.com/s2/favicons?sz=16&domain_url=${domain}`}
+            alt=""
+            className="w-4 h-4 mr-2"
+          />
+          <span>{formatUrl(post.link)}</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 px-2"
+          onClick={handleUpvote}
+          disabled={isLoading}
+        >
+          <ThumbsUp className={`h-4 w-4 mr-1 ${isUpvoted ? 'fill-primary' : ''}`} />
+          <span className="text-xs">{upvoteCount}</span>
+        </Button>
+      </div>
+
+      {/* Title Section */}
+      <h3 className="text-xl mb-2">
+        <a
+          href={decodeURIComponent(post.link)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#1a0dab] dark:text-[#8ab4f8] hover:underline font-normal"
+          onClick={() => onEngage(post.link)}
+        >
+          {post.title}
+        </a>
+      </h3>
+
+      {/* Snippet Section */}
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
+        {post.snippet}
+      </p>
+
+      {/* Action Buttons */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setIsDialogOpen(true)}
+          className="text-xs px-4 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center gap-1.5 transition-colors font-medium"
+        >
+          <SparklesIcon className="w-3.5 h-3.5" />
+          <span>Discuss</span>
+        </button>
+        <button
+          onClick={() => onBookmark(post)}
+          className="text-xs px-4 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-1.5 transition-colors"
+        >
+          <Bookmark className="w-3.5 h-3.5" />
+          <span>Save</span>
+        </button>
+        <button
+          onClick={() => onCopyUrl(post.link)}
+          className="text-xs px-4 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-1.5 transition-colors"
+        >
+          <Link2 className="w-3.5 h-3.5" />
+          <span>Share</span>
+        </button>
+      </div>
 
       <DiscussionDialog
         post={post}
@@ -544,7 +985,9 @@ const ExpandableSearchResult = ({ post, onEngage, onBookmark, onCopyUrl, email }
         onClose={() => setIsDialogOpen(false)}
         email={email}
       />
-    </Card>
+
+      <CommentSection post={post} email={email} />
+    </div>
   );
 };
 

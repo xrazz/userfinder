@@ -84,7 +84,7 @@ const UniversalSearchTutorial = () => {
                 size="icon" 
                 className="hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                <HelpCircle className="h-6 w-6 text-muted-foreground" />
+                <HelpCircle className="h-5 w-5 text-muted-foreground" />
                 <span className="sr-only">Search Guide</span>
               </Button>
             </DialogTrigger>

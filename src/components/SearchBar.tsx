@@ -60,10 +60,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
     }
 
     return (
-        <div className={`w-full border rounded-xl p-2 transition-all duration-300 ${
-            isSearchFocused ? 'border-primary shadow-lg' : 'border-gray-300 shadow-sm'
+        <div className={`w-full border rounded-xl overflow-hidden transition-all duration-300 ${
+            isSearchFocused ? 'border-primary shadow-lg' : 'border-gray-200 dark:border-gray-800'
         }`}>
-            <div className="flex-grow relative mb-4">
+            <div className="flex-grow relative">
                 <Input
                     ref={searchInputRef}
                     onKeyDown={handleKeyDown}
@@ -80,7 +80,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
                         }, 200)
                     }}
                     placeholder="Let's find..."
-                    className="h-full border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="h-12 px-4 border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                 />
             </div>
             <AnimatePresence>
@@ -89,7 +89,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="absolute w-3/4 mt-2 bg-white rounded-lg shadow-lg border z-50"
+                        className="absolute w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 z-50"
                     >
                         {suggestions.map((suggestion, index) => (
                             <motion.div
@@ -97,7 +97,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.05 }}
-                                className="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                className="flex items-center px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                                 onClick={() => handleSuggestionClick(suggestion)}
                             >
                                 <Search className="w-4 h-4 mr-2 text-gray-400" />
