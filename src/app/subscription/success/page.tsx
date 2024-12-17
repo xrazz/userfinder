@@ -1,14 +1,14 @@
 // Update src/app/subscription/success/page.tsx
 'use client'
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function SubscriptionSuccess() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -16,7 +16,7 @@ export default function SubscriptionSuccess() {
 
   useEffect(() => {
     const verifySubscription = async () => {
-      const sessionId = searchParams.get('session_id');
+      const sessionId = searchParams?.get('session_id');
       
       if (!sessionId) {
         setStatus('error');
@@ -129,5 +129,22 @@ export default function SubscriptionSuccess() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function SubscriptionSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="container max-w-lg mx-auto py-20">
+        <Card>
+          <CardContent className="pt-10 pb-10 flex flex-col items-center justify-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }
