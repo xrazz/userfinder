@@ -710,9 +710,9 @@ Create an enhanced version that requires proper clickable citation numbers and r
     }
 
     return (
-        <div className="max-w-3xl mx-auto px-4 md:px-0 mt-3">
+        <div className="min-w-full mx-auto md:px-0 mt-3">
             {/* AI Analysis Section */}
-            <div className="mb-8 max-w-3xl mx-auto">
+            <div className="mb-8 min-w-full">
             {!summary ? (
                 <div className="relative">
                     <div className="bg-gradient-to-br from-purple-50 via-gray-100 to-purple-100 dark:from-gray-800 dark:via-purple-900 dark:to-gray-900 rounded-xl overflow-hidden transition-all duration-300 hover:from-purple-100 hover:via-gray-50 hover:to-purple-50 dark:hover:from-gray-900 dark:hover:via-purple-800 dark:hover:to-gray-800">
