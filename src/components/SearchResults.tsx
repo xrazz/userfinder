@@ -496,9 +496,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 }) => {
     const [isGenerating, setIsGenerating] = React.useState(false);
     const [summary, setSummary] = React.useState('');
-    const [showCustomPrompt, setShowCustomPrompt] = React.useState(false);
-    const [customPrompt, setCustomPrompt] = React.useState('');
-    const [enhancedPrompt, setEnhancedPrompt] = React.useState('');
     const [isDialogOpen, setIsDialogOpen] = React.useState(false);
     const [selectedPost, setSelectedPost] = React.useState<Post | null>(null);
     const [isChatMode, setIsChatMode] = React.useState(false);
@@ -666,78 +663,9 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
 
             const data = await response.json();
             setSummary(data.output);
-            setShowCustomPrompt(false);
         } catch (error) {
             console.error('Error generating content:', error);
             setSummary(error instanceof Error ? error.message : 'Failed to generate content. Please try again.');
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-    const enhancePrompt = async () => {
-        if (!customPrompt.trim()) return;
-
-        setIsGenerating(true);
-        try {
-            if (!email) {
-                throw new Error('Please sign in to use AI features');
-            }
-
-            // Prepare search results with references
-            const searchResults = posts.map((post, index) => ({
-                id: index + 1,
-                title: post.title,
-                snippet: post.snippet,
-                url: post.link
-            }));
-
-            const response = await fetch('/api/prompt', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${email}`
-                },
-                body: JSON.stringify({
-                    systemPrompt: `You are an expert prompt engineer. Enhance the given prompt to:
-- Make it more specific and detailed
-- Include requirements for HTML citation links: <a href="url" target="_blank">[1]</a>
-- Request structured analysis with clear citation guidelines
-- Maintain focus on the original intent
-- Ensure comprehensive coverage of available sources
-
-Example prompt enhancement:
-"Original: Analyze the impact of X
-Enhanced: Provide a detailed analysis of X's impact, using clickable HTML citation links <a href="url" target="_blank">[1]</a> for each point. Include specific examples from the sources and conclude with a numbered references section."`,
-                    userPrompt: `Enhance this analysis prompt to include clear citation guidelines:
-Original prompt: "${customPrompt}"
-
-Available sources format:
-${searchResults.slice(0, 1).map(result =>
-                        `[${result.id}] "${result.title}"
-    URL: ${result.url}
-    Content: ${result.snippet}`
-                    ).join('\n\n')}
-
-Create an enhanced version that requires proper clickable citation numbers and references.`,
-                    email: email
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error(
-                    response.status === 403
-                        ? 'Please sign in to use AI features'
-                        : 'Failed to enhance prompt. Please try again.'
-                );
-            }
-
-            const data = await response.json();
-            setCustomPrompt(data.output || customPrompt);
-            setEnhancedPrompt(data.output || customPrompt);
-        } catch (error) {
-            console.error('Error enhancing prompt:', error);
-            setEnhancedPrompt(error instanceof Error ? error.message : 'Failed to enhance prompt. Please try again.');
         } finally {
             setIsGenerating(false);
         }
@@ -760,13 +688,10 @@ Create an enhanced version that requires proper clickable citation numbers and r
     React.useEffect(() => {
         // Reset all AI-related states when search query changes
         setSummary('');
-        setCustomPrompt('');
-        setEnhancedPrompt('');
         setMessages([]);
         setIsChatMode(false);
         setIsDialogOpen(false);
         setSelectedPost(null);
-        setShowCustomPrompt(false);
     }, [searchQuery]);  // Dipendenza da searchQuery
 
     if (posts.length === 0) {
@@ -780,93 +705,27 @@ Create an enhanced version that requires proper clickable citation numbers and r
                 {!summary ? (
                     <div className="relative">
                         <div className="bg-gradient-to-br from-purple-50 via-gray-100 to-purple-100 dark:from-gray-800 dark:via-purple-900 dark:to-gray-900 rounded-xl overflow-hidden transition-all duration-300 hover:from-purple-100 hover:via-gray-50 hover:to-purple-50 dark:hover:from-gray-900 dark:hover:via-purple-800 dark:hover:to-gray-800">
-                            <div className="grid grid-cols-2">
-                                <Button
-                                    onClick={() => generateSummary()}
-                                    disabled={isGenerating}
-                                    className="flex items-center justify-center sm:gap-2 gap-1 sm:py-4 py-2 hover:bg-purple-100/50 dark:hover:bg-purple-800/30 transition-colors text-sm font-medium text-gray-800 dark:text-gray-200"
-                                    variant="ghost"
-                                >
-                                    {isGenerating ? (
-                                        <div className="flex items-center gap-2">
-                                            <div className="relative w-5 h-5">
-                                                <div className="absolute inset-0 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
-                                            </div>
-                                            <span>Analyzing...</span>
+                            <Button
+                                onClick={() => generateSummary()}
+                                disabled={isGenerating}
+                                className="w-full flex items-center justify-center sm:gap-2 gap-1 sm:py-4 py-2 hover:bg-purple-100/50 dark:hover:bg-purple-800/30 transition-colors text-sm font-medium text-gray-800 dark:text-gray-200"
+                                variant="ghost"
+                            >
+                                {isGenerating ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative w-5 h-5">
+                                            <div className="absolute inset-0 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
                                         </div>
-                                    ) : (
-                                        <>
-                                            <SparklesIcon className="sm:w-5 sm:h-5 w-4 h-4 text-gray-800 dark:text-gray-200" />
-                                            <span className="sm:text-sm text-xs whitespace-nowrap">Quick Summary</span>
-                                        </>
-                                    )}
-                                </Button>
-
-                                <Button
-                                    onClick={() => setShowCustomPrompt(true)}
-                                    disabled={isGenerating}
-                                    className="flex items-center justify-center sm:gap-2 gap-1 sm:py-4 py-2 hover:bg-purple-100/50 dark:hover:bg-purple-800/30 transition-colors text-sm font-medium text-gray-800 dark:text-gray-200"
-                                    variant="ghost"
-                                >
-                                    {isGenerating ? (
-                                        <div className="flex items-center gap-2">
-                                            <div className="relative w-5 h-5">
-                                                <div className="absolute inset-0 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
-                                            </div>
-                                            <span>Analyzing...</span>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <MessageSquareIcon className="sm:w-5 sm:h-5 w-4 h-4 text-gray-800 dark:text-gray-200" />
-                                            <span className="sm:text-sm text-xs whitespace-nowrap">Custom Analysis</span>
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
+                                        <span>Analyzing...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <SparklesIcon className="sm:w-5 sm:h-5 w-4 h-4 text-gray-800 dark:text-gray-200" />
+                                        <span className="sm:text-sm text-xs whitespace-nowrap">Quick Summary</span>
+                                    </>
+                                )}
+                            </Button>
                         </div>
-
-                        {showCustomPrompt && (
-                            <div className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-gray-800 rounded-xl border border-purple-200 dark:border-purple-700 p-4 shadow-lg z-10 transition-all duration-300 ease-in-out">
-                                <div className="flex justify-between items-center mb-3">
-                                    <h3 className="text-sm font-medium text-purple-700 dark:text-purple-300">Custom Analysis Prompt</h3>
-                                    <Button
-                                        onClick={() => setShowCustomPrompt(false)}
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                                    >
-                                        <XIcon className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                                <Textarea
-                                    value={customPrompt}
-                                    onChange={(e) => setCustomPrompt(e.target.value)}
-                                    placeholder="Ask anything about these search results..."
-                                    className="min-h-[100px] mb-3 resize-none text-sm"
-                                />
-                                <div className="flex gap-2">
-                                    <Button
-                                        onClick={enhancePrompt}
-                                        disabled={!customPrompt.trim() || isGenerating}
-                                        variant="outline"
-                                        size="sm"
-                                        className="flex items-center gap-1.5 border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300"
-                                    >
-                                        <SparklesIcon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                                        <span>Enhance</span>
-                                    </Button>
-                                    <Button
-                                        onClick={() => generateSummary(customPrompt)}
-                                        disabled={!customPrompt.trim() || isGenerating}
-                                        size="sm"
-                                        className="flex-1 flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white"
-                                    >
-                                        <MessageSquareIcon className="w-3.5 h-3.5" />
-                                        <span>Analyze</span>
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 ) : (
                     <div className="bg-gradient-to-br from-purple-50 via-gray-100 to-purple-100 dark:from-gray-800 dark:via-purple-900 dark:to-gray-900 rounded-xl overflow-hidden transition-all duration-300 hover:from-purple-100 hover:via-gray-50 hover:to-purple-50 dark:hover:from-gray-900 dark:hover:via-purple-800 dark:hover:to-gray-800">
@@ -899,8 +758,6 @@ Create an enhanced version that requires proper clickable citation numbers and r
                                             <Button
                                                 onClick={() => {
                                                     setSummary('');
-                                                    setCustomPrompt('');
-                                                    setEnhancedPrompt('');
                                                 }}
                                                 variant="ghost"
                                                 size="sm"
@@ -911,12 +768,6 @@ Create an enhanced version that requires proper clickable citation numbers and r
                                             </Button>
                                         </div>
                                     </div>
-                                    {enhancedPrompt && (
-                                        <div className="mb-4 text-xs text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 rounded-lg p-3">
-                                            <div className="font-medium mb-1">Enhanced Prompt:</div>
-                                            <div>{enhancedPrompt}</div>
-                                        </div>
-                                    )}
                                     {isGenerating ? (
                                         <div className="space-y-4">
                                             <div className="flex items-center gap-3 text-sm text-purple-700 dark:text-purple-300">
@@ -974,8 +825,6 @@ Create an enhanced version that requires proper clickable citation numbers and r
                                     <Button
                                         onClick={() => {
                                             setSummary('');
-                                            setCustomPrompt('');
-                                            setEnhancedPrompt('');
                                             setMessages([]);
                                             setIsChatMode(false);
                                         }}
