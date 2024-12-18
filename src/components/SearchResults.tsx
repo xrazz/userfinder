@@ -8,12 +8,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import axios from 'axios'
 import { useInView } from 'react-intersection-observer'
-import { addCommentToPost } from '@/app/firebaseClient'
-import { toast } from 'react-hot-toast'
-import { db } from '@/app/firebaseClient'
-import { onSnapshot, getDoc, updateDoc, setDoc } from 'firebase/firestore'
-import { doc } from 'firebase/firestore'
-import { PostInteraction } from '@/app/firebaseClient'
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Post {
@@ -43,25 +37,6 @@ interface Message {
     content: string;
     sender: 'user' | 'ai';
     timestamp: string;
-}
-
-interface PostWithInteractions extends Post {
-    comments?: Comment[];
-    totalVotes?: number;
-    userVote?: 'up' | 'down';
-}
-
-interface Comment {
-    id: string;
-    userId: string;
-    userEmail: string;
-    userName: string;
-    userImage?: string;
-    content: string;
-    timestamp: Date;
-    votes: number;
-    replies?: Comment[];
-    parentId?: string;
 }
 
 // Aggiorna la funzione parseHtmlContent
@@ -505,120 +480,6 @@ ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
     )
 }
 
-const CommentItem = ({ comment, postUrl, email, onReply }: { 
-    comment: Comment; 
-    postUrl: string;
-    email?: string;
-    onReply: (parentId: string) => void;
-}) => {
-    const [isReplying, setIsReplying] = React.useState(false);
-    const [replyContent, setReplyContent] = React.useState('');
-
-    const handleReply = async () => {
-        if (!email || !replyContent.trim()) return;
-        
-        try {
-            await addCommentToPost(postUrl, {
-                userId: email,
-                userEmail: email,
-                userName: email.split('@')[0],
-                content: replyContent.trim(),
-                parentId: comment.id
-            });
-            setReplyContent('');
-            setIsReplying(false);
-        } catch (error) {
-            toast.error("Failed to add reply");
-        }
-    };
-
-    return (
-        <div className="space-y-2">
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-2">
-                    <Avatar className="w-6 h-6">
-                        <AvatarImage src={comment.userImage || '/placeholder.svg'} />
-                        <AvatarFallback>{comment.userName[0]}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">{comment.userName}</span>
-                
-                </div>
-                <p className="text-sm text-muted-foreground">{comment.content}</p>
-                
-                <div className="flex items-center gap-4 mt-2">
-                    <button
-                        onClick={() => setIsReplying(!isReplying)}
-                        className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-                    >
-                        <MessageCircle className="w-3 h-3" />
-                        {isReplying ? 'Cancel' : 'Reply'}
-                    </button>
-                </div>
-            </div>
-
-            <AnimatePresence>
-                {isReplying && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="ml-6 overflow-hidden"
-                    >
-                        <div className="flex gap-2 pt-2">
-                            <Textarea
-                                value={replyContent}
-                                onChange={(e) => setReplyContent(e.target.value)}
-                                placeholder="Write a reply..."
-                                className="flex-1 text-sm min-h-[60px]"
-                            />
-                            <Button 
-                                onClick={handleReply}
-                                disabled={!replyContent.trim() || !email}
-                                size="sm"
-                                className="self-start"
-                            >
-                                Reply
-                            </Button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {comment.replies && comment.replies.length > 0 && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="ml-6 space-y-2 border-l-2 border-gray-100 dark:border-gray-700 pl-4"
-                >
-                    {comment.replies.map((reply) => (
-                        <motion.div
-                            key={reply.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            <CommentItem
-                                comment={reply}
-                                postUrl={postUrl}
-                                email={email}
-                                onReply={onReply}
-                            />
-                        </motion.div>
-                    ))}
-                </motion.div>
-            )}
-        </div>
-    );
-};
-
-// Add this helper function at the top level
-const calculateVoteTotal = (votes: PostInteraction['votes']) => {
-    return Object.values(votes).reduce((total, vote) => {
-        return total + (vote.type === 'up' ? 1 : -1);
-    }, 0);
-};
-
 export const SearchResults: React.FC<SearchResultsProps> = ({
     platform,
     posts,
@@ -644,9 +505,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     const [messages, setMessages] = React.useState<Message[]>([]);
     const [newMessage, setNewMessage] = React.useState('');
     const scrollAreaRef = React.useRef<HTMLDivElement>(null);
-    const [expandedPost, setExpandedPost] = React.useState<string | null>(null);
-    const [newComment, setNewComment] = React.useState('');
-    const [postInteractions, setPostInteractions] = React.useState<{[key: string]: PostInteraction}>({});
 
     const scrollToBottom = () => {
         if (scrollAreaRef.current) {
@@ -910,96 +768,6 @@ Create an enhanced version that requires proper clickable citation numbers and r
         setSelectedPost(null);
         setShowCustomPrompt(false);
     }, [searchQuery]);  // Dipendenza da searchQuery
-
-    React.useEffect(() => {
-        // Carica le interazioni per ogni post
-        posts.forEach(async (post) => {
-            const postDocRef = doc(db, "postInteractions", encodeURIComponent(post.link));
-            onSnapshot(postDocRef, (doc) => {
-                if (doc.exists()) {
-                    setPostInteractions(prev => ({
-                        ...prev,
-                        [post.link]: doc.data() as PostInteraction
-                    }));
-                }
-            });
-        });
-    }, [posts]);
-
-    const handleVote = async (post: Post, voteType: 'up' | 'down') => {
-        if (!email) {
-            toast.error("Please sign in to vote");
-            return;
-        }
-
-        try {
-            const postDocRef = doc(db, "postInteractions", encodeURIComponent(post.link));
-            const postDoc = await getDoc(postDocRef);
-            
-            if (postDoc.exists()) {
-                const data = postDoc.data() as PostInteraction;
-                const currentVote = data.votes[email];
-                
-                // If clicking the same vote type, remove the vote
-                if (currentVote?.type === voteType) {
-                    const updatedVotes = { ...data.votes };
-                    delete updatedVotes[email];
-                    
-                    await updateDoc(postDocRef, {
-                        votes: updatedVotes,
-                        totalVotes: calculateVoteTotal(updatedVotes)
-                    });
-                    toast.success("Vote removed");
-                    return;
-                }
-                
-                // Update or add new vote
-                const updatedVotes = {
-                    ...data.votes,
-                    [email]: { type: voteType, timestamp: new Date() }
-                };
-
-                await updateDoc(postDocRef, {
-                    votes: updatedVotes,
-                    totalVotes: calculateVoteTotal(updatedVotes)
-                });
-                
-                toast.success(currentVote ? "Vote changed" : "Vote recorded");
-            } else {
-                // Create new document with vote
-                const newVotes = { [email]: { type: voteType, timestamp: new Date() } };
-                await setDoc(postDocRef, {
-                    comments: [],
-                    votes: newVotes,
-                    totalVotes: calculateVoteTotal(newVotes)
-                });
-                toast.success("Vote recorded");
-            }
-        } catch (error) {
-            console.error('Error voting:', error);
-            toast.error("Failed to record vote");
-        }
-    };
-
-    const handleComment = async (post: Post) => {
-        if (!email || !newComment.trim()) {
-            toast.error("Please sign in and write a comment");
-            return;
-        }
-
-        try {
-            await addCommentToPost(post.link, {
-                userId: email,
-                userEmail: email,
-                userName: email.split('@')[0],
-                content: newComment.trim()
-            });
-            setNewComment('');
-            toast.success("Comment added");
-        } catch (error) {
-            toast.error("Failed to add comment");
-        }
-    };
 
     if (posts.length === 0) {
         return <div></div>
@@ -1323,56 +1091,19 @@ Create an enhanced version that requires proper clickable citation numbers and r
                             className="group bg-white dark:bg-gray-900 first:rounded-t-xl last:rounded-b-xl p-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors duration-200"
                         >
                             <div className="space-y-4">
-                                {/* URL and Domain Section with Vote Buttons */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-full">
-                                            <img
-                                                src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
-                                                alt=""
-                                                className="w-4 h-4"
-                                            />
-                                            <span>{new URL(post.link).hostname.replace('www.', '')}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Vote buttons moved to top right */}
-                                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-full p-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleVote(post, 'up')}
-                                            className={`rounded-full px-3 ${
-                                                postInteractions[post.link]?.votes[email || '']?.type === 'up'
-                                                ? 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400' 
-                                                : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                                            }`}
-                                            title={email ? "Upvote" : "Sign in to vote"}
-                                            disabled={!email}
-                                        >
-                                            <ThumbsUp className="w-4 h-4 mr-1" />
-                                            <span className="tabular-nums">
-                                                {postInteractions[post.link]?.totalVotes || 0}
-                                            </span>
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleVote(post, 'down')}
-                                            className={`rounded-full px-3 ${
-                                                postInteractions[post.link]?.votes[email || '']?.type === 'down'
-                                                ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400'
-                                                : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                                            }`}
-                                            title={email ? "Downvote" : "Sign in to vote"}
-                                            disabled={!email}
-                                        >
-                                            <ThumbsDown className="w-4 h-4" />
-                                        </Button>
+                                {/* URL and Domain Section - simplified without vote buttons */}
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-full">
+                                        <img
+                                            src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
+                                            alt=""
+                                            className="w-4 h-4"
+                                        />
+                                        <span>{new URL(post.link).hostname.replace('www.', '')}</span>
                                     </div>
                                 </div>
 
-                                {/* Title Section */}
+                                {/* Title Section - remains the same */}
                                 <h3 className="text-lg font-medium leading-tight">
                                     <a
                                         href={decodeURIComponent(post.link)}
@@ -1385,12 +1116,12 @@ Create an enhanced version that requires proper clickable citation numbers and r
                                     </a>
                                 </h3>
 
-                                {/* Snippet Section */}
+                                {/* Snippet Section - remains the same */}
                                 <p className="text-sm text-muted-foreground leading-relaxed">
                                     {post.snippet}
                                 </p>
 
-                                {/* Action Buttons */}
+                                {/* Action Buttons - removed voting and comments */}
                                 <div className="flex flex-wrap items-center gap-2 pt-2">
                                     <div className="flex items-center gap-2">
                                         <button
@@ -1417,74 +1148,8 @@ Create an enhanced version that requires proper clickable citation numbers and r
                                             <Link2 className="w-4 h-4" />
                                             <span>Share</span>
                                         </button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setExpandedPost(expandedPost === post.link ? null : post.link)}
-                                            className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
-                                        >
-                                            <MessageCircle className="w-4 h-4" />
-                                            <span> ({postInteractions[post.link]?.comments?.length || 0})</span>
-                                        </Button>
                                     </div>
                                 </div>
-
-                                {/* Comments section with animation */}
-                                <AnimatePresence>
-                                    {expandedPost === post.link && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: "auto", opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            transition={{ duration: 0.2 }}
-                                            className="overflow-hidden"
-                                        >
-                                            <div className="mt-4 space-y-4 pt-4 border-t dark:border-gray-800">
-                                                <div className="flex gap-2">
-                                                    <Textarea
-                                                        value={newComment}
-                                                        onChange={(e) => setNewComment(e.target.value)}
-                                                        placeholder={email ? "Write a comment..." : "Sign in to comment"}
-                                                        className="flex-1 text-sm min-h-[80px]"
-                                                    />
-                                                    <Button 
-                                                        onClick={() => handleComment(post)}
-                                                        disabled={!newComment.trim() || !email}
-                                                        size="sm"
-                                                        className="self-start"
-                                                    >
-                                                        Post
-                                                    </Button>
-                                                </div>
-                                                
-                                                <AnimatePresence>
-                                                    <div className="space-y-3">
-                                                        {postInteractions[post.link]?.comments
-                                                            ?.filter(comment => !comment.parentId)
-                                                            .map((comment) => (
-                                                                <motion.div
-                                                                    key={comment.id}
-                                                                    initial={{ opacity: 0, y: 20 }}
-                                                                    animate={{ opacity: 1, y: 0 }}
-                                                                    exit={{ opacity: 0, y: -20 }}
-                                                                    transition={{ duration: 0.2 }}
-                                                                >
-                                                                    <CommentItem
-                                                                        comment={comment}
-                                                                        postUrl={post.link}
-                                                                        email={email}
-                                                                        onReply={(parentId) => {
-                                                                            setExpandedPost(post.link);
-                                                                        }}
-                                                                    />
-                                                                </motion.div>
-                                                            ))}
-                                                    </div>
-                                                </AnimatePresence>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
                             </div>
                         </div>
                     ))}
