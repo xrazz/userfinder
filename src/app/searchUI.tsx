@@ -148,36 +148,73 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         setSearchData(cachedData)
     }, [email])
 
+
+    // # old crawler which is more realiable so do not remove this comment #
+
+    // const fetchResults = async (query: string, page: number): Promise<Post[]> => {
+    //     try {
+    //         const response = await fetch('/api/searchApify', {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //             },
+    //             body: JSON.stringify({ 
+    //                 query: query, 
+    //                 num: RESULTS_PER_PAGE,
+    //                 start: (page - 1) * RESULTS_PER_PAGE
+    //             })
+    //         })
+
+    //         if (!response.ok) {
+    //             throw new Error(`HTTP error! Status: ${response.status}`)
+    //         }
+
+    //         const data = await response.json()
+
+    //         if (data.success) {
+    //             return data.data
+    //         } else {
+    //             throw new Error(data.error || 'Unknown API error occurred')
+    //         }
+    //     } catch (error: any) {
+    //         console.error('Error fetching results:', error.message || error)
+    //         return []
+    //     }
+    // }
+    
+    // #   old crawler ends here #
+
+    // new crawler for text
     const fetchResults = async (query: string, page: number): Promise<Post[]> => {
         try {
-            const response = await fetch('/api/searchApify', {
+            const response = await fetch('/api/search', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
-                    query: query, 
+                body: JSON.stringify({
+                    query: query,
                     num: RESULTS_PER_PAGE,
-                    start: (page - 1) * RESULTS_PER_PAGE
-                })
-            })
+                    start: (page - 1) * RESULTS_PER_PAGE,
+                }),
+            });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`)
+                throw new Error(`HTTP error! Status: ${response.status}`);
             }
 
-            const data = await response.json()
+            const data = await response.json();
 
             if (data.success) {
-                return data.data
+                return data.data;
             } else {
-                throw new Error(data.error || 'Unknown API error occurred')
+                throw new Error(data.error || 'Unknown API error occurred');
             }
         } catch (error: any) {
-            console.error('Error fetching results:', error.message || error)
-            return []
+            console.error('Error fetching results:', error.message || error);
+            return [];
         }
-    }
+    };
 
     const handleSearch = async () => {
         if (searchQuery.trim() !== '') {
