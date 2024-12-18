@@ -7,6 +7,7 @@ interface SearchBarProps {
     onSearch: (query: string) => void
     typingQuery: string
     setTypingQuery: (query: string) => void
+    className?: string
 }
 
 const placeholderQueries = [
@@ -18,7 +19,7 @@ const placeholderQueries = [
     "Let's find hidden knowledge..."
 ]
 
-export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, setTypingQuery }) => {
+export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, setTypingQuery, className = '' }) => {
     const searchInputRef = useRef<HTMLInputElement>(null)
     const [isSearchFocused, setIsSearchFocused] = useState(false)
     const [suggestions, setSuggestions] = useState<string[]>([])
@@ -118,11 +119,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
     }
 
     return (
-        <div className={`w-full border rounded-xl overflow-hidden transition-all duration-300 ${
+        <div className={`w-full border rounded-xl overflow-hidden transition-all duration-300 bg-white/50 dark:bg-gray-900 ${
             isSearchFocused ? 'border-primary shadow-lg' : 'border-gray-200 dark:border-gray-800'
-        }`}>
-            <div className="flex items-center">
-                <div className="flex-grow relative">
+        } ${className}`}>
+            <div className="flex items-center h-full">
+                <div className="flex-grow relative flex items-center">
                     <Input
                         ref={searchInputRef}
                         onKeyDown={handleKeyDown}
@@ -144,7 +145,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
                 </div>
                 <button
                     onClick={handleSearch}
-                    className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-r-xl transition-colors duration-200"
+                    className="h-full px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-r-xl transition-colors duration-200 flex items-center justify-center"
                 >
                     <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </button>

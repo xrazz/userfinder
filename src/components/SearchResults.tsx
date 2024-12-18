@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import axios from 'axios'
 import { useInView } from 'react-intersection-observer'
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 interface Post {
     title: string
@@ -144,6 +145,56 @@ const PresetQuestionButton = ({ question, onClick, disabled }: PresetQuestion) =
     </Button>
 )
 
+// Add this helper function to format messages with markdown-style content
+const formatMessage = (content: string): React.ReactNode => {
+    return content.split('\n').map((line, index) => {
+        if (line.startsWith('**') && line.endsWith('**')) {
+            // Section headers
+            return (
+                <h3 key={index} className="text-base font-semibold mt-4 mb-2 text-primary">
+                    {line.replace(/\*\*/g, '')}
+                </h3>
+            )
+        } else if (line.startsWith('• ')) {
+            // Bullet points
+            return (
+                <div key={index} className="ml-4 my-1 flex items-start">
+                    <span className="mr-2 text-primary">•</span>
+                    <span>{line.substring(2)}</span>
+                </div>
+            )
+        } else if (line.startsWith('💡') || line.startsWith('📄') || line.startsWith('❓') || line.startsWith('ℹ️')) {
+            // Emoji headers
+            return (
+                <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
+                    <span>{line.charAt(0)}</span>
+                    <span>{line.substring(1).trim()}</span>
+                </h3>
+            )
+        } else if (line.trim() === '') {
+            // Empty lines
+            return <div key={index} className="h-2" />
+        } else {
+            // Regular text
+            return <p key={index} className="my-1">{line}</p>
+        }
+    })
+}
+
+// Add this helper function to generate contextual questions
+const generateContextualQuestions = (content: string, title: string, limit: number = 3): string => {
+    const questions = [
+        `• What are the key findings about ${title}?`,
+        '• What methodology or approach was used?',
+        '• What are the practical implications?',
+        '• How does this compare to other research?',
+        '• What are the main conclusions?'
+    ]
+
+    // Return only the specified number of questions
+    return questions.slice(0, limit).join('\n')
+}
+
 const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
     post: Post,
     isOpen: boolean,
@@ -154,77 +205,51 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
     const [messages, setMessages] = React.useState<Message[]>([])
     const [newMessage, setNewMessage] = React.useState('')
     const [loading, setLoading] = React.useState(false)
-    const [questionsLoading, setQuestionsLoading] = React.useState(false)
-    const [presetQuestions, setPresetQuestions] = React.useState<string[]>([])
-    const [pageContent, setPageContent] = React.useState<any>(null)
-    const [isSummaryExpanded, setIsSummaryExpanded] = React.useState(true)
-    const [isScrapingFailed, setIsScrapingFailed] = React.useState(false)
+    const [initialLoading, setInitialLoading] = React.useState(true)
     const scrollAreaRef = React.useRef<HTMLDivElement>(null)
 
-    // Fetch full page content and generate questions when dialog opens
+    // Initialize with scraped content
     React.useEffect(() => {
-        const fetchPageContent = async () => {
-            if (isOpen && post.link) {
+        if (isOpen) {
+            const fetchContent = async () => {
+                setInitialLoading(true)
                 try {
                     const response = await axios.post('/api/scrape', {
                         url: post.link,
                         email: email
-                    }, {
-                        headers: {
-                            'Authorization': `Bearer ${email}`
-                        }
                     })
-                    setPageContent(response.data)
-                    setIsScrapingFailed(false)
-                    generateQuestions(response.data)
+
+                    if (response.data.summary?.mainContent) {
+                        setMessages([{
+                            id: Date.now(),
+                            content: `📄 **Summary**\n${response.data.summary.mainContent.slice(0, 200)}...\n\n` +
+                                `💡 **Key Points**\n` +
+                                `• Source: ${new URL(post.link).hostname.replace('www.', '')}\n` +
+                                `• Title: ${post.title}\n\n` +
+                                `🔍 **Full Content**\n${response.data.summary.mainContent}\n\n` +
+                                `❓ **Follow-up Questions**\n` +
+                                generateContextualQuestions(response.data.summary.mainContent, post.title, 3),
+                            sender: 'ai',
+                            timestamp: new Date().toISOString()
+                        }])
+                    } else {
+                        throw new Error('No content available')
+                    }
                 } catch (error) {
-                    console.error('Error fetching page content:', error)
-                    setIsScrapingFailed(true)
-                    // Generate questions using the snippet if scraping fails
-                    generateQuestions({ summary: { title: post.title, mainContent: post.snippet } })
+                    // Show warning toast and close dialog through parent
+                    toast.error("Limited AI Analysis", {
+                        description: "Detailed AI information is not available for this directory.",
+                        duration: 4000,
+                    })
+                    onClose()
+                } finally {
+                    setInitialLoading(false)
                 }
             }
+
+            fetchContent()
         }
-
-        fetchPageContent()
-    }, [isOpen, post.link, email])
-
-    const generateQuestions = async (content: any) => {
-        if (!email) return
-        setQuestionsLoading(true)
-        try {
-            const response = await axios.post('/api/prompt', {
-                systemPrompt: `You are an expert at generating insightful questions about content. Generate 5 interesting questions that would lead to meaningful discussions about this content. Questions should:
-- Be specific and thought-provoking
-- Focus on key insights, implications, or applications
-- Encourage analytical thinking
-- Be clearly worded and engaging`,
-                userPrompt: `Generate 5 interesting discussion questions about this content:
-
-Title: ${content.summary?.title || post.title}
-Content: ${content.summary?.mainContent || post.snippet}
-
-Format each question on a new line, numbered 1-5.`,
-                email: email
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${email}`
-                }
-            })
-
-            // Split response into individual questions and clean them up
-            const questions = response.data.output
-                .split('\n')
-                .filter((q: string) => q.trim())
-                .map((q: string) => q.replace(/^\d+\.\s*/, '').trim())
-
-            setPresetQuestions(questions)
-        } catch (error) {
-            console.error('Error generating questions:', error)
-        } finally {
-            setQuestionsLoading(false)
-        }
-    }
+    }, [isOpen, post.link, email, onClose])
 
     const handleSendMessage = async () => {
         if (!newMessage.trim() || !email) return
@@ -242,34 +267,42 @@ Format each question on a new line, numbered 1-5.`,
 
         try {
             const response = await axios.post('/api/prompt', {
-                systemPrompt: `You are having a conversation about search results. Follow these rules:
-- Use information ONLY from the provided sources
-- Citations must be HTML links that open the source URL when clicked
-- Format each citation as: <a href="source_url" target="_blank">[1]</a>
-- Every fact or insight must have at least one citation
-- If information isn't in the sources, say so explicitly
-- Maintain conversation context while providing accurate citations`,
-                userPrompt: `Context: Search query was "${post.searchQuery}" with the following content:
+                systemPrompt: `You are an AI assistant helping to analyze content. Follow these guidelines:
+- Structure your responses with clear sections using markdown-style formatting
+- Keep responses concise and focused
+- Use bullet points for lists
+- Include a brief summary at the start
+- Format your response with these sections:
+  📌 **Summary**
+  A 2-3 line overview
+  
+  💡 **Key Points**
+  Bullet points of main findings
+  
+  🔍 **Analysis**
+  Brief detailed explanation
+  
+  ❓ **Follow-up Questions**
+  3 relevant questions for deeper understanding`,
+                userPrompt: `Content Title: ${post.title}
+Content: ${post.snippet}
+Question: ${newMessage}
 
-Main Source:
-Title: ${pageContent?.summary?.title || post.title}
-URL: ${post.link}
-Content: ${pageContent?.summary?.mainContent || post.snippet}
-
-User's Question: ${newMessage}
-
-Previous messages:
-${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
+Format the response using the specified structure with clear sections and concise information.`,
                 email: email
             }, {
-                headers: {
-                    'Authorization': `Bearer ${email}`
-                }
+                headers: { 'Authorization': `Bearer ${email}` }
             })
+
+            // Format the AI response to ensure consistent structure
+            const formattedResponse = response.data.output.includes('**Summary**') 
+                ? response.data.output 
+                : `📌 **Summary**\n${response.data.output}\n\n❓ **Follow-up Questions**\n` +
+                  generateContextualQuestions(response.data.output, post.title, 3)
 
             const aiMessage: Message = {
                 id: Date.now(),
-                content: response.data.output,
+                content: formattedResponse,
                 sender: 'ai',
                 timestamp: new Date().toISOString(),
             }
@@ -277,186 +310,202 @@ ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
             setMessages(prev => [...prev, aiMessage])
         } catch (error) {
             console.error('Error in chat:', error)
-            const errorMessage: Message = {
-                id: Date.now(),
-                content: error instanceof Error ? error.message : 'Failed to send message',
-                sender: 'ai',
-                timestamp: new Date().toISOString(),
-            }
-            setMessages(prev => [...prev, errorMessage])
         } finally {
             setLoading(false)
         }
     }
 
+    // Add this function to handle question clicks
+    const handleQuestionClick = (question: string) => {
+        setNewMessage(question);
+        handleSendMessage();
+    };
+
+    // Add this helper function to extract image URLs from HTML strings
+    const extractImageUrls = (content: string): string[] => {
+        const imgRegex = /<img[^>]+src="([^">]+)"/g;
+        const urls: string[] = [];
+        let match;
+        
+        while ((match = imgRegex.exec(content)) !== null) {
+            urls.push(match[1]);
+        }
+        
+        return urls;
+    }
+
+    // Update the formatMessageWithClickableQuestions function
+    const formatMessageWithClickableQuestions = (content: string): React.ReactNode => {
+        // First extract any images from the content
+        const imageUrls = extractImageUrls(content);
+        
+        // Remove the img tags from content but keep the rest
+        const cleanContent = content.replace(/<img[^>]+>/g, '{{IMAGE_PLACEHOLDER}}');
+        
+        let imageIndex = 0;
+        
+        return cleanContent.split('\n').map((line, index) => {
+            if (line.includes('{{IMAGE_PLACEHOLDER}}')) {
+                const imageUrl = imageUrls[imageIndex++];
+                return (
+                    <div key={`img-${index}`} className="my-4 flex justify-center">
+                        <div className="relative max-w-[90%] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
+                            <img
+                                src={imageUrl}
+                                alt="Content visualization"
+                                className="w-full h-auto"
+                                loading="lazy"
+                            />
+                            <div className="absolute top-2 right-2 flex gap-2">
+                                <button
+                                    onClick={() => window.open(imageUrl, '_blank')}
+                                    className="p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
+                                >
+                                    <ArrowUpRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // Handle "Full Content" section specially
+            if (line.includes('**Full Content**')) {
+                return (
+                    <h3 key={index} className="text-base font-semibold mt-6 mb-3 text-primary border-t pt-6">
+                        Complete Article
+                    </h3>
+                );
+            }
+
+            // Handle any text with ** markers
+            if (line.includes('**')) {
+                const parts = line.split('**');
+                return (
+                    <div key={index} className="text-base">
+                        {parts.map((part, i) => {
+                            // Even indices are normal text, odd indices are bold
+                            return i % 2 === 0 ? (
+                                <span key={i}>{part}</span>
+                            ) : (
+                                <span key={i} className="font-semibold text-primary">
+                                    {part}
+                                </span>
+                            );
+                        })}
+                    </div>
+                );
+            } else if (line.startsWith('• ')) {
+                const isQuestion = content.includes('**Follow-up Questions**');
+                if (isQuestion) {
+                    return (
+                        <button
+                            key={index}
+                            onClick={() => setNewMessage(line.substring(2))}
+                            className="ml-4 my-1 flex items-start w-full rounded-lg p-3 
+                                bg-primary/5 hover:bg-primary/10 
+                                border border-primary/10 hover:border-primary/20
+                                transition-all duration-200 text-left group"
+                        >
+                            <span className="mr-2 text-primary group-hover:scale-110 transition-transform">•</span>
+                            <span className="text-primary/90 group-hover:text-primary transition-colors">
+                                {line.substring(2)}
+                            </span>
+                        </button>
+                    );
+                }
+                return (
+                    <div key={index} className="ml-4 my-1 flex items-start">
+                        <span className="mr-2 text-primary">•</span>
+                        <span>{line.substring(2)}</span>
+                    </div>
+                );
+            } else if (line.startsWith('📄') || line.startsWith('❓')) {
+                return (
+                    <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
+                        <span>{line.charAt(0)}</span>
+                        <span>{line.substring(1).trim()}</span>
+                    </h3>
+                );
+            } else if (line.trim() === '') {
+                return <div key={index} className="h-2" />;
+            } else {
+                return <p key={index} className="my-1">{line}</p>;
+            }
+        });
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0">
-                <div className="px-6 pt-4">
-                    <DialogHeader>
+            <DialogContent className="w-screen h-screen max-w-full p-0">
+                {/* Header */}
+                <div className="p-4 border-b flex items-center gap-4">
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div>
                         <DialogTitle className="text-lg font-medium">
-                            {pageContent ? pageContent.summary?.title : post.title}
+                            {post.title}
                         </DialogTitle>
-
-                        {/* Content Summary Section */}
-                        <div className="mt-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-800">
-                            <button
-                                onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
-                                className="w-full flex items-center justify-between p-4 text-sm"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <SparklesIcon className="w-4 h-4 text-primary" />
-                                    <span className="font-medium">Content Summary</span>
-                                    {isScrapingFailed && (
-                                        <span className="text-xs text-yellow-500 dark:text-yellow-400">
-                                            (Preview Only)
-                                        </span>
-                                    )}
-                                </div>
-                                {isSummaryExpanded ? (
-                                    <ChevronUpIcon className="w-4 h-4" />
-                                ) : (
-                                    <ChevronDownIcon className="w-4 h-4" />
-                                )}
-                            </button>
-                            {isSummaryExpanded && (
-                                <div className="px-4 pb-4">
-                                    <div className="space-y-3">
-                                        {/* Source Info */}
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                            <img
-                                                src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
-                                                alt=""
-                                                className="w-4 h-4"
-                                            />
-                                            <span>{new URL(post.link).hostname.replace('www.', '')}</span>
-                                            {isScrapingFailed && (
-                                                <span className="text-yellow-500 dark:text-yellow-400">
-                                                    • Full content unavailable
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Content */}
-                                        <ScrollArea className="max-h-[200px]">
-                                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                                {pageContent?.summary?.mainContent || post.snippet}
-                                            </p>
-                                        </ScrollArea>
-
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-2 pt-2">
-                                            <a
-                                                href={post.link}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                onClick={() => onEngage?.(post.link)}
-                                                className="text-xs px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center gap-1.5 transition-colors"
-                                            >
-                                                <ArrowUpRight className="w-3.5 h-3.5" />
-                                                <span>Visit Website</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </DialogHeader>
+                        <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                            <img
+                                src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
+                                alt=""
+                                className="w-4 h-4"
+                            />
+                            {new URL(post.link).hostname.replace('www.', '')}
+                        </p>
+                    </div>
                 </div>
 
-                {/* Questions and Chat Section */}
-                <div className="flex-1 overflow-hidden px-6 mt-4">
-                    {messages.length === 0 ? (
-                        <div className="h-full overflow-y-auto">
-                            <div className="grid grid-cols-1 gap-3 py-4">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <MessageSquareIcon className="w-5 h-5 text-primary" />
-                                    <p className="text-sm font-medium">Ask questions about this content:</p>
-                                </div>
-                                {questionsLoading ? (
-                                    <QuestionsSkeleton />
-                                ) : (
-                                    <div className="grid gap-2">
-                                        {presetQuestions.map((question, index) => (
-                                            <PresetQuestionButton
-                                                key={index}
-                                                question={question}
-                                                onClick={() => {
-                                                    setNewMessage(question)
-                                                    handleSendMessage()
-                                                }}
-                                                disabled={loading}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-                                <p className="text-xs text-muted-foreground mt-2 text-center">
-                                    Click a suggested question or type your own below
-                                </p>
+                {/* Chat Messages */}
+                <ScrollArea className="flex-1 p-6 h-[calc(100vh-160px)]">
+                    <div className="max-w-3xl mx-auto space-y-6">
+                        {initialLoading ? (
+                            <div className="flex items-center gap-3 text-muted-foreground">
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>Analyzing content...</span>
                             </div>
-                        </div>
-                    ) : (
-                        <ScrollArea className="h-full pr-4" ref={scrollAreaRef}>
-                            <div className="flex flex-col gap-3 py-2">
-                                {messages.map((message) => (
+                        ) : (
+                            messages.map((message) => (
+                                <div
+                                    key={message.id}
+                                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                                >
                                     <div
-                                        key={message.id}
-                                        className={`flex gap-2 ${message.sender === 'user' ? 'justify-end' : 'justify-start'
-                                            }`}
+                                        className={`rounded-lg px-6 py-4 max-w-[80%] ${
+                                            message.sender === 'user'
+                                                ? 'bg-primary text-primary-foreground ml-4'
+                                                : 'bg-muted mr-4'
+                                        }`}
                                     >
-                                        {message.sender === 'ai' && (
-                                            <Avatar className="h-6 w-6">
-                                                <AvatarImage src="/logo.svg" />
-                                                <AvatarFallback>AI</AvatarFallback>
-                                            </Avatar>
-                                        )}
-                                        <div
-                                            className={`px-4 py-2 rounded-lg max-w-[80%] ${message.sender === 'user'
-                                                ? 'bg-purple-600 text-white'
-                                                : 'bg-purple-100 dark:bg-purple-900 text-gray-800 dark:text-gray-200'
-                                                }`}
-                                        >
-                                            <div className="text-sm whitespace-pre-wrap prose dark:prose-invert max-w-none prose-sm">
-                                                {message.sender === 'user' 
-                                                    ? message.content 
-                                                    : parseHtmlContent(message.content)
-                                                }
-                                            </div>
-                                        </div>
-                                        {message.sender === 'user' && (
-                                            <Avatar className="h-6 w-6">
-                                                <AvatarImage src="/placeholder.svg" />
-                                                <AvatarFallback>U</AvatarFallback>
-                                            </Avatar>
-                                        )}
-                                    </div>
-                                ))}
-                                {loading && (
-                                    <div className="flex items-center gap-2">
-                                        <Avatar className="h-6 w-6">
-                                            <AvatarImage src="/logo.svg" />
-                                            <AvatarFallback>AI</AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex gap-1">
-                                            <span className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                                            <span className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                                            <span className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+                                        <div className="text-sm whitespace-pre-wrap">
+                                            {formatMessageWithClickableQuestions(message.content)}
                                         </div>
                                     </div>
-                                )}
+                                </div>
+                            ))
+                        )}
+                        {loading && (
+                            <div className="flex items-center gap-3 text-muted-foreground">
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>Thinking...</span>
                             </div>
-                        </ScrollArea>
-                    )}
-                </div>
+                        )}
+                    </div>
+                </ScrollArea>
 
-                {/* Chat Input */}
-                <div className="p-4 border-t">
-                    <div className="flex gap-2">
+                {/* Input Area */}
+                <div className="p-4 border-t bg-background">
+                    <div className="max-w-3xl mx-auto flex gap-3">
                         <Textarea
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
-                            placeholder={messages.length === 0 ? "Ask anything about this content..." : "Type your message..."}
-                            className="min-h-[60px] flex-grow"
+                            placeholder="Ask a question..."
+                            className="min-h-[60px] resize-none"
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault()
@@ -466,22 +515,22 @@ ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
                         />
                         <Button
                             onClick={handleSendMessage}
-                            className="self-end"
+                            disabled={loading || !newMessage.trim()}
                             size="icon"
-                            disabled={loading}
+                            className="self-end h-[60px] w-[60px]"
                         >
                             {loading ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader2 className="h-5 w-5 animate-spin" />
                             ) : (
-                                <SendHorizontal className="h-4 w-4" />
+                                <SendHorizontal className="h-5 w-5" />
                             )}
                         </Button>
                     </div>
                 </div>
             </DialogContent>
         </Dialog>
-    )
-}
+    );
+};
 
 // Add this helper function at the top of the file
 const extractDomain = (url: string): string => {
@@ -738,6 +787,11 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
         setSelectedSite('Universal search');
         setPendingSearch(true);
     };
+
+    const handleAIClick = (post: Post) => {
+        setSelectedPost(post)
+        setIsDialogOpen(true)
+    }
 
     if (posts.length === 0) {
         return <div></div>
@@ -1034,10 +1088,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                             </button>
                                         )}
                                         <button
-                                            onClick={() => {
-                                                setSelectedPost(post);
-                                                setIsDialogOpen(true);
-                                            }}
+                                            onClick={() => handleAIClick(post)}
                                             className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
                                         >
                                             <SparklesIcon className="w-4 h-4" />
@@ -1085,8 +1136,8 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                     post={selectedPost}
                     isOpen={isDialogOpen}
                     onClose={() => {
-                        setIsDialogOpen(false);
-                        setSelectedPost(null);
+                        setIsDialogOpen(false)
+                        setSelectedPost(null)
                     }}
                     email={email}
                     onEngage={onEngage}

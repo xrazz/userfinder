@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Settings2, Search } from 'lucide-react'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
-import { motion } from 'framer-motion'
+import { motion, useScroll, useTransform } from 'framer-motion'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -104,6 +104,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         const saved = localStorage.getItem('privacyMode')
         return saved ? JSON.parse(saved) : false
     })
+    const [hasResults, setHasResults] = useState(false)
+    const { scrollY } = useScroll()
+    const [isScrolled, setIsScrolled] = useState(false)
 
     useEffect(() => {
         firebaseAnalytics.logPageView('/')
@@ -166,47 +169,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             setLoading(false)
         }
     }, [searchData])
-
-    useEffect(() => {
-        const cachedData = JSON.parse(localStorage.getItem(`searchData`) || '[]')
-        setSearchData(cachedData)
-    }, [email])
-
-
-    // # old crawler which is more realiable so do not remove this comment #
-
-    // const fetchResults = async (query: string, page: number): Promise<Post[]> => {
-    //     try {
-    //         const response = await fetch('/api/searchApify', {
-    //             method: 'POST',
-    //             headers: {
-    //                 'Content-Type': 'application/json',
-    //             },
-    //             body: JSON.stringify({ 
-    //                 query: query, 
-    //                 num: RESULTS_PER_PAGE,
-    //                 start: (page - 1) * RESULTS_PER_PAGE
-    //             })
-    //         })
-
-    //         if (!response.ok) {
-    //             throw new Error(`HTTP error! Status: ${response.status}`)
-    //         }
-
-    //         const data = await response.json()
-
-    //         if (data.success) {
-    //             return data.data
-    //         } else {
-    //             throw new Error(data.error || 'Unknown API error occurred')
-    //         }
-    //     } catch (error: any) {
-    //         console.error('Error fetching results:', error.message || error)
-    //         return []
-    //     }
-    // }
-    
-    // #   old crawler ends here #
 
     // new crawler for text
     const fetchResults = async (query: string, page: number): Promise<Post[]> => {
@@ -290,7 +252,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             setHasMore(true)
 
             try {
-                // Track the search query
                 await trackSearchQuery(searchQuery)
 
                 const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
@@ -298,9 +259,10 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 const Results = await fetchResults(`site:${siteToSearch} ${searchQuery} ${dateFilterString}`, 1)
 
                 setSearchData(Results)
-                localStorage.setItem('searchData', JSON.stringify(Results))
+                setHasResults(Results.length > 0)
             } catch (error) {
                 console.error("Error fetching data:", error)
+                setHasResults(false)
             } finally {
                 setLoading(false)
             }
@@ -387,6 +349,29 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         localStorage.setItem('privacyMode', JSON.stringify(privacyMode))
     }, [privacyMode])
 
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        if (loading) {
+            scrollToTop();
+        }
+    }, [loading]);
+
+    useEffect(() => {
+        if (hasResults) {
+            scrollToTop();
+        }
+    }, [hasResults]);
+
+    useEffect(() => {
+        const unsubscribe = scrollY.onChange(value => {
+            setIsScrolled(value > 100)
+        })
+        return () => unsubscribe()
+    }, [scrollY])
+
     return (
         <main className="min-h-screen bg-background">
             <Toaster position="bottom-center" />
@@ -397,126 +382,179 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 imageUrl={imageUrl}
                 onLogout={handleLogout}
             />
-            <div className="w-full max-w-3xl mx-auto px-3 py-8">
-                <motion.h1
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="text-2xl md:text-3xl font-medium tracking-tight text-center mb-6"
+            {hasResults && (
+                <motion.div
+                    className={`fixed top-0 left-0 right-0 z-50 bg-background/55 backdrop-blur-sm transition-all duration-300 ${
+                        isScrolled ? 'translate-y-0 border-b shadow-sm dark:bg-gray-950/95 bg-gray-100/95' : '-translate-y-full'
+                    }`}
                 >
-                    {selectedSite === 'custom' ? (
-                        <div className="flex items-center justify-center gap-2">
-                            <img
-                                src={`https://www.google.com/s2/favicons?sz=32&domain_url=${customUrl}`}
-                                alt=""
-                                className="w-8 h-8"
-                            />
-                            <span>
-                                Searching <span className="text-purple-600 dark:text-purple-400">{formatDomain(customUrl)}</span>
-                            </span>
+                    <div className="max-w-3xl mx-auto px-3 py-4">
+                        <div className="flex items-center gap-4">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: isScrolled ? 1 : 0, scale: isScrolled ? 1 : 0.8 }}
+                                className="flex items-center gap-2"
+                            >
+                                <span className="font-bold text-xl bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
+                                    LEXY
+                                </span>
+                            </motion.div>
+
+                            <div className="flex-1">
+                                <SearchBar
+                                    onSearch={handleSearch}
+                                    typingQuery={typingQuery}
+                                    setTypingQuery={handleSearchInputChange}
+                                    className={`transition-all duration-300 ${
+                                        isScrolled ? 'h-10' : 'h-12'
+                                    }`}
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="secondary"
+                                            size="icon"
+                                            className="w-8 h-8"
+                                        >
+                                            <Settings2 className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <LoggedInSettingsPopover
+                                        selectedSite={selectedSite}
+                                        setSelectedSite={setSelectedSite}
+                                        currentFilter={currentFilter}
+                                        handleFilterChange={handleFilterChange}
+                                        customUrl={customUrl}
+                                        setCustomUrl={setCustomUrl}
+                                        membership={Membership}
+                                    />
+                                </Popover>
+                            </div>
                         </div>
-                    ) : (
-                        "What can I help you find?"
-                    )}
-                </motion.h1>
+                    </div>
+                </motion.div>
+            )}
 
-                <SearchBar
-                    onSearch={handleSearch}
-                    typingQuery={typingQuery}
-                    setTypingQuery={handleSearchInputChange}
-                />
-
-                <div className="flex items-center justify-between gap-2 mt-2">
-                    <div className="flex flex-wrap items-center gap-1">
-                        <div>
-                            {/* <QueryTutorialModal /> */}
-                        </div>
-
-                        {/* <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="w-8 h-8 rounded-lg hover:bg-gray-100 hover:text-gray-900"
-                                >
-                                    <Settings2 className="w-4 h-4" />
-                                    <span className="sr-only">Settings</span>
-                                </Button>
-                            </PopoverTrigger>
-                            <LoggedInSettingsPopover
-                                selectedSite={selectedSite}
-                                setSelectedSite={setSelectedSite}
-                                resultCount={resultCount}
-                                setResultCount={setResultCount}
-                                currentFilter={currentFilter}
-                                handleFilterChange={handleFilterChange}
-                                customUrl={customUrl}
-                                setCustomUrl={setCustomUrl}
-                                membership={Membership}
-                            />
-                        </Popover> */}
-
-                        <Badge size="1" color="crimson">
-                            {selectedSite === 'custom' ? (customUrl || 'Custom Site') : selectedSite}
-                        </Badge>
-                        {currentFilter && (
-                            <Badge size="1" color="orange">
-                                {mapFilterToDate(currentFilter).replace('last', '')}
-                            </Badge>
+            <motion.div 
+                className={`w-full max-w-3xl mx-auto px-3 transition-all duration-500 ${
+                    !hasResults && !loading 
+                        ? 'h-[calc(100vh-80px)] flex flex-col justify-center -mt-[15vh]' 
+                        : 'py-8'
+                }`}
+                animate={{ 
+                    y: hasResults || loading ? 0 : "0%",
+                }}
+                transition={{ duration: 0.3 }}
+            >
+                <motion.div
+                    animate={{ 
+                        scale: isScrolled ? 0.95 : 1,
+                        opacity: isScrolled ? 0 : 1,
+                    }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <motion.h1
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="text-2xl md:text-3xl font-medium tracking-tight text-center mb-6"
+                    >
+                        {selectedSite === 'custom' ? (
+                            <div className="flex items-center justify-center gap-2">
+                                <img
+                                    src={`https://www.google.com/s2/favicons?sz=32&domain_url=${customUrl}`}
+                                    alt=""
+                                    className="w-8 h-8"
+                                />
+                                <span>
+                                    Searching <span className="text-purple-600 dark:text-purple-400">{formatDomain(customUrl)}</span>
+                                </span>
+                            </div>
+                        ) : (
+                            "What can I help you find?"
                         )}
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Switch
-                            id="privacy-mode"
-                            checked={privacyMode}
-                            onCheckedChange={setPrivacyMode}
-                            className="data-[state=checked]:bg-purple-600"
-                        />
-                        <Label htmlFor="privacy-mode" className="text-sm text-muted-foreground">
-                            Privacy Mode
-                        </Label>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="w-8 h-8 rounded-lg hover:bg-gray-100 hover:text-gray-900"
-                                >
-                                    <Settings2 className="w-4 h-4" />
-                                </Button>
-                            </PopoverTrigger>
-                            <LoggedInSettingsPopover
-                                selectedSite={selectedSite}
-                                setSelectedSite={setSelectedSite}
-                                currentFilter={currentFilter}
-                                handleFilterChange={handleFilterChange}
-                                customUrl={customUrl}
-                                setCustomUrl={setCustomUrl}
-                                membership={Membership}
+                    </motion.h1>
+
+                    <SearchBar
+                        onSearch={handleSearch}
+                        typingQuery={typingQuery}
+                        setTypingQuery={handleSearchInputChange}
+                    />
+
+                    <motion.div 
+                        className="flex items-center justify-between gap-2 mt-2"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                    >
+                        <div className="flex flex-wrap items-center gap-1">
+                            <Badge size="1" color="crimson">
+                                {selectedSite === 'custom' ? (customUrl || 'Custom Site') : selectedSite}
+                            </Badge>
+                            {currentFilter && (
+                                <Badge size="1" color="orange">
+                                    {mapFilterToDate(currentFilter).replace('last', '')}
+                                </Badge>
+                            )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Switch
+                                id="privacy-mode"
+                                checked={privacyMode}
+                                onCheckedChange={setPrivacyMode}
+                                className="data-[state=checked]:bg-purple-600"
                             />
-                        </Popover>
-                    </div>
-                </div>
+                            <Label htmlFor="privacy-mode" className="text-sm text-muted-foreground">
+                                Privacy Mode
+                            </Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="secondary"
+                                        size="icon"
+                                        className="w-8 h-8 rounded-lg hover:bg-gray-100 hover:text-gray-900"
+                                    >
+                                        <Settings2 className="w-4 h-4" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <LoggedInSettingsPopover
+                                    selectedSite={selectedSite}
+                                    setSelectedSite={setSelectedSite}
+                                    currentFilter={currentFilter}
+                                    handleFilterChange={handleFilterChange}
+                                    customUrl={customUrl}
+                                    setCustomUrl={setCustomUrl}
+                                    membership={Membership}
+                                />
+                            </Popover>
+                        </div>
+                    </motion.div>
+                </motion.div>
 
                 {loading && <TabDataSkeleton />}
-                <SearchResults
-                    platform={selectedSite === 'custom' ? customUrl : selectedSite}
-                    posts={searchData}
-                    logo={selectedSite === 'custom' ? '/custom.png' : sites.find(site => site.name === selectedSite)?.icon || '/custom.png'}
-                    searchQuery={searchQuery}
-                    currentFilter={currentFilter}
-                    onBookmark={handleBookmark}
-                    onEngage={handleEngage}
-                    onCopyUrl={handleCopyUrl}
-                    email={email}
-                    onLoadMore={handleLoadMore}
-                    hasMore={hasMore}
-                    isLoadingMore={isLoadingMore}
-                    setCustomUrl={setCustomUrl}
-                    setSelectedSite={setSelectedSite}
-                    handleSearch={handleSearch}
-                />
-            </div>
+                {hasResults && (
+                    <SearchResults
+                        platform={selectedSite === 'custom' ? customUrl : selectedSite}
+                        posts={searchData}
+                        logo={selectedSite === 'custom' ? '/custom.png' : sites.find(site => site.name === selectedSite)?.icon || '/custom.png'}
+                        searchQuery={searchQuery}
+                        currentFilter={currentFilter}
+                        onBookmark={handleBookmark}
+                        onEngage={handleEngage}
+                        onCopyUrl={handleCopyUrl}
+                        email={email}
+                        onLoadMore={handleLoadMore}
+                        hasMore={hasMore}
+                        isLoadingMore={isLoadingMore}
+                        setCustomUrl={setCustomUrl}
+                        setSelectedSite={setSelectedSite}
+                        handleSearch={handleSearch}
+                    />
+                )}
+            </motion.div>
         </main>
     )
 }
