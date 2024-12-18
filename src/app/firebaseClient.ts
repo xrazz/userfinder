@@ -1,6 +1,6 @@
 import { initializeApp, getApps, FirebaseApp, FirebaseOptions } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, User } from 'firebase/auth';
-import { doc, getDoc, getFirestore, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, getFirestore, setDoc, updateDoc, deleteField } from "firebase/firestore";
 import { getAnalytics, logEvent, Analytics } from 'firebase/analytics';
 
 const firebaseConfig: FirebaseOptions = {
@@ -156,5 +156,81 @@ export const checkAndUpdateMembership = async (userEmail: string) => {
     }
   } catch (error) {
     console.error(`Error checking and updating membership for userEmail: ${userEmail}`, error);
+  }
+};
+
+interface Comment {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  userImage?: string;
+  content: string;
+  timestamp: Date;
+  votes: number;
+  replies?: Comment[];
+  parentId?: string;
+}
+
+export interface PostInteraction {
+  comments: Comment[];
+  votes: { 
+    [userId: string]: {
+      type: 'up' | 'down';
+      timestamp: Date;
+    }
+  };
+  totalVotes: number;
+}
+
+export const addCommentToPost = async (
+  postUrl: string, 
+  comment: Omit<Comment, 'id' | 'timestamp' | 'votes' | 'replies'>
+) => {
+  try {
+    const postDocRef = doc(db, "postInteractions", encodeURIComponent(postUrl));
+    const postDoc = await getDoc(postDocRef);
+    
+    const newComment: Comment = {
+      ...comment,
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+      votes: 0,
+      replies: []
+    };
+
+    if (postDoc.exists()) {
+      const data = postDoc.data() as PostInteraction;
+      let comments = [...data.comments];
+      
+      if (comment.parentId) {
+        // Add reply to parent comment
+        comments = comments.map(c => {
+          if (c.id === comment.parentId) {
+            return {
+              ...c,
+              replies: [...(c.replies || []), newComment]
+            };
+          }
+          return c;
+        });
+      } else {
+        // Add new top-level comment
+        comments.push(newComment);
+      }
+      
+      await updateDoc(postDocRef, { comments });
+    } else {
+      await setDoc(postDocRef, {
+        comments: [newComment],
+        votes: {},
+        totalVotes: 0
+      });
+    }
+
+    return newComment;
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    throw error;
   }
 };

@@ -133,8 +133,6 @@ export const LoggedOutSettingsPopover: React.FC<LoggedOutSettingsPopoverProps> =
 interface LoggedInSettingsPopoverProps {
     selectedSite: string
     setSelectedSite: (site: string) => void
-    resultCount: number
-    setResultCount: (count: number) => void
     currentFilter: string
     handleFilterChange: (filter: string) => void
     customUrl: string
@@ -145,8 +143,6 @@ interface LoggedInSettingsPopoverProps {
 export const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = ({
     selectedSite,
     setSelectedSite,
-    resultCount,
-    setResultCount,
     currentFilter,
     handleFilterChange,
     customUrl,
@@ -218,24 +214,7 @@ export const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = (
                     </div>
                 </div>
             )}
-            <div className="space-y-2">
-                <Label htmlFor="result-count" className="text-sm font-medium">Result Count</Label>
-                <Select
-                    value={resultCount.toString()}
-                    onValueChange={(value) => setResultCount(parseInt(value, 10))}
-                >
-                    <SelectTrigger id="result-count" className="w-full">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {[10, 25, 50].map((count) => (
-                            <SelectItem key={count} value={count.toString()} className="py-2">
-                                {count}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+
             <div className="space-y-2">
                 <Label className="text-sm font-medium">Filter by</Label>
                 <RadioGroup value={currentFilter} onValueChange={handleFilterChange} className="space-y-2">

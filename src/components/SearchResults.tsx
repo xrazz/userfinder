@@ -1,12 +1,20 @@
 import React from 'react'
 import { Card } from "@/components/ui/card"
-import { SparklesIcon, MessageSquareIcon, XIcon, Bookmark, Link2, MessageSquare, SendHorizontal, ArrowLeft, Loader2, ChevronUpIcon, ChevronDownIcon, ArrowUpRight } from 'lucide-react'
+import { SparklesIcon, MessageSquareIcon, XIcon, Bookmark, Link2, MessageSquare, SendHorizontal, ArrowLeft, Loader2, ChevronUpIcon, ChevronDownIcon, ArrowUpRight, ThumbsUp, ThumbsDown, MessageCircle } from 'lucide-react'
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import axios from 'axios'
+import { useInView } from 'react-intersection-observer'
+import { addCommentToPost } from '@/app/firebaseClient'
+import { toast } from 'react-hot-toast'
+import { db } from '@/app/firebaseClient'
+import { onSnapshot, getDoc, updateDoc, setDoc } from 'firebase/firestore'
+import { doc } from 'firebase/firestore'
+import { PostInteraction } from '@/app/firebaseClient'
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Post {
     title: string
@@ -25,6 +33,9 @@ interface SearchResultsProps {
     onEngage: (link: string) => void
     onCopyUrl: (link: string) => void
     email?: string
+    onLoadMore: () => void
+    hasMore: boolean
+    isLoadingMore: boolean
 }
 
 interface Message {
@@ -34,23 +45,39 @@ interface Message {
     timestamp: string;
 }
 
-// Function to safely parse HTML content with links
+interface PostWithInteractions extends Post {
+    comments?: Comment[];
+    totalVotes?: number;
+    userVote?: 'up' | 'down';
+}
+
+interface Comment {
+    id: string;
+    userId: string;
+    userEmail: string;
+    userName: string;
+    userImage?: string;
+    content: string;
+    timestamp: Date;
+    votes: number;
+    replies?: Comment[];
+    parentId?: string;
+}
+
+// Aggiorna la funzione parseHtmlContent
 const parseHtmlContent = (content: string): React.ReactNode => {
     if (!content) return null;
 
-    // Split content by HTML tags
-    const parts = content.split(/(<a[^>]*>.*?<\/a>)/);
+    // Split content by HTML tags, including strong, em, and bullet points
+    const parts = content.split(/(<[^>]*>.*?<\/[^>]*>|<[^>]*\/?>|\n|•)/);
 
     return parts.map((part, index) => {
-        // Check if part is a link
+        // Handle links
         if (part.startsWith('<a')) {
-            // Extract href and text content
             const hrefMatch = part.match(/href="([^"]*)"/) || [];
             const textMatch = part.match(/>([^<]*)</) || [];
             const href = hrefMatch[1];
             const text = textMatch[1];
-
-            // Check if the text is a citation number (e.g., [1], [2], etc.)
             const isCitation = /^\[\d+\]$/.test(text);
 
             return (
@@ -68,9 +95,38 @@ const parseHtmlContent = (content: string): React.ReactNode => {
                 </a>
             );
         }
-        // Return regular text
-        return <span key={index}>{part}</span>;
-    });
+        
+        // Handle strong tags (bold)
+        if (part.startsWith('<strong>')) {
+            const textMatch = part.match(/>([^<]*)</) || [];
+            const text = textMatch[1];
+            return <strong key={index} className="text-base font-semibold block my-3">{text}</strong>;
+        }
+
+        // Handle emphasis tags (italic)
+        if (part.startsWith('<em>')) {
+            const textMatch = part.match(/>([^<]*)</) || [];
+            const text = textMatch[1];
+            return <em key={index} className="text-primary-600 dark:text-primary-400">{text}</em>;
+        }
+
+        // Handle bullet points
+        if (part === '•') {
+            return <span key={index} className="mr-2">•</span>;
+        }
+
+        // Handle line breaks
+        if (part === '\n') {
+            return <br key={index} />;
+        }
+
+        // Return regular text if not a special tag
+        if (part.trim()) {
+            return <span key={index}>{part}</span>;
+        }
+
+        return null;
+    }).filter(Boolean); // Remove null values
 };
 
 interface PresetQuestion {
@@ -214,8 +270,7 @@ Format each question on a new line, numbered 1-5.`,
 - Format each citation as: <a href="source_url" target="_blank">[1]</a>
 - Every fact or insight must have at least one citation
 - If information isn't in the sources, say so explicitly
-- Maintain conversation context while providing accurate citations
-- Include a brief "References" section at the end of longer responses`,
+- Maintain conversation context while providing accurate citations`,
                 userPrompt: `Context: Search query was "${post.searchQuery}" with the following content:
 
 Main Source:
@@ -378,13 +433,16 @@ ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
                                             </Avatar>
                                         )}
                                         <div
-                                            className={`px-3 py-2 rounded-lg max-w-[80%] ${message.sender === 'user'
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-muted'
+                                            className={`px-4 py-2 rounded-lg max-w-[80%] ${message.sender === 'user'
+                                                ? 'bg-purple-600 text-white'
+                                                : 'bg-purple-100 dark:bg-purple-900 text-gray-800 dark:text-gray-200'
                                                 }`}
                                         >
-                                            <div className="text-sm whitespace-pre-wrap">
-                                                {parseHtmlContent(message.content)}
+                                            <div className="text-sm whitespace-pre-wrap prose dark:prose-invert max-w-none prose-sm">
+                                                {message.sender === 'user' 
+                                                    ? message.content 
+                                                    : parseHtmlContent(message.content)
+                                                }
                                             </div>
                                         </div>
                                         {message.sender === 'user' && (
@@ -447,6 +505,120 @@ ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
     )
 }
 
+const CommentItem = ({ comment, postUrl, email, onReply }: { 
+    comment: Comment; 
+    postUrl: string;
+    email?: string;
+    onReply: (parentId: string) => void;
+}) => {
+    const [isReplying, setIsReplying] = React.useState(false);
+    const [replyContent, setReplyContent] = React.useState('');
+
+    const handleReply = async () => {
+        if (!email || !replyContent.trim()) return;
+        
+        try {
+            await addCommentToPost(postUrl, {
+                userId: email,
+                userEmail: email,
+                userName: email.split('@')[0],
+                content: replyContent.trim(),
+                parentId: comment.id
+            });
+            setReplyContent('');
+            setIsReplying(false);
+        } catch (error) {
+            toast.error("Failed to add reply");
+        }
+    };
+
+    return (
+        <div className="space-y-2">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                    <Avatar className="w-6 h-6">
+                        <AvatarImage src={comment.userImage || '/placeholder.svg'} />
+                        <AvatarFallback>{comment.userName[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium">{comment.userName}</span>
+                
+                </div>
+                <p className="text-sm text-muted-foreground">{comment.content}</p>
+                
+                <div className="flex items-center gap-4 mt-2">
+                    <button
+                        onClick={() => setIsReplying(!isReplying)}
+                        className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+                    >
+                        <MessageCircle className="w-3 h-3" />
+                        {isReplying ? 'Cancel' : 'Reply'}
+                    </button>
+                </div>
+            </div>
+
+            <AnimatePresence>
+                {isReplying && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="ml-6 overflow-hidden"
+                    >
+                        <div className="flex gap-2 pt-2">
+                            <Textarea
+                                value={replyContent}
+                                onChange={(e) => setReplyContent(e.target.value)}
+                                placeholder="Write a reply..."
+                                className="flex-1 text-sm min-h-[60px]"
+                            />
+                            <Button 
+                                onClick={handleReply}
+                                disabled={!replyContent.trim() || !email}
+                                size="sm"
+                                className="self-start"
+                            >
+                                Reply
+                            </Button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {comment.replies && comment.replies.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="ml-6 space-y-2 border-l-2 border-gray-100 dark:border-gray-700 pl-4"
+                >
+                    {comment.replies.map((reply) => (
+                        <motion.div
+                            key={reply.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <CommentItem
+                                comment={reply}
+                                postUrl={postUrl}
+                                email={email}
+                                onReply={onReply}
+                            />
+                        </motion.div>
+                    ))}
+                </motion.div>
+            )}
+        </div>
+    );
+};
+
+// Add this helper function at the top level
+const calculateVoteTotal = (votes: PostInteraction['votes']) => {
+    return Object.values(votes).reduce((total, vote) => {
+        return total + (vote.type === 'up' ? 1 : -1);
+    }, 0);
+};
+
 export const SearchResults: React.FC<SearchResultsProps> = ({
     platform,
     posts,
@@ -456,7 +628,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     onBookmark,
     onEngage,
     onCopyUrl,
-    email
+    email,
+    onLoadMore,
+    hasMore,
+    isLoadingMore
 }) => {
     const [isGenerating, setIsGenerating] = React.useState(false);
     const [summary, setSummary] = React.useState('');
@@ -469,6 +644,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     const [messages, setMessages] = React.useState<Message[]>([]);
     const [newMessage, setNewMessage] = React.useState('');
     const scrollAreaRef = React.useRef<HTMLDivElement>(null);
+    const [expandedPost, setExpandedPost] = React.useState<string | null>(null);
+    const [newComment, setNewComment] = React.useState('');
+    const [postInteractions, setPostInteractions] = React.useState<{[key: string]: PostInteraction}>({});
 
     const scrollToBottom = () => {
         if (scrollAreaRef.current) {
@@ -517,7 +695,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 - Every fact or insight must have at least one citation
 - If information isn't in the sources, say so explicitly
 - Maintain conversation context while providing accurate citations
-- Include a brief "References" section at the end of longer responses
 
 Example format:
 "Based on recent studies <a href="url1" target="_blank">[1]</a>, the key point is X. This relates to your question about Y <a href="url2" target="_blank">[2]</a>..."
@@ -588,21 +765,25 @@ ${searchResults.map(result =>
                 body: JSON.stringify({
                     systemPrompt: `You are a skilled content analyzer providing clear, structured insights. Follow these rules:
 - ONLY use information from the provided search results
+- Use HTML/Markdown formatting for better readability:
+  * Use <strong> or ** for section titles and important concepts
+  * Use <em> or * for emphasis and key terms
+  * Use bullet points for lists
+  * Add line breaks between sections
+  * Use headings like "Key Points:", "Main Findings:", "Analysis:", etc.
 - Citations must be HTML links that open the source URL when clicked
 - Format each citation as: <a href="source_url" target="_blank">[1]</a>
 - Every fact or insight must have at least one citation
 - Structure your response with clear sections and bullet points
 - If information isn't in the sources, explicitly state that
-- Use consistent citation format throughout
-- Begin each major point with its relevant citation(s)
-- At the end of your analysis, include a "References" section listing all cited sources
 
 Example format:
-"The main concept is X <a href="url1" target="_blank">[1]</a>. This is further supported by research <a href="url2" target="_blank">[2]</a>, which shows that..."
+"<strong>Key Findings:</strong>
+• The main concept is <em>X</em> <a href="url1" target="_blank">[1]</a>
+• Research shows that <em>Y</em> <a href="url2" target="_blank">[2]</a>
 
-References:
-1. Title of Source 1
-2. Title of Source 2`,
+<strong>Detailed Analysis:</strong>
+..."`,
                     userPrompt: prompt || `Analyze these ${posts.length} search results for "${searchQuery}" and provide a clear, structured summary with citations:
 
 Available Sources:
@@ -666,7 +847,6 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
 - Request structured analysis with clear citation guidelines
 - Maintain focus on the original intent
 - Ensure comprehensive coverage of available sources
-- Suggest including a references section
 
 Example prompt enhancement:
 "Original: Analyze the impact of X
@@ -705,6 +885,122 @@ Create an enhanced version that requires proper clickable citation numbers and r
         }
     };
 
+    // Configurazione dell'observer per lo scroll infinito
+    const { ref, inView } = useInView({
+        threshold: 0,
+        rootMargin: '100px',
+    })
+
+    // Trigger del caricamento quando l'elemento è in vista
+    React.useEffect(() => {
+        if (inView && hasMore && !isLoadingMore) {
+            onLoadMore()
+        }
+    }, [inView, hasMore, isLoadingMore, onLoadMore])
+
+    // Aggiungi questo useEffect per resettare gli stati quando searchQuery cambia
+    React.useEffect(() => {
+        // Reset all AI-related states when search query changes
+        setSummary('');
+        setCustomPrompt('');
+        setEnhancedPrompt('');
+        setMessages([]);
+        setIsChatMode(false);
+        setIsDialogOpen(false);
+        setSelectedPost(null);
+        setShowCustomPrompt(false);
+    }, [searchQuery]);  // Dipendenza da searchQuery
+
+    React.useEffect(() => {
+        // Carica le interazioni per ogni post
+        posts.forEach(async (post) => {
+            const postDocRef = doc(db, "postInteractions", encodeURIComponent(post.link));
+            onSnapshot(postDocRef, (doc) => {
+                if (doc.exists()) {
+                    setPostInteractions(prev => ({
+                        ...prev,
+                        [post.link]: doc.data() as PostInteraction
+                    }));
+                }
+            });
+        });
+    }, [posts]);
+
+    const handleVote = async (post: Post, voteType: 'up' | 'down') => {
+        if (!email) {
+            toast.error("Please sign in to vote");
+            return;
+        }
+
+        try {
+            const postDocRef = doc(db, "postInteractions", encodeURIComponent(post.link));
+            const postDoc = await getDoc(postDocRef);
+            
+            if (postDoc.exists()) {
+                const data = postDoc.data() as PostInteraction;
+                const currentVote = data.votes[email];
+                
+                // If clicking the same vote type, remove the vote
+                if (currentVote?.type === voteType) {
+                    const updatedVotes = { ...data.votes };
+                    delete updatedVotes[email];
+                    
+                    await updateDoc(postDocRef, {
+                        votes: updatedVotes,
+                        totalVotes: calculateVoteTotal(updatedVotes)
+                    });
+                    toast.success("Vote removed");
+                    return;
+                }
+                
+                // Update or add new vote
+                const updatedVotes = {
+                    ...data.votes,
+                    [email]: { type: voteType, timestamp: new Date() }
+                };
+
+                await updateDoc(postDocRef, {
+                    votes: updatedVotes,
+                    totalVotes: calculateVoteTotal(updatedVotes)
+                });
+                
+                toast.success(currentVote ? "Vote changed" : "Vote recorded");
+            } else {
+                // Create new document with vote
+                const newVotes = { [email]: { type: voteType, timestamp: new Date() } };
+                await setDoc(postDocRef, {
+                    comments: [],
+                    votes: newVotes,
+                    totalVotes: calculateVoteTotal(newVotes)
+                });
+                toast.success("Vote recorded");
+            }
+        } catch (error) {
+            console.error('Error voting:', error);
+            toast.error("Failed to record vote");
+        }
+    };
+
+    const handleComment = async (post: Post) => {
+        if (!email || !newComment.trim()) {
+            toast.error("Please sign in and write a comment");
+            return;
+        }
+
+        try {
+            await addCommentToPost(post.link, {
+                userId: email,
+                userEmail: email,
+                userName: email.split('@')[0],
+                content: newComment.trim()
+            });
+            setNewComment('');
+            toast.success("Comment added");
+        } catch (error) {
+            toast.error("Failed to add comment");
+        }
+    };
+
     if (posts.length === 0) {
         return <div></div>
     }
@@ -713,294 +1009,298 @@ Create an enhanced version that requires proper clickable citation numbers and r
         <div className="min-w-full mx-auto md:px-0 mt-3">
             {/* AI Analysis Section */}
             <div className="mb-8 min-w-full">
-            {!summary ? (
-                <div className="relative">
-                    <div className="bg-gradient-to-br from-purple-50 via-gray-100 to-purple-100 dark:from-gray-800 dark:via-purple-900 dark:to-gray-900 rounded-xl overflow-hidden transition-all duration-300 hover:from-purple-100 hover:via-gray-50 hover:to-purple-50 dark:hover:from-gray-900 dark:hover:via-purple-800 dark:hover:to-gray-800">
-                        <div className="grid grid-cols-2">
-                            <Button
-                                onClick={() => generateSummary()}
-                                disabled={isGenerating}
-                                className="flex items-center justify-center sm:gap-2 gap-1 sm:py-4 py-2 hover:bg-purple-100/50 dark:hover:bg-purple-800/30 transition-colors text-sm font-medium text-gray-800 dark:text-gray-200"
-                                variant="ghost"
-                            >
-                                {isGenerating ? (
-                                    <div className="flex items-center gap-2">
-                                        <div className="relative w-5 h-5">
-                                            <div className="absolute inset-0 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
-                                        </div>
-                                        <span>Analyzing...</span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <SparklesIcon className="sm:w-5 sm:h-5 w-4 h-4 text-gray-800 dark:text-gray-200" />
-                                        <span className="sm:text-sm text-xs whitespace-nowrap">Quick Summary</span>
-                                    </>
-                                )}
-                            </Button>
-
-                            <Button
-                                onClick={() => setShowCustomPrompt(true)}
-                                disabled={isGenerating}
-                                className="flex items-center justify-center sm:gap-2 gap-1 sm:py-4 py-2 hover:bg-purple-100/50 dark:hover:bg-purple-800/30 transition-colors text-sm font-medium text-gray-800 dark:text-gray-200"
-                                variant="ghost"
-                            >
-                                {isGenerating ? (
-                                    <div className="flex items-center gap-2">
-                                        <div className="relative w-5 h-5">
-                                            <div className="absolute inset-0 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
-                                        </div>
-                                        <span>Analyzing...</span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <MessageSquareIcon className="sm:w-5 sm:h-5 w-4 h-4 text-gray-800 dark:text-gray-200" />
-                                        <span className="sm:text-sm text-xs whitespace-nowrap">Custom Analysis</span>
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-
-                    {showCustomPrompt && (
-                        <div className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-gray-800 rounded-xl border border-purple-200 dark:border-purple-700 p-4 shadow-lg z-10 transition-all duration-300 ease-in-out">
-                            <div className="flex justify-between items-center mb-3">
-                                <h3 className="text-sm font-medium text-purple-700 dark:text-purple-300">Custom Analysis Prompt</h3>
+                {!summary ? (
+                    <div className="relative">
+                        <div className="bg-gradient-to-br from-purple-50 via-gray-100 to-purple-100 dark:from-gray-800 dark:via-purple-900 dark:to-gray-900 rounded-xl overflow-hidden transition-all duration-300 hover:from-purple-100 hover:via-gray-50 hover:to-purple-50 dark:hover:from-gray-900 dark:hover:via-purple-800 dark:hover:to-gray-800">
+                            <div className="grid grid-cols-2">
                                 <Button
-                                    onClick={() => setShowCustomPrompt(false)}
+                                    onClick={() => generateSummary()}
+                                    disabled={isGenerating}
+                                    className="flex items-center justify-center sm:gap-2 gap-1 sm:py-4 py-2 hover:bg-purple-100/50 dark:hover:bg-purple-800/30 transition-colors text-sm font-medium text-gray-800 dark:text-gray-200"
                                     variant="ghost"
-                                    size="icon"
-                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                 >
-                                    <XIcon className="w-4 h-4" />
-                                </Button>
-                            </div>
-                            <Textarea
-                                value={customPrompt}
-                                onChange={(e) => setCustomPrompt(e.target.value)}
-                                placeholder="Ask anything about these search results..."
-                                className="min-h-[100px] mb-3 resize-none text-sm"
-                            />
-                            <div className="flex gap-2">
-                                <Button
-                                    onClick={enhancePrompt}
-                                    disabled={!customPrompt.trim() || isGenerating}
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex items-center gap-1.5 border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300"
-                                >
-                                    <SparklesIcon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                                    <span>Enhance</span>
-                                </Button>
-                                <Button
-                                    onClick={() => generateSummary(customPrompt)}
-                                    disabled={!customPrompt.trim() || isGenerating}
-                                    size="sm"
-                                    className="flex-1 flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white"
-                                >
-                                    <MessageSquareIcon className="w-3.5 h-3.5" />
-                                    <span>Analyze</span>
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            ) : (
-                <div className="bg-gradient-to-br from-purple-50 via-gray-100 to-purple-100 dark:from-gray-800 dark:via-purple-900 dark:to-gray-900 rounded-xl overflow-hidden transition-all duration-300 hover:from-purple-100 hover:via-gray-50 hover:to-purple-50 dark:hover:from-gray-900 dark:hover:via-purple-800 dark:hover:to-gray-800">
-                    {!isChatMode ? (
-                        <div className="p-6">
-                            <div className="prose dark:prose-invert max-w-none">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
-                                        <SparklesIcon className={`w-5 h-5 ${isGenerating ? 'animate-pulse' : ''}`} />
-                                        <span className="font-medium">AI Analysis</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            onClick={() => {
-                                                setIsChatMode(true);
-                                                setMessages([{
-                                                    id: Date.now(),
-                                                    content: summary,
-                                                    sender: 'ai',
-                                                    timestamp: new Date().toISOString(),
-                                                }]);
-                                            }}
-                                            variant="outline"
-                                            size="sm"
-                                            className="text-xs border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300"
-                                        >
-                                            <MessageSquareIcon className="w-3.5 h-3.5 mr-1.5" />
-                                            Continue in Chat
-                                        </Button>
-                                        <Button
-                                            onClick={() => {
-                                                setSummary('');
-                                                setCustomPrompt('');
-                                                setEnhancedPrompt('');
-                                            }}
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-xs text-purple-700 dark:text-purple-300"
-                                            disabled={isGenerating}
-                                        >
-                                            New Analysis
-                                        </Button>
-                                    </div>
-                                </div>
-                                {enhancedPrompt && (
-                                    <div className="mb-4 text-xs text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 rounded-lg p-3">
-                                        <div className="font-medium mb-1">Enhanced Prompt:</div>
-                                        <div>{enhancedPrompt}</div>
-                                    </div>
-                                )}
-                                {isGenerating ? (
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-3 text-sm text-purple-700 dark:text-purple-300">
+                                    {isGenerating ? (
+                                        <div className="flex items-center gap-2">
                                             <div className="relative w-5 h-5">
                                                 <div className="absolute inset-0 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
-                                                <div className="absolute inset-0 rounded-full border-2 border-purple-500 opacity-20" />
                                             </div>
-                                            <div className="inline-flex items-center gap-1.5">
-                                                <span>AI is analyzing</span>
-                                                <span className="animate-pulse">.</span>
-                                                <span className="animate-pulse animation-delay-200">.</span>
-                                                <span className="animate-pulse animation-delay-400">.</span>
-                                            </div>
+                                            <span>Analyzing...</span>
                                         </div>
+                                    ) : (
+                                        <>
+                                            <SparklesIcon className="sm:w-5 sm:h-5 w-4 h-4 text-gray-800 dark:text-gray-200" />
+                                            <span className="sm:text-sm text-xs whitespace-nowrap">Quick Summary</span>
+                                        </>
+                                    )}
+                                </Button>
 
-                                        <div className="relative overflow-hidden rounded-lg bg-purple-100/50 dark:bg-purple-900/30 p-4">
-                                            <div className="space-y-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 rounded-full bg-purple-300 dark:bg-purple-700 animate-pulse" />
-                                                    <div className="h-4 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-32" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <div className="h-3 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-full" />
-                                                    <div className="h-3 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-[90%]" />
-                                                    <div className="h-3 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-[95%]" />
-                                                    <div className="h-3 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-[85%]" />
-                                                </div>
+                                <Button
+                                    onClick={() => setShowCustomPrompt(true)}
+                                    disabled={isGenerating}
+                                    className="flex items-center justify-center sm:gap-2 gap-1 sm:py-4 py-2 hover:bg-purple-100/50 dark:hover:bg-purple-800/30 transition-colors text-sm font-medium text-gray-800 dark:text-gray-200"
+                                    variant="ghost"
+                                >
+                                    {isGenerating ? (
+                                        <div className="flex items-center gap-2">
+                                            <div className="relative w-5 h-5">
+                                                <div className="absolute inset-0 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
                                             </div>
-                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-200/10 dark:via-purple-700/10 to-transparent animate-shimmer" />
+                                            <span>Analyzing...</span>
                                         </div>
-                                    </div>
-                                ) : (
-                                    summary.split('\n').map((paragraph, idx) => (
-                                        paragraph.trim() && (
-                                            <p key={idx} className="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
-                                                {parseHtmlContent(paragraph)}
-                                            </p>
-                                        )
-                                    ))
-                                )}
+                                    ) : (
+                                        <>
+                                            <MessageSquareIcon className="sm:w-5 sm:h-5 w-4 h-4 text-gray-800 dark:text-gray-200" />
+                                            <span className="sm:text-sm text-xs whitespace-nowrap">Custom Analysis</span>
+                                        </>
+                                    )}
+                                </Button>
                             </div>
                         </div>
-                    ) : (
-                        <div className="flex flex-col h-[500px]">
-                            <div className="flex items-center justify-between p-4 border-b border-purple-200 dark:border-purple-700">
-                                <Button
-                                    onClick={() => setIsChatMode(false)}
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-sm text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 transition-colors"
-                                >
-                                    <ArrowLeft className="w-4 h-4 mr-2" />
-                                    Back to Summary
-                                </Button>
-                                <Button
-                                    onClick={() => {
-                                        setSummary('');
-                                        setCustomPrompt('');
-                                        setEnhancedPrompt('');
-                                        setMessages([]);
-                                        setIsChatMode(false);
-                                    }}
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-xs text-purple-700 dark:text-purple-300"
-                                >
-                                    New Analysis
-                                </Button>
-                            </div>
 
-                            <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-                                <div className="space-y-4">
-                                    {messages.map((message) => (
-                                        <div
-                                            key={message.id}
-                                            className={`flex gap-2 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                                        >
-                                            {message.sender === 'ai' && (
+                        {showCustomPrompt && (
+                            <div className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-gray-800 rounded-xl border border-purple-200 dark:border-purple-700 p-4 shadow-lg z-10 transition-all duration-300 ease-in-out">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="text-sm font-medium text-purple-700 dark:text-purple-300">Custom Analysis Prompt</h3>
+                                    <Button
+                                        onClick={() => setShowCustomPrompt(false)}
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                    >
+                                        <XIcon className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                                <Textarea
+                                    value={customPrompt}
+                                    onChange={(e) => setCustomPrompt(e.target.value)}
+                                    placeholder="Ask anything about these search results..."
+                                    className="min-h-[100px] mb-3 resize-none text-sm"
+                                />
+                                <div className="flex gap-2">
+                                    <Button
+                                        onClick={enhancePrompt}
+                                        disabled={!customPrompt.trim() || isGenerating}
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex items-center gap-1.5 border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300"
+                                    >
+                                        <SparklesIcon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                                        <span>Enhance</span>
+                                    </Button>
+                                    <Button
+                                        onClick={() => generateSummary(customPrompt)}
+                                        disabled={!customPrompt.trim() || isGenerating}
+                                        size="sm"
+                                        className="flex-1 flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white"
+                                    >
+                                        <MessageSquareIcon className="w-3.5 h-3.5" />
+                                        <span>Analyze</span>
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="bg-gradient-to-br from-purple-50 via-gray-100 to-purple-100 dark:from-gray-800 dark:via-purple-900 dark:to-gray-900 rounded-xl overflow-hidden transition-all duration-300 hover:from-purple-100 hover:via-gray-50 hover:to-purple-50 dark:hover:from-gray-900 dark:hover:via-purple-800 dark:hover:to-gray-800">
+                        {!isChatMode ? (
+                            <div className="p-6">
+                                <div className="prose dark:prose-invert max-w-none">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
+                                            <SparklesIcon className={`w-5 h-5 ${isGenerating ? 'animate-pulse' : ''}`} />
+                                            <span className="font-medium">AI Analysis</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                onClick={() => {
+                                                    setIsChatMode(true);
+                                                    setMessages([{
+                                                        id: Date.now(),
+                                                        content: summary,
+                                                        sender: 'ai',
+                                                        timestamp: new Date().toISOString(),
+                                                    }]);
+                                                }}
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-xs border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300"
+                                            >
+                                                <MessageSquareIcon className="w-3.5 h-3.5 mr-1.5" />
+                                                Continue in Chat
+                                            </Button>
+                                            <Button
+                                                onClick={() => {
+                                                    setSummary('');
+                                                    setCustomPrompt('');
+                                                    setEnhancedPrompt('');
+                                                }}
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-xs text-purple-700 dark:text-purple-300"
+                                                disabled={isGenerating}
+                                            >
+                                                New Analysis
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    {enhancedPrompt && (
+                                        <div className="mb-4 text-xs text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 rounded-lg p-3">
+                                            <div className="font-medium mb-1">Enhanced Prompt:</div>
+                                            <div>{enhancedPrompt}</div>
+                                        </div>
+                                    )}
+                                    {isGenerating ? (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-3 text-sm text-purple-700 dark:text-purple-300">
+                                                <div className="relative w-5 h-5">
+                                                    <div className="absolute inset-0 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+                                                    <div className="absolute inset-0 rounded-full border-2 border-purple-500 opacity-20" />
+                                                </div>
+                                                <div className="inline-flex items-center gap-1.5">
+                                                    <span>AI is analyzing</span>
+                                                    <span className="animate-pulse">.</span>
+                                                    <span className="animate-pulse animation-delay-200">.</span>
+                                                    <span className="animate-pulse animation-delay-400">.</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="relative overflow-hidden rounded-lg bg-purple-100/50 dark:bg-purple-900/30 p-4">
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-8 h-8 rounded-full bg-purple-300 dark:bg-purple-700 animate-pulse" />
+                                                        <div className="h-4 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-32" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div className="h-3 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-full" />
+                                                        <div className="h-3 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-[90%]" />
+                                                        <div className="h-3 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-[95%]" />
+                                                        <div className="h-3 bg-purple-200 dark:bg-purple-800 animate-pulse rounded-full w-[85%]" />
+                                                    </div>
+                                                </div>
+                                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-200/10 dark:via-purple-700/10 to-transparent animate-shimmer" />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        summary.split('\n').map((paragraph, idx) => (
+                                            paragraph.trim() && (
+                                                <p key={idx} className="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
+                                                    {parseHtmlContent(paragraph)}
+                                                </p>
+                                            )
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col h-[500px]">
+                                <div className="flex items-center justify-between p-4 border-b border-purple-200 dark:border-purple-700">
+                                    <Button
+                                        onClick={() => setIsChatMode(false)}
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-sm text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 transition-colors"
+                                    >
+                                        <ArrowLeft className="w-4 h-4 mr-2" />
+                                        Back to Summary
+                                    </Button>
+                                    <Button
+                                        onClick={() => {
+                                            setSummary('');
+                                            setCustomPrompt('');
+                                            setEnhancedPrompt('');
+                                            setMessages([]);
+                                            setIsChatMode(false);
+                                        }}
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-xs text-purple-700 dark:text-purple-300"
+                                    >
+                                        New Analysis
+                                    </Button>
+                                </div>
+
+                                <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+                                    <div className="space-y-4">
+                                        {messages.map((message) => (
+                                            <div
+                                                key={message.id}
+                                                className={`flex gap-2 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                                            >
+                                                {message.sender === 'ai' && (
+                                                    <Avatar className="h-8 w-8">
+                                                        <AvatarImage src="/logo.svg" />
+                                                        <AvatarFallback>AI</AvatarFallback>
+                                                    </Avatar>
+                                                )}
+                                                <div
+                                                    className={`px-4 py-2 rounded-lg max-w-[80%] ${message.sender === 'user'
+                                                        ? 'bg-purple-600 text-white'
+                                                        : 'bg-purple-100 dark:bg-purple-900 text-gray-800 dark:text-gray-200'
+                                                        }`}
+                                                >
+                                                    <div className="text-sm whitespace-pre-wrap prose dark:prose-invert max-w-none prose-sm">
+                                                        {message.sender === 'user' 
+                                                            ? message.content 
+                                                            : parseHtmlContent(message.content)
+                                                        }
+                                                    </div>
+                                                </div>
+                                                {message.sender === 'user' && (
+                                                    <Avatar className="h-8 w-8">
+                                                        <AvatarImage src="/placeholder.svg" />
+                                                        <AvatarFallback>U</AvatarFallback>
+                                                    </Avatar>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {isGenerating && (
+                                            <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
                                                 <Avatar className="h-8 w-8">
                                                     <AvatarImage src="/logo.svg" />
                                                     <AvatarFallback>AI</AvatarFallback>
                                                 </Avatar>
-                                            )}
-                                            <div
-                                                className={`px-4 py-2 rounded-lg max-w-[80%] ${message.sender === 'user'
-                                                    ? 'bg-purple-600 text-white'
-                                                    : 'bg-purple-100 dark:bg-purple-900 text-gray-800 dark:text-gray-200'
-                                                }`}
-                                            >
-                                                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                                <div className="flex gap-1">
+                                                    <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: "0ms" }} />
+                                                    <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: "150ms" }} />
+                                                    <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+                                                </div>
                                             </div>
-                                            {message.sender === 'user' && (
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarImage src="/placeholder.svg" />
-                                                    <AvatarFallback>U</AvatarFallback>
-                                                </Avatar>
-                                            )}
-                                        </div>
-                                    ))}
-                                    {isGenerating && (
-                                        <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
-                                            <Avatar className="h-8 w-8">
-                                                <AvatarImage src="/logo.svg" />
-                                                <AvatarFallback>AI</AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex gap-1">
-                                                <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: "0ms" }} />
-                                                <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: "150ms" }} />
-                                                <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: "300ms" }} />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </ScrollArea>
-
-                            <div className="p-4 border-t border-purple-200 dark:border-purple-700">
-                                <div className="flex gap-2">
-                                    <Textarea
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        placeholder="Ask a follow-up question..."
-                                        className="min-h-[44px] max-h-32 resize-none"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault();
-                                                handleSendMessage();
-                                            }
-                                        }}
-                                    />
-                                    <Button
-                                        onClick={handleSendMessage}
-                                        disabled={isGenerating || !newMessage.trim()}
-                                        className="px-3 bg-purple-600 hover:bg-purple-700 text-white"
-                                    >
-                                        {isGenerating ? (
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                            <SendHorizontal className="w-4 h-4" />
                                         )}
-                                    </Button>
+                                    </div>
+                                </ScrollArea>
+
+                                <div className="p-4 border-t border-purple-200 dark:border-purple-700">
+                                    <div className="flex gap-2">
+                                        <Textarea
+                                            value={newMessage}
+                                            onChange={(e) => setNewMessage(e.target.value)}
+                                            placeholder="Ask a follow-up question..."
+                                            className="min-h-[44px] max-h-32 resize-none"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleSendMessage();
+                                                }
+                                            }}
+                                        />
+                                        <Button
+                                            onClick={handleSendMessage}
+                                            disabled={isGenerating || !newMessage.trim()}
+                                            className="px-3 bg-purple-600 hover:bg-purple-700 text-white"
+                                        >
+                                            {isGenerating ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <SendHorizontal className="w-4 h-4" />
+                                            )}
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-
+                        )}
+                    </div>
+                )}
+            </div>
 
             {/* Results Count & Filter */}
             <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6">
@@ -1013,74 +1313,197 @@ Create an enhanced version that requires proper clickable citation numbers and r
                 )}
             </div>
 
-            {/* Search Results */}
-            <div className="space-y-6">
-                {posts.map((post, index) => (
-                    <div
-                        key={index}
-                        className="group bg-white dark:bg-gray-900 border-b border-gray-200/50 dark:border-gray-800/50 p-4"
-                    >
-                        <div className="space-y-4">
-                            {/* URL and Domain Section */}
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-full">
-                                    <img
-                                        src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
-                                        alt=""
-                                        className="w-4 h-4"
-                                    />
-                                    <span>{new URL(post.link).hostname.replace('www.', '')}</span>
+            {/* Search Results with Background */}
+            <div className="rounded-xl bg-gray-50/50 dark:bg-gray-900/20 border border-gray-100 dark:border-gray-800">
+                {/* Search Results List */}
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {posts.map((post, index) => (
+                        <div
+                            key={index}
+                            className="group bg-white dark:bg-gray-900 first:rounded-t-xl last:rounded-b-xl p-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors duration-200"
+                        >
+                            <div className="space-y-4">
+                                {/* URL and Domain Section with Vote Buttons */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-full">
+                                            <img
+                                                src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
+                                                alt=""
+                                                className="w-4 h-4"
+                                            />
+                                            <span>{new URL(post.link).hostname.replace('www.', '')}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Vote buttons moved to top right */}
+                                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-full p-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleVote(post, 'up')}
+                                            className={`rounded-full px-3 ${
+                                                postInteractions[post.link]?.votes[email || '']?.type === 'up'
+                                                ? 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400' 
+                                                : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                                            }`}
+                                            title={email ? "Upvote" : "Sign in to vote"}
+                                            disabled={!email}
+                                        >
+                                            <ThumbsUp className="w-4 h-4 mr-1" />
+                                            <span className="tabular-nums">
+                                                {postInteractions[post.link]?.totalVotes || 0}
+                                            </span>
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleVote(post, 'down')}
+                                            className={`rounded-full px-3 ${
+                                                postInteractions[post.link]?.votes[email || '']?.type === 'down'
+                                                ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400'
+                                                : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                                            }`}
+                                            title={email ? "Downvote" : "Sign in to vote"}
+                                            disabled={!email}
+                                        >
+                                            <ThumbsDown className="w-4 h-4" />
+                                        </Button>
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Title Section */}
-                            <h3 className="text-lg font-medium leading-tight">
-                                <a
-                                    href={decodeURIComponent(post.link)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-gray-900 dark:text-white hover:text-primary dark:hover:text-primary transition-colors"
-                                    onClick={() => onEngage(post.link)}
-                                >
-                                    {post.title}
-                                </a>
-                            </h3>
+                                {/* Title Section */}
+                                <h3 className="text-lg font-medium leading-tight">
+                                    <a
+                                        href={decodeURIComponent(post.link)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-gray-900 dark:text-white hover:text-primary dark:hover:text-primary transition-colors"
+                                        onClick={() => onEngage(post.link)}
+                                    >
+                                        {post.title}
+                                    </a>
+                                </h3>
 
-                            {/* Snippet Section */}
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                {post.snippet}
-                            </p>
+                                {/* Snippet Section */}
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    {post.snippet}
+                                </p>
 
-                            {/* Action Buttons */}
-                            <div className="flex items-center gap-2 pt-2">
-                                <button
-                                    onClick={() => {
-                                        setSelectedPost(post);
-                                        setIsDialogOpen(true);
-                                    }}
-                                    className="text-sm px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center gap-2 transition-colors font-medium"
-                                >
-                                    <SparklesIcon className="w-4 h-4" />
-                                    <span>Discuss</span>
-                                </button>
-                                <button
-                                    onClick={() => onBookmark(post)}
-                                    className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
-                                >
-                                    <Bookmark className="w-4 h-4" />
-                                    <span>Save</span>
-                                </button>
-                                <button
-                                    onClick={() => onCopyUrl(post.link)}
-                                    className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
-                                >
-                                    <Link2 className="w-4 h-4" />
-                                    <span>Share</span>
-                                </button>
+                                {/* Action Buttons */}
+                                <div className="flex flex-wrap items-center gap-2 pt-2">
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedPost(post);
+                                                setIsDialogOpen(true);
+                                            }}
+                                            className="text-sm px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center gap-2 transition-colors font-medium"
+                                        >
+                                            <SparklesIcon className="w-4 h-4" />
+                                            <span>AI</span>
+                                        </button>
+                                        <button
+                                            onClick={() => onBookmark(post)}
+                                            className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
+                                        >
+                                            <Bookmark className="w-4 h-4" />
+                                            <span>Save</span>
+                                        </button>
+                                        <button
+                                            onClick={() => onCopyUrl(post.link)}
+                                            className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
+                                        >
+                                            <Link2 className="w-4 h-4" />
+                                            <span>Share</span>
+                                        </button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setExpandedPost(expandedPost === post.link ? null : post.link)}
+                                            className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
+                                        >
+                                            <MessageCircle className="w-4 h-4" />
+                                            <span> ({postInteractions[post.link]?.comments?.length || 0})</span>
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Comments section with animation */}
+                                <AnimatePresence>
+                                    {expandedPost === post.link && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="mt-4 space-y-4 pt-4 border-t dark:border-gray-800">
+                                                <div className="flex gap-2">
+                                                    <Textarea
+                                                        value={newComment}
+                                                        onChange={(e) => setNewComment(e.target.value)}
+                                                        placeholder={email ? "Write a comment..." : "Sign in to comment"}
+                                                        className="flex-1 text-sm min-h-[80px]"
+                                                    />
+                                                    <Button 
+                                                        onClick={() => handleComment(post)}
+                                                        disabled={!newComment.trim() || !email}
+                                                        size="sm"
+                                                        className="self-start"
+                                                    >
+                                                        Post
+                                                    </Button>
+                                                </div>
+                                                
+                                                <AnimatePresence>
+                                                    <div className="space-y-3">
+                                                        {postInteractions[post.link]?.comments
+                                                            ?.filter(comment => !comment.parentId)
+                                                            .map((comment) => (
+                                                                <motion.div
+                                                                    key={comment.id}
+                                                                    initial={{ opacity: 0, y: 20 }}
+                                                                    animate={{ opacity: 1, y: 0 }}
+                                                                    exit={{ opacity: 0, y: -20 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                >
+                                                                    <CommentItem
+                                                                        comment={comment}
+                                                                        postUrl={post.link}
+                                                                        email={email}
+                                                                        onReply={(parentId) => {
+                                                                            setExpandedPost(post.link);
+                                                                        }}
+                                                                    />
+                                                                </motion.div>
+                                                            ))}
+                                                    </div>
+                                                </AnimatePresence>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
+
+                {/* Infinite Scroll Trigger & Loading State */}
+                <div ref={ref} className="py-8 text-center">
+                    {isLoadingMore && (
+                        <div className="inline-flex items-center gap-2 text-sm text-muted-foreground bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse" />
+                            <span>Loading more results</span>
+                        </div>
+                    )}
+                    {!hasMore && posts.length > 0 && (
+                        <div className="text-sm text-muted-foreground">
+                            No more results to load
+                        </div>
+                    )}
+                </div>
             </div>
 
             {selectedPost && (
@@ -1095,14 +1518,6 @@ Create an enhanced version that requires proper clickable citation numbers and r
                     onEngage={onEngage}
                 />
             )}
-
-            {/* Load More Indicator */}
-            <div className="py-8 text-center">
-                <div className="inline-flex items-center gap-2 text-sm text-muted-foreground bg-gray-50 dark:bg-gray-900 px-4 py-2 rounded-full">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse" />
-                    <span>Loading more results</span>
-                </div>
-            </div>
         </div>
     )
 } 

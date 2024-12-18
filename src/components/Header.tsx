@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import Cookies from 'js-cookie'
 import Link from 'next/link'
+import { getCreditManager } from '@/lib/credits'
 
 interface HeaderProps {
     userId?: string
@@ -32,33 +33,25 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
     const hasShownToast = useRef(false)
 
     useEffect(() => {
-        if (!email) {
-            const guestCredits = parseInt(Cookies.get('guestCredits') || '0');
-            setCredits(guestCredits);
-
-            if (guestCredits <= 1 && !hasShownToast.current) {
-                hasShownToast.current = true;
-                toast("Credits running low!", {
-                    description: "Sign up to get 5 free credits daily.",
-                    duration: 10000,
-                    action: {
-                        label: "Sign up now",
-                        onClick: () => router.push('/login')
-                    }
-                });
-            }
-            return;
+        const creditManager = getCreditManager(email)
+        
+        const updateCredits = async () => {
+            await creditManager.resetDailyCredits()
+            const currentCredits = await creditManager.getCredits()
+            setCredits(currentCredits)
         }
 
-        const userDocRef = doc(db, 'users', email)
-        const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
-            if (docSnapshot.exists()) {
-                const currentCredits = docSnapshot.data().credits
-                setCredits(currentCredits)
-            }
-        })
+        updateCredits()
 
-        return () => unsubscribe()
+        if (email) {
+            const userDocRef = doc(db, 'users', email)
+            const unsubscribe = onSnapshot(userDocRef, async () => {
+                const currentCredits = await creditManager.getCredits()
+                setCredits(currentCredits)
+            })
+
+            return () => unsubscribe()
+        }
     }, [email, router])
 
     return (

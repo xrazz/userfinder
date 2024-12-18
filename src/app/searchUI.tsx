@@ -16,6 +16,7 @@ import { Settings2, Search } from 'lucide-react'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
 import { motion } from 'framer-motion'
+import { useInfiniteQuery } from '@tanstack/react-query'
 
 const MEMBERSHIP_LEVELS = {
     FREE: 'Free',
@@ -72,10 +73,13 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [loading, setLoading] = useState(false)
     const [searchData, setSearchData] = useState<Post[]>([])
     const [selectedSite, setSelectedSite] = useState('Universal search')
-    const [resultCount, setResultCount] = useState<number>(10)
     const [customUrl, setCustomUrl] = useState('')
     const [credits, setCredits] = useState(0)
     const [typingQuery, setTypingQuery] = useState('')
+    const [pageNumber, setPageNumber] = useState(1)
+    const [hasMore, setHasMore] = useState(true)
+    const [isLoadingMore, setIsLoadingMore] = useState(false)
+    const RESULTS_PER_PAGE = 10 // Costante per il numero di risultati per pagina
 
     useEffect(() => {
         firebaseAnalytics.logPageView('/')
@@ -144,14 +148,18 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         setSearchData(cachedData)
     }, [email])
 
-    const fetchResult = async (query: string): Promise<any[]> => {
+    const fetchResults = async (query: string, page: number): Promise<Post[]> => {
         try {
             const response = await fetch('/api/searchApify', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ query: query, num: resultCount })
+                body: JSON.stringify({ 
+                    query: query, 
+                    num: RESULTS_PER_PAGE,
+                    start: (page - 1) * RESULTS_PER_PAGE
+                })
             })
 
             if (!response.ok) {
@@ -173,23 +181,47 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
     const handleSearch = async () => {
         if (searchQuery.trim() !== '') {
-            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
-
             setSearchData([])
             setLoading(true)
+            setPageNumber(1)
+            setHasMore(true)
 
             try {
                 const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
-                const Results = await fetchResult(`site:${siteToSearch} ${searchQuery} ${dateFilterString} `)
+                const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
+                const Results = await fetchResults(`site:${siteToSearch} ${searchQuery} ${dateFilterString}`, 1)
 
                 setSearchData(Results)
                 localStorage.setItem('searchData', JSON.stringify(Results))
                 localStorage.setItem('history', JSON.stringify({ title: searchQuery, data: Results }))
-
             } catch (error) {
                 console.error("Error fetching data:", error)
             } finally {
                 setLoading(false)
+            }
+        }
+    }
+
+    const handleLoadMore = async () => {
+        if (!isLoadingMore && hasMore) {
+            setIsLoadingMore(true)
+            try {
+                const nextPage = pageNumber + 1
+                const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
+                const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
+                const newResults = await fetchResults(`site:${siteToSearch} ${searchQuery} ${dateFilterString}`, nextPage)
+
+                if (newResults.length === 0) {
+                    setHasMore(false)
+                } else {
+                    setSearchData(prev => [...prev, ...newResults])
+                    setPageNumber(nextPage)
+                }
+            } catch (error) {
+                console.error("Error loading more results:", error)
+                setHasMore(false)
+            } finally {
+                setIsLoadingMore(false)
             }
         }
     }
@@ -310,32 +342,28 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                 {mapFilterToDate(currentFilter).replace('last', '')}
                             </Badge>
                         )}
-                        <Badge color="cyan" variant="soft">{resultCount}</Badge>
                     </div>
                     <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="w-8 h-8 rounded-lg hover:bg-gray-100 hover:text-gray-900"
-                                >
-                                    <Settings2 className="w-4 h-4" />
-                                    <span className="sr-only">Settings</span>
-                                </Button>
-                            </PopoverTrigger>
-                            <LoggedInSettingsPopover
-                                selectedSite={selectedSite}
-                                setSelectedSite={setSelectedSite}
-                                resultCount={resultCount}
-                                setResultCount={setResultCount}
-                                currentFilter={currentFilter}
-                                handleFilterChange={handleFilterChange}
-                                customUrl={customUrl}
-                                setCustomUrl={setCustomUrl}
-                                membership={Membership}
-                            />
-                        </Popover>
-                    
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="secondary"
+                                size="icon"
+                                className="w-8 h-8 rounded-lg hover:bg-gray-100 hover:text-gray-900"
+                            >
+                                <Settings2 className="w-4 h-4" />
+                                <span className="sr-only">Settings</span>
+                            </Button>
+                        </PopoverTrigger>
+                        <LoggedInSettingsPopover
+                            selectedSite={selectedSite}
+                            setSelectedSite={setSelectedSite}
+                            currentFilter={currentFilter}
+                            handleFilterChange={handleFilterChange}
+                            customUrl={customUrl}
+                            setCustomUrl={setCustomUrl}
+                            membership={Membership}
+                        />
+                    </Popover>
                 </div>
 
                 {loading && <TabDataSkeleton />}
@@ -349,6 +377,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     onEngage={handleEngage}
                     onCopyUrl={handleCopyUrl}
                     email={email}
+                    onLoadMore={handleLoadMore}
+                    hasMore={hasMore}
+                    isLoadingMore={isLoadingMore}
                 />
             </div>
         </main>

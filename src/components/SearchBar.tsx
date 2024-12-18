@@ -98,18 +98,22 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
     const handleSuggestionClick = (suggestion: string) => {
         setTypingQuery(suggestion)
         setShowSuggestions(false)
-        onSearch(suggestion)
+        if (searchInputRef.current) {
+            searchInputRef.current.focus()
+        }
     }
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
         if (event.key === 'Enter' && typingQuery.trim() !== '') {
             onSearch(typingQuery)
+            setShowSuggestions(false)
         }
     }
 
     const handleSearch = () => {
         if (typingQuery.trim() !== '') {
             onSearch(typingQuery)
+            setShowSuggestions(false)
         }
     }
 
@@ -159,12 +163,21 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.05 }}
-                                className="flex items-center px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-                                onClick={() => handleSuggestionClick(suggestion)}
+                                className="flex items-center px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800"
                             >
-                                <Search className="w-4 h-4 mr-2 text-gray-400" />
-                                <span>{suggestion}</span>
-                                <ArrowUpRight className="w-4 h-4 ml-auto text-gray-400" />
+                                <div 
+                                    className="flex-1 flex items-center cursor-pointer"
+                                    onClick={() => handleSuggestionClick(suggestion)}
+                                >
+                                    <Search className="w-4 h-4 mr-2 text-gray-400" />
+                                    <span>{suggestion}</span>
+                                </div>
+                                <button
+                                    onClick={() => handleSuggestionClick(suggestion)}
+                                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                                >
+                                    <ArrowUpRight className="w-4 h-4 text-gray-400" />
+                                </button>
                             </motion.div>
                         ))}
                     </motion.div>
