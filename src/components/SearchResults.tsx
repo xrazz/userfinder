@@ -505,14 +505,29 @@ ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
     )
 }
 
-const CommentItem = ({ comment, postUrl, email, onReply }: { 
+const CommentItem = ({ comment, postUrl, email, onReply, nestingLevel = 0, setExpandedPost }: { 
     comment: Comment; 
     postUrl: string;
     email?: string;
     onReply: (parentId: string) => void;
+    nestingLevel?: number;
+    setExpandedPost: (postUrl: string | null) => void;
 }) => {
     const [isReplying, setIsReplying] = React.useState(false);
     const [replyContent, setReplyContent] = React.useState('');
+    const [collapsedComments, setCollapsedComments] = React.useState<Set<string>>(new Set());
+    const isCollapsed = collapsedComments.has(comment.id);
+    const hasReplies = (comment.replies?.length ?? 0) > 0;
+
+    const toggleCollapse = () => {
+        const newCollapsed = new Set(collapsedComments);
+        if (isCollapsed) {
+            newCollapsed.delete(comment.id);
+        } else {
+            newCollapsed.add(comment.id);
+        }
+        setCollapsedComments(newCollapsed);
+    };
 
     const handleReply = async () => {
         if (!email || !replyContent.trim()) return;
@@ -534,80 +549,127 @@ const CommentItem = ({ comment, postUrl, email, onReply }: {
 
     return (
         <div className="space-y-2">
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-2">
-                    <Avatar className="w-6 h-6">
-                        <AvatarImage src={comment.userImage || '/placeholder.svg'} />
-                        <AvatarFallback>{comment.userName[0]}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">{comment.userName}</span>
-                
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                {/* Comment Header */}
+                <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                        <Avatar className="w-6 h-6">
+                            <AvatarImage src={comment.userImage || '/placeholder.svg'} />
+                            <AvatarFallback>{comment.userName[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-medium">{comment.userName}</span>
+
+                        </div>
+                    </div>
                 </div>
-                <p className="text-sm text-muted-foreground">{comment.content}</p>
+
+                {/* Comment Content */}
+                <p className="text-sm text-muted-foreground leading-relaxed break-words">
+                    {comment.content}
+                </p>
                 
-                <div className="flex items-center gap-4 mt-2">
-                    <button
-                        onClick={() => setIsReplying(!isReplying)}
-                        className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-                    >
-                        <MessageCircle className="w-3 h-3" />
-                        {isReplying ? 'Cancel' : 'Reply'}
-                    </button>
-                </div>
+                {/* Comment Actions */}
+                {nestingLevel < 1 && (
+                    <div className="flex items-center gap-4 mt-2">
+                        <button
+                            onClick={() => setIsReplying(!isReplying)}
+                            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors"
+                        >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            {isReplying ? 'Cancel' : 'Reply'}
+                        </button>
+                        {hasReplies && (
+                            <button
+                                onClick={toggleCollapse}
+                                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors"
+                            >
+                                {isCollapsed ? (
+                                    <ChevronDownIcon className="w-3.5 h-3.5" />
+                                ) : (
+                                    <ChevronUpIcon className="w-3.5 h-3.5" />
+                                )}
+                                {comment.replies?.length} {(comment.replies?.length ?? 0) === 1 ? 'reply' : 'replies'}
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
 
+            {/* Reply Form */}
+            {nestingLevel < 1 && (
+                <AnimatePresence>
+                    {isReplying && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="ml-6 overflow-hidden"
+                        >
+                            <div className="flex flex-col gap-2 pt-2">
+                                <Textarea
+                                    value={replyContent}
+                                    onChange={(e) => setReplyContent(e.target.value)}
+                                    placeholder="Write a reply..."
+                                    className="flex-1 text-sm min-h-[60px] resize-none"
+                                />
+                                <div className="flex justify-end gap-2">
+                                    <Button 
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setIsReplying(false)}
+                                        className="text-xs"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button 
+                                        onClick={handleReply}
+                                        disabled={!replyContent.trim() || !email}
+                                        size="sm"
+                                        className="text-xs"
+                                    >
+                                        Reply
+                                    </Button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            )}
+
+            {/* Nested Replies */}
             <AnimatePresence>
-                {isReplying && (
+                {hasReplies && !isCollapsed && (
                     <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="ml-6 overflow-hidden"
+                        className="ml-6 space-y-2 border-l-2 border-gray-100 dark:border-gray-700 pl-4"
                     >
-                        <div className="flex gap-2 pt-2">
-                            <Textarea
-                                value={replyContent}
-                                onChange={(e) => setReplyContent(e.target.value)}
-                                placeholder="Write a reply..."
-                                className="flex-1 text-sm min-h-[60px]"
-                            />
-                            <Button 
-                                onClick={handleReply}
-                                disabled={!replyContent.trim() || !email}
-                                size="sm"
-                                className="self-start"
+                        {comment.replies?.map((reply) => (
+                            <motion.div
+                                key={reply.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.2 }}
                             >
-                                Reply
-                            </Button>
-                        </div>
+                                <CommentItem
+                                    comment={reply}
+                                    postUrl={postUrl}
+                                    email={email}
+                                    onReply={(parentId) => {
+                                        setExpandedPost(postUrl);
+                                    }}
+                                    nestingLevel={nestingLevel + 1}
+                                    setExpandedPost={setExpandedPost}
+                                />
+                            </motion.div>
+                        ))}
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {comment.replies && comment.replies.length > 0 && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="ml-6 space-y-2 border-l-2 border-gray-100 dark:border-gray-700 pl-4"
-                >
-                    {comment.replies.map((reply) => (
-                        <motion.div
-                            key={reply.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            <CommentItem
-                                comment={reply}
-                                postUrl={postUrl}
-                                email={email}
-                                onReply={onReply}
-                            />
-                        </motion.div>
-                    ))}
-                </motion.div>
-            )}
         </div>
     );
 };
@@ -647,6 +709,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     const [expandedPost, setExpandedPost] = React.useState<string | null>(null);
     const [newComment, setNewComment] = React.useState('');
     const [postInteractions, setPostInteractions] = React.useState<{[key: string]: PostInteraction}>({});
+    const [showCommentInput, setShowCommentInput] = React.useState<string | null>(null);
 
     const scrollToBottom = () => {
         if (scrollAreaRef.current) {
@@ -1440,23 +1503,76 @@ Create an enhanced version that requires proper clickable citation numbers and r
                                             className="overflow-hidden"
                                         >
                                             <div className="mt-4 space-y-4 pt-4 border-t dark:border-gray-800">
-                                                <div className="flex gap-2">
-                                                    <Textarea
-                                                        value={newComment}
-                                                        onChange={(e) => setNewComment(e.target.value)}
-                                                        placeholder={email ? "Write a comment..." : "Sign in to comment"}
-                                                        className="flex-1 text-sm min-h-[80px]"
-                                                    />
-                                                    <Button 
-                                                        onClick={() => handleComment(post)}
-                                                        disabled={!newComment.trim() || !email}
-                                                        size="sm"
-                                                        className="self-start"
+                                                {/* Write Comment Button */}
+                                                {showCommentInput !== post.link && (
+                                                    <Button
+                                                        onClick={() => setShowCommentInput(post.link)}
+                                                        className="w-full flex items-center justify-center gap-2 text-sm"
+                                                        variant="outline"
                                                     >
-                                                        Post
+                                                        <MessageCircle className="w-4 h-4" />
+                                                        Write a comment
                                                     </Button>
-                                                </div>
+                                                )}
+
+                                                {/* New Comment Form */}
+                                                <AnimatePresence>
+                                                    {showCommentInput === post.link && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: "auto", opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            transition={{ duration: 0.2 }}
+                                                            className="overflow-hidden"
+                                                        >
+                                                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                                                                <div className="flex items-center justify-between gap-2 mb-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Avatar className="w-6 h-6">
+                                                                            <AvatarImage src="/placeholder.svg" />
+                                                                            <AvatarFallback>?</AvatarFallback>
+                                                                        </Avatar>
+                                                                        <span className="text-sm font-medium">
+                                                                            {email ? email.split('@')[0] : 'Sign in to comment'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => setShowCommentInput(null)}
+                                                                        className="text-xs"
+                                                                    >
+                                                                        Cancel
+                                                                    </Button>
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Textarea
+                                                                        value={newComment}
+                                                                        onChange={(e) => setNewComment(e.target.value)}
+                                                                        placeholder={email ? "Write a comment..." : "Sign in to comment"}
+                                                                        className="flex-1 text-sm min-h-[80px] bg-white dark:bg-gray-900"
+                                                                        disabled={!email}
+                                                                    />
+                                                                    <div className="flex justify-end">
+                                                                        <Button 
+                                                                            onClick={() => {
+                                                                                handleComment(post);
+                                                                                setShowCommentInput(null);
+                                                                            }}
+                                                                            disabled={!newComment.trim() || !email}
+                                                                            size="sm"
+                                                                            className="text-xs"
+                                                                        >
+                                                                            Post Comment
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
                                                 
+                                                {/* Comments List */}
                                                 <AnimatePresence>
                                                     <div className="space-y-3">
                                                         {postInteractions[post.link]?.comments
@@ -1476,6 +1592,8 @@ Create an enhanced version that requires proper clickable citation numbers and r
                                                                         onReply={(parentId) => {
                                                                             setExpandedPost(post.link);
                                                                         }}
+                                                                        nestingLevel={0}
+                                                                        setExpandedPost={setExpandedPost}
                                                                     />
                                                                 </motion.div>
                                                             ))}

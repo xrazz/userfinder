@@ -6,7 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: Request) {
   try {
-    const { email, userId } = await req.json();
+    const { email, userId, plan } = await req.json();
 
     // First, create or retrieve a customer
     let customer;
@@ -26,6 +26,11 @@ export async function POST(req: Request) {
       });
     }
 
+    // Set price based on plan
+    const priceAmount = plan === 'enterprise' ? 4999 : 999; // $49.99 or $9.99
+    const planName = plan === 'enterprise' ? 'Enterprise' : 'Pro';
+    const credits = plan === 'enterprise' ? 'Unlimited' : '100 per day';
+
     // Create the checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
@@ -35,10 +40,10 @@ export async function POST(req: Request) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'Pro Subscription',
-              description: '100 AI credits per day',
+              name: `${planName} Subscription`,
+              description: `${credits} AI credits`,
             },
-            unit_amount: 999, // $9.99 in cents
+            unit_amount: priceAmount,
             recurring: {
               interval: 'month',
             },
@@ -52,6 +57,7 @@ export async function POST(req: Request) {
       metadata: {
         userId: userId,
         userEmail: email,
+        plan: plan,
       },
     });
 
