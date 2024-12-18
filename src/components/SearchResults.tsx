@@ -1,6 +1,6 @@
 import React from 'react'
 import { Card } from "@/components/ui/card"
-import { SparklesIcon, MessageSquareIcon, XIcon, Bookmark, Link2, MessageSquare, SendHorizontal, ArrowLeft, Loader2, ChevronUpIcon, ChevronDownIcon, ArrowUpRight, ThumbsUp, ThumbsDown, MessageCircle } from 'lucide-react'
+import { SparklesIcon, MessageSquareIcon, XIcon, Bookmark, Link2, MessageSquare, SendHorizontal, ArrowLeft, Loader2, ChevronUpIcon, ChevronDownIcon, ArrowUpRight, ThumbsUp, ThumbsDown, MessageCircle, Search } from 'lucide-react'
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -30,6 +30,9 @@ interface SearchResultsProps {
     onLoadMore: () => void
     hasMore: boolean
     isLoadingMore: boolean
+    setCustomUrl: (url: string) => void
+    setSelectedSite: (site: string) => void
+    handleSearch: () => void
 }
 
 interface Message {
@@ -480,6 +483,22 @@ ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}`,
     )
 }
 
+// Add this helper function at the top of the file
+const extractDomain = (url: string): string => {
+    try {
+        const urlObj = new URL(url)
+        return urlObj.hostname
+    } catch (error) {
+        console.error('Error extracting domain:', error)
+        return ''
+    }
+}
+
+// Add this helper function to format domain names nicely
+const formatDomain = (domain: string): string => {
+    return domain.replace(/^www\./, '')
+}
+
 export const SearchResults: React.FC<SearchResultsProps> = ({
     platform,
     posts,
@@ -492,7 +511,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     email,
     onLoadMore,
     hasMore,
-    isLoadingMore
+    isLoadingMore,
+    setCustomUrl,
+    setSelectedSite,
+    handleSearch
 }) => {
     const [isGenerating, setIsGenerating] = React.useState(false);
     const [summary, setSummary] = React.useState('');
@@ -502,6 +524,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     const [messages, setMessages] = React.useState<Message[]>([]);
     const [newMessage, setNewMessage] = React.useState('');
     const scrollAreaRef = React.useRef<HTMLDivElement>(null);
+    const [pendingSearch, setPendingSearch] = React.useState(false);
 
     const scrollToBottom = () => {
         if (scrollAreaRef.current) {
@@ -693,6 +716,28 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
         setIsDialogOpen(false);
         setSelectedPost(null);
     }, [searchQuery]);  // Dipendenza da searchQuery
+
+    // Add this useEffect to handle search when platform changes
+    React.useEffect(() => {
+        if (pendingSearch) {
+            handleSearch();
+            setPendingSearch(false);
+        }
+    }, [platform, pendingSearch, handleSearch]);
+
+    // Modify the Explore button click handler
+    const handleExplore = (domain: string) => {
+        setCustomUrl(domain);
+        setSelectedSite('custom');
+        setPendingSearch(true);
+    };
+
+    // Modify the Back to Universal Search button click handler
+    const handleBackToUniversal = () => {
+        setCustomUrl('');
+        setSelectedSite('Universal search');
+        setPendingSearch(true);
+    };
 
     if (posts.length === 0) {
         return <div></div>
@@ -973,12 +1018,27 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                 {/* Action Buttons - removed voting and comments */}
                                 <div className="flex flex-wrap items-center gap-2 pt-2">
                                     <div className="flex items-center gap-2">
+                                        {/* Show Explore button only when not in custom site mode */}
+                                        {platform === 'Universal search' && (
+                                            <button
+                                                onClick={() => {
+                                                    const domain = extractDomain(post.link)
+                                                    if (domain) {
+                                                        handleExplore(domain);
+                                                    }
+                                                }}
+                                                className="text-sm px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center gap-2 transition-colors font-medium"
+                                            >
+                                                <Search className="w-4 h-4" />
+                                                <span>Explore</span>
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => {
                                                 setSelectedPost(post);
                                                 setIsDialogOpen(true);
                                             }}
-                                            className="text-sm px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center gap-2 transition-colors font-medium"
+                                            className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
                                         >
                                             <SparklesIcon className="w-4 h-4" />
                                             <span>AI</span>
@@ -1031,6 +1091,26 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                     email={email}
                     onEngage={onEngage}
                 />
+            )}
+
+            {platform && platform !== 'Universal search' && (
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg z-50">
+                    <div className="max-w-3xl mx-auto flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Search className="w-4 h-4" />
+                            <span>
+                                Exploring <span className="font-medium text-purple-600 dark:text-purple-400">{formatDomain(platform)}</span>
+                            </span>
+                        </div>
+                        <button
+                            onClick={handleBackToUniversal}
+                            className="text-sm px-4 py-2 rounded-full bg-primary hover:bg-primary/90 text-white flex items-center gap-2 transition-colors"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            <span>Back to Universal Search</span>
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     )

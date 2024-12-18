@@ -82,6 +82,10 @@ interface GeneralSearchData {
     filter?: string
 }
 
+const formatDomain = (domain: string): string => {
+    return domain.replace(/^www\./, '')
+}
+
 export default function SearchTab({ Membership = '', name = '', email = '', userId = '', imageUrl = '' }: SearchTabProps) {
     const [searchQuery, setSearchQuery] = useState('')
     const [currentFilter, setCurrentFilter] = useState('')
@@ -400,7 +404,20 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     transition={{ duration: 0.5 }}
                     className="text-2xl md:text-3xl font-medium tracking-tight text-center mb-6"
                 >
-                    What can I help you find?
+                    {selectedSite === 'custom' ? (
+                        <div className="flex items-center justify-center gap-2">
+                            <img
+                                src={`https://www.google.com/s2/favicons?sz=32&domain_url=${customUrl}`}
+                                alt=""
+                                className="w-8 h-8"
+                            />
+                            <span>
+                                Searching <span className="text-purple-600 dark:text-purple-400">{formatDomain(customUrl)}</span>
+                            </span>
+                        </div>
+                    ) : (
+                        "What can I help you find?"
+                    )}
                 </motion.h1>
 
                 <SearchBar
@@ -495,6 +512,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     onLoadMore={handleLoadMore}
                     hasMore={hasMore}
                     isLoadingMore={isLoadingMore}
+                    setCustomUrl={setCustomUrl}
+                    setSelectedSite={setSelectedSite}
+                    handleSearch={handleSearch}
                 />
             </div>
         </main>
