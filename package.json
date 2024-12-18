@@ -75,7 +75,9 @@
     "stripe": "^17.4.0",
     "synonyms": "^1.0.1",
     "tailwind-merge": "^2.5.2",
-    "tls": "^0.0.1"
+    "tls": "^0.0.1",
+    "@radix-ui/react-switch": "^1.0.3",
+    "@radix-ui/react-label": "^2.0.2"
   },
   "devDependencies": {
     "@types/cookie": "^0.6.0",

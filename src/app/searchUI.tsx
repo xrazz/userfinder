@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { toast, Toaster } from "sonner"
-import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc, setDoc, collection, addDoc } from 'firebase/firestore'
 import { auth, db, firebaseAnalytics } from '@/app/firebaseClient'
 import Cookies from "js-cookie"
 import { Header } from '@/components/Header'
@@ -17,6 +17,8 @@ import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
 import { motion } from 'framer-motion'
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 
 const MEMBERSHIP_LEVELS = {
     FREE: 'Free',
@@ -67,6 +69,19 @@ interface SearchTabProps {
     imageUrl?: string
 }
 
+interface SearchQuery {
+    query: string
+    timestamp: number
+    userId?: string
+}
+
+interface GeneralSearchData {
+    query: string
+    timestamp: number
+    platform: string
+    filter?: string
+}
+
 export default function SearchTab({ Membership = '', name = '', email = '', userId = '', imageUrl = '' }: SearchTabProps) {
     const [searchQuery, setSearchQuery] = useState('')
     const [currentFilter, setCurrentFilter] = useState('')
@@ -80,6 +95,11 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [hasMore, setHasMore] = useState(true)
     const [isLoadingMore, setIsLoadingMore] = useState(false)
     const RESULTS_PER_PAGE = 10 // Costante per il numero di risultati per pagina
+    const [privacyMode, setPrivacyMode] = useState(() => {
+        // Check localStorage for saved preference
+        const saved = localStorage.getItem('privacyMode')
+        return saved ? JSON.parse(saved) : false
+    })
 
     useEffect(() => {
         firebaseAnalytics.logPageView('/')
@@ -216,6 +236,48 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         }
     };
 
+    const trackSearchQuery = async (query: string) => {
+        // Don't track anything if privacy mode is ON
+        if (privacyMode) {
+            return;
+        }
+
+        try {
+            // Track general anonymous data
+            const generalSearchData: GeneralSearchData = {
+                query: query.trim(),
+                timestamp: Date.now(),
+                platform: selectedSite,
+                ...(currentFilter && { filter: currentFilter })
+            }
+
+            // Save to general search history collection
+            const generalHistoryRef = collection(db, 'generalSearchHistory')
+            await addDoc(generalHistoryRef, generalSearchData)
+
+            // Track user-specific data if user is logged in
+            if (email) {
+                const searchQuery: SearchQuery = {
+                    query: query.trim(),
+                    timestamp: Date.now(),
+                    userId: userId || undefined
+                }
+
+                // Save to Firebase for logged-in users
+                const userDocRef = doc(db, 'users', email)
+                const searchHistoryRef = collection(userDocRef, 'searchHistory')
+                await addDoc(searchHistoryRef, searchQuery)
+
+                // Save to localStorage
+                const localHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]')
+                localHistory.push(searchQuery)
+                localStorage.setItem('searchHistory', JSON.stringify(localHistory))
+            }
+        } catch (error) {
+            console.error('Error tracking search query:', error)
+        }
+    }
+
     const handleSearch = async () => {
         if (searchQuery.trim() !== '') {
             setSearchData([])
@@ -224,13 +286,15 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             setHasMore(true)
 
             try {
+                // Track the search query
+                await trackSearchQuery(searchQuery)
+
                 const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
                 const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
                 const Results = await fetchResults(`site:${siteToSearch} ${searchQuery} ${dateFilterString}`, 1)
 
                 setSearchData(Results)
                 localStorage.setItem('searchData', JSON.stringify(Results))
-                localStorage.setItem('history', JSON.stringify({ title: searchQuery, data: Results }))
             } catch (error) {
                 console.error("Error fetching data:", error)
             } finally {
@@ -315,6 +379,10 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         setSearchQuery(value)
     }
 
+    useEffect(() => {
+        localStorage.setItem('privacyMode', JSON.stringify(privacyMode))
+    }, [privacyMode])
+
     return (
         <main className="min-h-screen bg-background">
             <Toaster position="bottom-center" />
@@ -380,27 +448,37 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                             </Badge>
                         )}
                     </div>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant="secondary"
-                                size="icon"
-                                className="w-8 h-8 rounded-lg hover:bg-gray-100 hover:text-gray-900"
-                            >
-                                <Settings2 className="w-4 h-4" />
-                                <span className="sr-only">Settings</span>
-                            </Button>
-                        </PopoverTrigger>
-                        <LoggedInSettingsPopover
-                            selectedSite={selectedSite}
-                            setSelectedSite={setSelectedSite}
-                            currentFilter={currentFilter}
-                            handleFilterChange={handleFilterChange}
-                            customUrl={customUrl}
-                            setCustomUrl={setCustomUrl}
-                            membership={Membership}
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            id="privacy-mode"
+                            checked={privacyMode}
+                            onCheckedChange={setPrivacyMode}
+                            className="data-[state=checked]:bg-purple-600"
                         />
-                    </Popover>
+                        <Label htmlFor="privacy-mode" className="text-sm text-muted-foreground">
+                            Privacy Mode
+                        </Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="w-8 h-8 rounded-lg hover:bg-gray-100 hover:text-gray-900"
+                                >
+                                    <Settings2 className="w-4 h-4" />
+                                </Button>
+                            </PopoverTrigger>
+                            <LoggedInSettingsPopover
+                                selectedSite={selectedSite}
+                                setSelectedSite={setSelectedSite}
+                                currentFilter={currentFilter}
+                                handleFilterChange={handleFilterChange}
+                                customUrl={customUrl}
+                                setCustomUrl={setCustomUrl}
+                                membership={Membership}
+                            />
+                        </Popover>
+                    </div>
                 </div>
 
                 {loading && <TabDataSkeleton />}
