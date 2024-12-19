@@ -56,7 +56,14 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
 
     return (
         <header className="w-full px-4 md:px-6 py-4 flex justify-between items-center bg-background border-none">
-            <div className="flex items-center">
+            <div className="flex items-center space-x-2">
+                      <Image src="/logo-round.svg" alt="UserFinder AI Logo" width={40} height={40} />
+          <span className="font-bold text-lg">Search</span>
+
+                      {/* <Image src="/logo.svg" alt="UserFinder AI Logo" width={30} height={30} /> */}
+                      
+                    </div>
+            {/* <div className="flex items-center">
                 <Link href="/" className="flex items-center gap-1.5 select-none group">
                     <span 
                         className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-indigo-500 to-primary"
@@ -67,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
                         LEXY
                     </span>
                 </Link>
-            </div>
+            </div> */}
             <div className="flex items-center gap-2 md:gap-4">
                 <div className="hidden sm:flex items-center gap-2">
                     <Badge 

@@ -14,7 +14,7 @@ const Navbar = () => {
     <nav className="w-full border-none fixed top-0 left-0 z-50 px-4 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-2">
-        <Image src="/logo.svg" alt="UserFinder AI Logo" width={70} height={70} />
+          <Image src="/logo-round.svg" alt="UserFinder AI Logo" width={30} height={30} />
           <span className="font-bold text-lg">Login</span>
         </div>
         {/* <span className="text-lg font-semibold">Refund Policy</span> */}
@@ -52,7 +52,7 @@ export default function LoginUI() {
     }
   }
 
-   
+
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
@@ -62,12 +62,12 @@ export default function LoginUI() {
           <h1 className="text-4xl font-bold tracking-tight">Think it. Find it.</h1>
           <p className="text-xl text-muted-foreground">Log in to Lexy</p>
         </div>
-        
+
         <div className="space-y-4">
-          <Button 
+          <Button
             onClick={handleGoogleLogin}
             disabled={loading}
-            variant="default" 
+            variant="default"
             className="w-full h-12 text-base font-medium"
           >
             {loading ? (
@@ -102,7 +102,7 @@ export default function LoginUI() {
       </div>
 
       <p className="text-center text-sm text-muted-foreground mt-8 max-w-[400px]">
-      By continuing, you acknowledge that you understand and agree to Lexy's Terms of Service and Privacy Policy.
+        By continuing, you acknowledge that you understand and agree to Lexy's Terms of Service and Privacy Policy.
       </p>
     </div>
   )
