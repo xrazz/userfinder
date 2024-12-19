@@ -107,6 +107,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [hasResults, setHasResults] = useState(false)
     const { scrollY } = useScroll()
     const [isScrolled, setIsScrolled] = useState(false)
+    const [settingsButtonRef, setSettingsButtonRef] = useState<HTMLButtonElement | null>(null);
 
     useEffect(() => {
         firebaseAnalytics.logPageView('/')
@@ -410,10 +411,36 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                     }`}
                                     showSettings={isScrolled}
                                     onSettingsClick={() => {
-                                        // Handle settings click
-                                        // You can reuse your existing popover logic here
+                                        // Programmatically trigger the popover
+                                        if (settingsButtonRef) {
+                                            settingsButtonRef.click();
+                                        }
                                     }}
                                 />
+                            </div>
+
+                            <div className="hidden">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            ref={setSettingsButtonRef}
+                                            variant="secondary"
+                                            size="icon"
+                                            className="w-8 h-8"
+                                        >
+                                            <Settings2 className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <LoggedInSettingsPopover
+                                        selectedSite={selectedSite}
+                                        setSelectedSite={setSelectedSite}
+                                        currentFilter={currentFilter}
+                                        handleFilterChange={handleFilterChange}
+                                        customUrl={customUrl}
+                                        setCustomUrl={setCustomUrl}
+                                        membership={Membership}
+                                    />
+                                </Popover>
                             </div>
 
                             {!isScrolled && (

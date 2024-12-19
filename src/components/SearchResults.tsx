@@ -1071,8 +1071,29 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
 
                                 {/* Action Buttons - removed voting and comments */}
                                 <div className="flex flex-wrap items-center gap-2 pt-2">
-                                    <div className="flex items-center gap-2">
-                                        {/* Show Explore button only when not in custom site mode */}
+                                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                                        {/* Mobile-first order */}
+                                        <button
+                                            onClick={() => onCopyUrl(post.link)}
+                                            className="flex-1 sm:flex-none text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-2 transition-colors order-1 sm:order-4"
+                                        >
+                                            <Link2 className="w-4 h-4" />
+                                            <span>Share</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleAIClick(post)}
+                                            className="flex-1 sm:flex-none text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-2 transition-colors order-2 sm:order-2"
+                                        >
+                                            <SparklesIcon className="w-4 h-4" />
+                                            <span>AI</span>
+                                        </button>
+                                        <button
+                                            onClick={() => onBookmark(post)}
+                                            className="flex-1 sm:flex-none text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-2 transition-colors order-3 sm:order-3"
+                                        >
+                                            <Bookmark className="w-4 h-4" />
+                                            <span>Save</span>
+                                        </button>
                                         {platform === 'Universal search' && (
                                             <button
                                                 onClick={() => {
@@ -1081,33 +1102,12 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                                         handleExplore(domain);
                                                     }
                                                 }}
-                                                className="text-sm px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center gap-2 transition-colors font-medium"
+                                                className="flex-1 sm:flex-none text-sm px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center gap-2 transition-colors font-medium order-4 sm:order-1"
                                             >
                                                 <Search className="w-4 h-4" />
                                                 <span>Explore</span>
                                             </button>
                                         )}
-                                        <button
-                                            onClick={() => handleAIClick(post)}
-                                            className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
-                                        >
-                                            <SparklesIcon className="w-4 h-4" />
-                                            <span>AI</span>
-                                        </button>
-                                        <button
-                                            onClick={() => onBookmark(post)}
-                                            className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
-                                        >
-                                            <Bookmark className="w-4 h-4" />
-                                            <span>Save</span>
-                                        </button>
-                                        <button
-                                            onClick={() => onCopyUrl(post.link)}
-                                            className="text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
-                                        >
-                                            <Link2 className="w-4 h-4" />
-                                            <span>Share</span>
-                                        </button>
                                     </div>
                                 </div>
                             </div>

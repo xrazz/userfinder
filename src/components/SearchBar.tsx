@@ -145,17 +145,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
                         className="h-12 px-4 border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                     />
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-stretch h-full divide-x divide-gray-200 dark:divide-gray-800">
                     <button
                         onClick={handleSearch}
-                        className="h-full px-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
+                        className="px-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
                     >
                         <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                     </button>
                     {showSettings && (
                         <button
                             onClick={onSettingsClick}
-                            className="h-full px-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
+                            className="px-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
                         >
                             <Settings2 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                         </button>
