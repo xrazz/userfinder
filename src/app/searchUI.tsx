@@ -12,7 +12,7 @@ import { LoggedInSettingsPopover, LoggedOutSettingsPopover } from '@/components/
 import TabDataSkeleton from '@/components/searchProgressUI'
 import QueryTutorialModal from './docs/QueryModal'
 import { Button } from "@/components/ui/button"
-import { Settings2, Search } from 'lucide-react'
+import { Settings2, Search, ShieldCheck, ShieldOff } from 'lucide-react'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
 import { motion, useScroll, useTransform } from 'framer-motion'
@@ -538,8 +538,13 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                 onCheckedChange={setPrivacyMode}
                                 className="data-[state=checked]:bg-purple-600"
                             />
-                            <Label htmlFor="privacy-mode" className="text-sm text-muted-foreground">
-                                Privacy Mode
+                            <Label htmlFor="privacy-mode" className="text-sm text-muted-foreground flex items-center gap-1">
+                                Stealth
+                                {privacyMode ? (
+                                    <ShieldCheck className="w-3 h-3" />
+                                ) : (
+                                    <ShieldOff className="w-3 h-3" />
+                                )}
                             </Label>
                             <Popover>
                                 <PopoverTrigger asChild>

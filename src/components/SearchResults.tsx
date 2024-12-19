@@ -207,36 +207,58 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
     const [loading, setLoading] = React.useState(false)
     const [initialLoading, setInitialLoading] = React.useState(true)
     const scrollAreaRef = React.useRef<HTMLDivElement>(null)
+    const [contentFetched, setContentFetched] = React.useState(false)
+    const [isApiLoading, setIsApiLoading] = React.useState(false)
 
     // Initialize with scraped content
     React.useEffect(() => {
-        if (isOpen) {
+        if (isOpen && !contentFetched && !isApiLoading && messages.length === 0) {
             const fetchContent = async () => {
                 setInitialLoading(true)
+                setIsApiLoading(true)
                 try {
+                    console.log('Executing scrape on URL:', post.link)
                     const response = await axios.post('/api/scrape', {
                         url: post.link,
                         email: email
                     })
 
                     if (response.data.summary?.mainContent) {
-                        setMessages([{
-                            id: Date.now(),
-                            content: `📄 **Summary**\n${response.data.summary.mainContent.slice(0, 200)}...\n\n` +
-                                `💡 **Key Points**\n` +
-                                `• Source: ${new URL(post.link).hostname.replace('www.', '')}\n` +
-                                `• Title: ${post.title}\n\n` +
-                                `🔍 **Full Content**\n${response.data.summary.mainContent}\n\n` +
-                                `❓ **Follow-up Questions**\n` +
-                                generateContextualQuestions(response.data.summary.mainContent, post.title, 3),
-                            sender: 'ai',
-                            timestamp: new Date().toISOString()
-                        }])
+                        // Process the content through AI to generate a more digestible summary
+                        const aiResponse = await axios.post('/api/prompt', {
+                            systemPrompt: `You are an expert at summarizing content clearly and concisely. Given the following content, create:
+1. A brief 2-3 sentence summary in plain language
+2. 3-4 key takeaways that capture the main points
+3. The most important implications or findings
+
+Format the response as:
+📄 **Summary**
+[2-3 sentence summary]
+
+💡 **Key Points**
+• key point 1
+• key point 2
+• key point 3
+
+❓ **Follow-up Questions**
+[generated questions]`,
+                            userPrompt: response.data.summary.mainContent,
+                            email: email
+                        });
+
+                        if (aiResponse.data.output) {
+                            setMessages([{
+                                id: Date.now(),
+                                content: aiResponse.data.output,
+                                sender: 'ai',
+                                timestamp: new Date().toISOString()
+                            }])
+                            setContentFetched(true)
+                        }
                     } else {
                         throw new Error('No content available')
                     }
                 } catch (error) {
-                    // Show warning toast and close dialog through parent
                     toast.error("Limited AI Analysis", {
                         description: "Detailed AI information is not available for this directory.",
                         duration: 4000,
@@ -244,15 +266,25 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
                     onClose()
                 } finally {
                     setInitialLoading(false)
+                    setIsApiLoading(false)
                 }
             }
 
             fetchContent()
         }
-    }, [isOpen, post.link, email, onClose])
+    }, [isOpen, post.link, email, onClose, contentFetched, isApiLoading, messages.length])
+
+    // Reset states when dialog closes
+    React.useEffect(() => {
+        if (!isOpen) {
+            setContentFetched(false)
+            setIsApiLoading(false)
+            setMessages([])
+        }
+    }, [isOpen])
 
     const handleSendMessage = async () => {
-        if (!newMessage.trim() || !email) return
+        if (!newMessage.trim() || !email || isApiLoading) return
 
         const userMessage: Message = {
             id: Date.now(),
@@ -264,6 +296,7 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
         setMessages(prev => [...prev, userMessage])
         setNewMessage('')
         setLoading(true)
+        setIsApiLoading(true)
 
         try {
             const response = await axios.post('/api/prompt', {
@@ -312,6 +345,7 @@ Format the response using the specified structure with clear sections and concis
             console.error('Error in chat:', error)
         } finally {
             setLoading(false)
+            setIsApiLoading(false)
         }
     }
 
@@ -343,6 +377,7 @@ Format the response using the specified structure with clear sections and concis
         const cleanContent = content.replace(/<img[^>]+>/g, '{{IMAGE_PLACEHOLDER}}');
         
         let imageIndex = 0;
+        let isInQuestionsSection = false;  // Add this flag
         
         return cleanContent.split('\n').map((line, index) => {
             if (line.includes('{{IMAGE_PLACEHOLDER}}')) {
@@ -369,13 +404,20 @@ Format the response using the specified structure with clear sections and concis
                 );
             }
 
-            // Handle "Full Content" section specially
-            if (line.includes('**Full Content**')) {
+            // Check if we're entering the questions section
+            if (line.includes('**Follow-up Questions**')) {
+                isInQuestionsSection = true;
                 return (
-                    <h3 key={index} className="text-base font-semibold mt-6 mb-3 text-primary border-t pt-6">
-                        Complete Article
+                    <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
+                        <span>❓</span>
+                        <span>Follow-up Questions</span>
                     </h3>
                 );
+            }
+
+            // Reset the flag if we hit another section
+            if (line.includes('**') && !line.includes('Follow-up Questions')) {
+                isInQuestionsSection = false;
             }
 
             // Handle any text with ** markers
@@ -384,7 +426,6 @@ Format the response using the specified structure with clear sections and concis
                 return (
                     <div key={index} className="text-base">
                         {parts.map((part, i) => {
-                            // Even indices are normal text, odd indices are bold
                             return i % 2 === 0 ? (
                                 <span key={i}>{part}</span>
                             ) : (
@@ -396,8 +437,8 @@ Format the response using the specified structure with clear sections and concis
                     </div>
                 );
             } else if (line.startsWith('• ')) {
-                const isQuestion = content.includes('**Follow-up Questions**');
-                if (isQuestion) {
+                // Make only questions clickable, regular bullet points stay normal
+                if (isInQuestionsSection) {
                     return (
                         <button
                             key={index}
@@ -414,6 +455,7 @@ Format the response using the specified structure with clear sections and concis
                         </button>
                     );
                 }
+                // Regular bullet points (non-clickable)
                 return (
                     <div key={index} className="ml-4 my-1 flex items-start">
                         <span className="mr-2 text-primary">•</span>
@@ -437,32 +479,48 @@ Format the response using the specified structure with clear sections and concis
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="w-screen h-screen max-w-full p-0">
+            <DialogContent className="w-screen h-screen max-w-full max-h-screen p-0 overflow-hidden flex flex-col">
                 {/* Header */}
-                <div className="p-4 border-b flex items-center gap-4">
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div>
-                        <DialogTitle className="text-lg font-medium">
-                            {post.title}
-                        </DialogTitle>
-                        <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                            <img
-                                src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
-                                alt=""
-                                className="w-4 h-4"
-                            />
-                            {new URL(post.link).hostname.replace('www.', '')}
-                        </p>
+                <div className="p-4 border-b flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <DialogTitle className="text-lg font-medium">
+                                {post.title}
+                            </DialogTitle>
+                            <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                                <img
+                                    src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
+                                    alt=""
+                                    className="w-4 h-4"
+                                />
+                                {new URL(post.link).hostname.replace('www.', '')}
+                            </p>
+                        </div>
                     </div>
+                    
+                    {/* Add Visit Page button */}
+                    <a
+                        href={post.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => onEngage?.(post.link)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg 
+                            bg-primary text-primary-foreground hover:bg-primary/90 
+                            transition-colors text-sm font-medium"
+                    >
+                        <ArrowUpRight className="w-4 h-4" />
+                        Visit Page
+                    </a>
                 </div>
 
                 {/* Chat Messages */}
-                <ScrollArea className="flex-1 p-6 h-[calc(100vh-160px)]">
+                <ScrollArea className="flex-1 p-6 overflow-y-auto">
                     <div className="max-w-3xl mx-auto space-y-6">
                         {initialLoading ? (
                             <div className="flex items-center gap-3 text-muted-foreground">
@@ -476,10 +534,10 @@ Format the response using the specified structure with clear sections and concis
                                     className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
                                     <div
-                                        className={`rounded-lg px-6 py-4 max-w-[80%] ${
+                                        className={`rounded-lg px-6 py-4 ${
                                             message.sender === 'user'
-                                                ? 'bg-primary text-primary-foreground ml-4'
-                                                : 'bg-muted mr-4'
+                                                ? 'bg-primary text-primary-foreground ml-4 max-w-[80%]'
+                                                : 'bg-muted mr-4 w-full'
                                         }`}
                                     >
                                         <div className="text-sm whitespace-pre-wrap">
@@ -505,7 +563,7 @@ Format the response using the specified structure with clear sections and concis
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             placeholder="Ask a question..."
-                            className="min-h-[60px] resize-none"
+                            className="min-h-[60px] max-h-[120px] resize-none"
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault()
