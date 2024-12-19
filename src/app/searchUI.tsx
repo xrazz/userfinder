@@ -478,15 +478,12 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                         ? 'h-[calc(100vh-80px)] flex flex-col justify-center -mt-[15vh]' 
                         : 'py-8'
                 }`}
-                animate={{ 
-                    y: hasResults || loading ? 0 : "0%",
-                }}
                 transition={{ duration: 0.3 }}
             >
                 <motion.div
                     animate={{ 
-                        scale: isScrolled ? 0.95 : 1,
-                        opacity: isScrolled ? 0 : 1,
+                        scale: isScrolled && hasResults ? 0.95 : 1,
+                        opacity: isScrolled && hasResults ? 0 : 1,
                     }}
                     transition={{ duration: 0.3 }}
                 >
