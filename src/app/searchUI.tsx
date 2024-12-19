@@ -385,7 +385,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             {hasResults && (
                 <motion.div
                     className={`fixed top-0 left-0 right-0 z-50 bg-background/55 backdrop-blur-sm transition-all duration-300 ${
-                        isScrolled ? 'translate-y-0 border-b shadow-sm dark:bg-gray-950/95 bg-gray-100/95' : '-translate-y-full'
+                        isScrolled ? 'translate-y-0 border-b shadow-sm dark:bg-gray-950/95 bg-gray-100/45' : '-translate-y-full'
                     }`}
                 >
                     <div className="max-w-3xl mx-auto px-3 py-4">
@@ -408,31 +408,38 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                     className={`transition-all duration-300 ${
                                         isScrolled ? 'h-10' : 'h-12'
                                     }`}
+                                    showSettings={isScrolled}
+                                    onSettingsClick={() => {
+                                        // Handle settings click
+                                        // You can reuse your existing popover logic here
+                                    }}
                                 />
                             </div>
 
-                            <div className="flex items-center gap-2">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="secondary"
-                                            size="icon"
-                                            className="w-8 h-8"
-                                        >
-                                            <Settings2 className="w-4 h-4" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <LoggedInSettingsPopover
-                                        selectedSite={selectedSite}
-                                        setSelectedSite={setSelectedSite}
-                                        currentFilter={currentFilter}
-                                        handleFilterChange={handleFilterChange}
-                                        customUrl={customUrl}
-                                        setCustomUrl={setCustomUrl}
-                                        membership={Membership}
-                                    />
-                                </Popover>
-                            </div>
+                            {!isScrolled && (
+                                <div className="flex items-center gap-2">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="secondary"
+                                                size="icon"
+                                                className="w-8 h-8"
+                                            >
+                                                <Settings2 className="w-4 h-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <LoggedInSettingsPopover
+                                            selectedSite={selectedSite}
+                                            setSelectedSite={setSelectedSite}
+                                            currentFilter={currentFilter}
+                                            handleFilterChange={handleFilterChange}
+                                            customUrl={customUrl}
+                                            setCustomUrl={setCustomUrl}
+                                            membership={Membership}
+                                        />
+                                    </Popover>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </motion.div>

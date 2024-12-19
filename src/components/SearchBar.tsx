@@ -1,13 +1,15 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ArrowUpRight } from 'lucide-react'
+import { Search, ArrowUpRight, Settings2 } from 'lucide-react'
 
 interface SearchBarProps {
     onSearch: (query: string) => void
     typingQuery: string
     setTypingQuery: (query: string) => void
     className?: string
+    showSettings?: boolean
+    onSettingsClick?: () => void
 }
 
 const placeholderQueries = [
@@ -19,7 +21,7 @@ const placeholderQueries = [
     "Let's find hidden knowledge..."
 ]
 
-export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, setTypingQuery, className = '' }) => {
+export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, setTypingQuery, className = '', showSettings = false, onSettingsClick }) => {
     const searchInputRef = useRef<HTMLInputElement>(null)
     const [isSearchFocused, setIsSearchFocused] = useState(false)
     const [suggestions, setSuggestions] = useState<string[]>([])
@@ -143,12 +145,22 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
                         className="h-12 px-4 border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                     />
                 </div>
-                <button
-                    onClick={handleSearch}
-                    className="h-full px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-r-xl transition-colors duration-200 flex items-center justify-center"
-                >
-                    <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                </button>
+                <div className="flex items-center">
+                    <button
+                        onClick={handleSearch}
+                        className="h-full px-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
+                    >
+                        <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                    </button>
+                    {showSettings && (
+                        <button
+                            onClick={onSettingsClick}
+                            className="h-full px-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
+                        >
+                            <Settings2 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                        </button>
+                    )}
+                </div>
             </div>
             <AnimatePresence>
                 {showSuggestions && suggestions.length > 0 && (
