@@ -240,8 +240,7 @@ Format the response as:
 • key point 2
 • key point 3
 
-❓ **Follow-up Questions**
-[generated questions]`,
+`,
                             userPrompt: response.data.summary.mainContent,
                             email: email
                         });
@@ -315,8 +314,7 @@ Format the response as:
   🔍 **Analysis**
   Brief detailed explanation
   
-  ❓ **Follow-up Questions**
-  3 relevant questions for deeper understanding`,
+`,
                 userPrompt: `Content Title: ${post.title}
 Content: ${post.snippet}
 Question: ${newMessage}
@@ -330,7 +328,7 @@ Format the response using the specified structure with clear sections and concis
             // Format the AI response to ensure consistent structure
             const formattedResponse = response.data.output.includes('**Summary**') 
                 ? response.data.output 
-                : `📌 **Summary**\n${response.data.output}\n\n❓ **Follow-up Questions**\n` +
+                : `📌 **Summary**\n${response.data.output}\n\n` +
                   generateContextualQuestions(response.data.output, post.title, 3)
 
             const aiMessage: Message = {
@@ -405,20 +403,20 @@ Format the response using the specified structure with clear sections and concis
             }
 
             // Check if we're entering the questions section
-            if (line.includes('**Follow-up Questions**')) {
-                isInQuestionsSection = true;
-                return (
-                    <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
-                        <span>❓</span>
-                        <span>Follow-up Questions</span>
-                    </h3>
-                );
-            }
+            // if (line.includes('**Follow-up Questions**')) {
+            //     isInQuestionsSection = true;
+            //     return (
+            //         <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
+            //             <span>❓</span>
+            //             <span>Follow-up Questions</span>
+            //         </h3>
+            //     );
+            // }
 
             // Reset the flag if we hit another section
-            if (line.includes('**') && !line.includes('Follow-up Questions')) {
-                isInQuestionsSection = false;
-            }
+            // if (line.includes('**') && !line.includes('Follow-up Questions')) {
+            //     isInQuestionsSection = false;
+            // }
 
             // Handle any text with ** markers
             if (line.includes('**')) {

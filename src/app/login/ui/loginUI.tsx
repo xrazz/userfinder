@@ -9,14 +9,31 @@ import Cookies from "js-cookie"
 import { Button } from "@/components/ui/button"
 import { auth, createUserSettings, googleProvider } from "@/app/firebaseClient"
 
+const gradientTextStyle = {
+  backgroundSize: '200% auto',
+  animation: 'shine 3s linear infinite',
+}
+
 const Navbar = () => {
   return (
     <nav className="w-full border-none fixed top-0 left-0 z-50 px-4 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+        {/* <div className="flex items-center space-x-2">
           <Image src="/logo-round.svg" alt="UserFinder AI Logo" width={30} height={30} />
           <span className="font-bold text-lg">Login</span>
-        </div>
+        </div> */}
+          <div className="flex items-center">
+                <Link href="/" className="flex items-center gap-1.5 select-none group">
+                    <span 
+                        className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-indigo-500 to-primary"
+                        style={{
+                            ...gradientTextStyle,
+                        }}
+                    >
+                        LEXY
+                    </span>
+                </Link>
+            </div>
         {/* <span className="text-lg font-semibold">Refund Policy</span> */}
       </div>
     </nav>
