@@ -217,6 +217,7 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
                 setInitialLoading(true)
                 setIsApiLoading(true)
                 try {
+                    console.log('Executing scrape on URL:', post.link)
                     const response = await axios.post('/api/scrape', {
                         url: post.link,
                         email: email
@@ -480,43 +481,42 @@ Format the response using the specified structure with clear sections and concis
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="w-screen h-screen max-w-full max-h-screen p-0 overflow-hidden flex flex-col">
                 {/* Header */}
-                <div className="p-4 border-b">
-                    <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                            <button
-                                onClick={onClose}
-                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors flex-shrink-0"
-                            >
-                                <ArrowLeft className="w-5 h-5" />
-                            </button>
-                            <div className="truncate">
-                                <DialogTitle className="text-lg font-medium truncate">
-                                    {post.title}
-                                </DialogTitle>
-                                <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                                    <img
-                                        src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
-                                        alt=""
-                                        className="w-4 h-4 flex-shrink-0"
-                                    />
-                                    <span className="truncate">{new URL(post.link).hostname.replace('www.', '')}</span>
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <a
-                            href={post.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() => onEngage?.(post.link)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg 
-                                bg-primary text-primary-foreground hover:bg-primary/90 
-                                transition-colors text-sm font-medium flex-shrink-0"
+                <div className="p-4 border-b flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
                         >
-                            <ArrowUpRight className="w-4 h-4" />
-                            Visit Page
-                        </a>
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <DialogTitle className="text-lg font-medium">
+                                {post.title}
+                            </DialogTitle>
+                            <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                                <img
+                                    src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
+                                    alt=""
+                                    className="w-4 h-4"
+                                />
+                                {new URL(post.link).hostname.replace('www.', '')}
+                            </p>
+                        </div>
                     </div>
+                    
+                    {/* Add Visit Page button */}
+                    <a
+                        href={post.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => onEngage?.(post.link)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg 
+                            bg-primary text-primary-foreground hover:bg-primary/90 
+                            transition-colors text-sm font-medium"
+                    >
+                        <ArrowUpRight className="w-4 h-4" />
+                        Visit Page
+                    </a>
                 </div>
 
                 {/* Chat Messages */}
