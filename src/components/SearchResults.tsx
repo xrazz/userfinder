@@ -1145,20 +1145,20 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
             )}
 
             {platform && platform !== 'Universal search' && (
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg z-50">
+                <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg z-50">
                     <div className="max-w-3xl mx-auto flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Search className="w-4 h-4" />
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                            <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             <span>
                                 Exploring <span className="font-medium text-purple-600 dark:text-purple-400">{formatDomain(platform)}</span>
                             </span>
                         </div>
                         <button
                             onClick={handleBackToUniversal}
-                            className="text-sm px-4 py-2 rounded-full bg-primary hover:bg-primary/90 text-white flex items-center gap-2 transition-colors"
+                            className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary hover:bg-primary/90 text-white flex items-center gap-1.5 sm:gap-2 transition-colors"
                         >
-                            <ArrowLeft className="w-4 h-4" />
-                            <span>Back to Universal Search</span>
+                            <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <span>Back to Universal</span>
                         </button>
                     </div>
                 </div>
