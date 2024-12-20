@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 import cheerio from 'cheerio';
+
 interface SearchResult {
     title: string;
     snippet: string;
     link: string;
 }
+
 export async function POST(request: Request) {
     try {
         // Parse the request body
@@ -31,16 +33,21 @@ export async function POST(request: Request) {
 
         // Parse the results
         const results: SearchResult[] = [];
+        const seenLinks = new Set<string>(); // Track seen links to avoid duplicates
+
         $('div.g').each((_, el) => {
             const title = $(el).find('h3').text().trim();
             const snippet = $(el).find('.VwiC3b').text().trim();
             const link = $(el).find('a').attr('href');
 
-            if (title && link) {
+            // Avoid duplicates based on the link
+            if (title && link && !seenLinks.has(link)) {
                 results.push({ title, snippet, link });
+                seenLinks.add(link); // Add to the set of seen links
             }
         });
-        console.log(results)
+
+        console.log(results);
         return NextResponse.json({ success: true, data: results });
     } catch (error: any) {
         console.error('Error in API route:', error.message || error);
