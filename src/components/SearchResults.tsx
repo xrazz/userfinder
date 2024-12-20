@@ -240,11 +240,11 @@
     • key point 2
     • key point 3
 
-    ❓ **Follow-up Questions**
-    [generated questions]`,
-                                userPrompt: response.data.summary.mainContent,
-                                email: email
-                            });
+❓ **Follow-up Questions**
+[generated questions]`,
+                            userPrompt: response.data.summary.mainContent,
+                            email: email
+                        });
 
                             if (aiResponse.data.output) {
                                 setMessages([{
@@ -298,28 +298,28 @@
             setLoading(true)
             setIsApiLoading(true)
 
-            try {
-                const response = await axios.post('/api/prompt', {
-                    systemPrompt: `You are an AI assistant helping to analyze content. Follow these guidelines:
-    - Structure your responses with clear sections using markdown-style formatting
-    - Keep responses concise and focused
-    - Use bullet points for lists
-    - Include a brief summary at the start
-    - Format your response with these sections:
-    📌 **Summary**
-    A 2-3 line overview
-    
-    💡 **Key Points**
-    Bullet points of main findings
-    
-    🔍 **Analysis**
-    Brief detailed explanation
-    
-    ❓ **Follow-up Questions**
-    3 relevant questions for deeper understanding`,
-                    userPrompt: `Content Title: ${post.title}
-    Content: ${post.snippet}
-    Question: ${newMessage}
+        try {
+            const response = await axios.post('/api/prompt', {
+                systemPrompt: `You are an AI assistant helping to analyze content. Follow these guidelines:
+- Structure your responses with clear sections using markdown-style formatting
+- Keep responses concise and focused
+- Use bullet points for lists
+- Include a brief summary at the start
+- Format your response with these sections:
+  📌 **Summary**
+  A 2-3 line overview
+  
+  💡 **Key Points**
+  Bullet points of main findings
+  
+  🔍 **Analysis**
+  Brief detailed explanation
+  
+  ❓ **Follow-up Questions**
+  3 relevant questions for deeper understanding`,
+                userPrompt: `Content Title: ${post.title}
+Content: ${post.snippet}
+Question: ${newMessage}
 
     Format the response using the specified structure with clear sections and concise information.`,
                     email: email
@@ -327,11 +327,11 @@
                     headers: { 'Authorization': `Bearer ${email}` }
                 })
 
-                // Format the AI response to ensure consistent structure
-                const formattedResponse = response.data.output.includes('**Summary**') 
-                    ? response.data.output 
-                    : `📌 **Summary**\n${response.data.output}\n\n❓ **Follow-up Questions**\n` +
-                    generateContextualQuestions(response.data.output, post.title, 3)
+            // Format the AI response to ensure consistent structure
+            const formattedResponse = response.data.output.includes('**Summary**') 
+                ? response.data.output 
+                : `📌 **Summary**\n${response.data.output}\n\n❓ **Follow-up Questions**\n` +
+                  generateContextualQuestions(response.data.output, post.title, 3)
 
                 const aiMessage: Message = {
                     id: Date.now(),
@@ -404,21 +404,21 @@
                     );
                 }
 
-                // Check if we're entering the questions section
-                if (line.includes('**Follow-up Questions**')) {
-                    isInQuestionsSection = true;
-                    return (
-                        <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
-                            <span>❓</span>
-                            <span>Follow-up Questions</span>
-                        </h3>
-                    );
-                }
+            // Check if we're entering the questions section
+            if (line.includes('**Follow-up Questions**')) {
+                isInQuestionsSection = true;
+                return (
+                    <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
+                        <span>❓</span>
+                        <span>Follow-up Questions</span>
+                    </h3>
+                );
+            }
 
-                // Reset the flag if we hit another section
-                if (line.includes('**') && !line.includes('Follow-up Questions')) {
-                    isInQuestionsSection = false;
-                }
+            // Reset the flag if we hit another section
+            if (line.includes('**') && !line.includes('Follow-up Questions')) {
+                isInQuestionsSection = false;
+            }
 
                 // Handle any text with ** markers
                 if (line.includes('**')) {
