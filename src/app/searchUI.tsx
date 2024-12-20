@@ -203,6 +203,35 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         }
     };
 
+
+    // video crawler but doesnt returns the thumbnail 
+    // const fetchResults = async (query: string, num: number): Promise<any[]> => {
+    //     try {
+    //         const response = await fetch('/api/video', {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //             },
+    //             body: JSON.stringify({ query, num }),
+    //         });
+    
+    //         if (!response.ok) {
+    //             throw new Error(`HTTP error! Status: ${response.status}`);
+    //         }
+    
+    //         const data = await response.json();
+    //         if (data.success) {
+    //             return data.data;
+    //         } else {
+    //             throw new Error(data.error || 'Unknown API error occurred');
+    //         }
+    //     } catch (error: any) {
+    //         console.error('Error fetching video results:', error.message || error);
+    //         return [];
+    //     }
+    // };
+    
+
     const trackSearchQuery = async (query: string) => {
         // Don't track anything if privacy mode is ON
         if (privacyMode) {
