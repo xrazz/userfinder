@@ -12,11 +12,13 @@
     import { toast } from 'sonner';
 
     interface Post {
+        thumbnail: string | undefined
         title: string
         link: string
         snippet: string
         searchQuery?: string
     }
+
 
     interface SearchResultsProps {
         platform: string
@@ -1121,6 +1123,18 @@ Question: ${newMessage}
                                             {post.title}
                                         </a>
                                     </h3>
+                                    <div className="flex-shrink-0">
+                            <img 
+                                src={post.thumbnail} 
+                                alt={post.title}
+                                className=" object-cover rounded-md"
+                                onError={(e) => {
+                                    // Fallback per thumbnail non disponibili
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = '/placeholder-thumbnail.jpg';
+                                }}
+                            />
+                        </div>
 
                                     {/* Snippet Section - remains the same */}
                                     <p className="text-sm text-muted-foreground leading-relaxed">

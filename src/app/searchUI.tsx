@@ -38,6 +38,7 @@ interface Post {
     title: string
     link: string
     snippet: string
+    thumbnail: string | undefined
 }
 
 const sites = [
@@ -172,64 +173,64 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     }, [searchData])
 
     // new crawler for text
-    const fetchResults = async (query: string, page: number): Promise<Post[]> => {
-        try {
-            const response = await fetch('/api/search', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    query: query,
-                    num: RESULTS_PER_PAGE,
-                    start: (page - 1) * RESULTS_PER_PAGE,
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                return data.data;
-            } else {
-                throw new Error(data.error || 'Unknown API error occurred');
-            }
-        } catch (error: any) {
-            console.error('Error fetching results:', error.message || error);
-            return [];
-        }
-    };
-
-
-    // video crawler but doesnt returns the thumbnail 
-    // const fetchResults = async (query: string, num: number): Promise<any[]> => {
+    // const fetchResults = async (query: string, page: number): Promise<Post[]> => {
     //     try {
-    //         const response = await fetch('/api/video', {
+    //         const response = await fetch('/api/search', {
     //             method: 'POST',
     //             headers: {
     //                 'Content-Type': 'application/json',
     //             },
-    //             body: JSON.stringify({ query, num }),
+    //             body: JSON.stringify({
+    //                 query: query,
+    //                 num: RESULTS_PER_PAGE,
+    //                 start: (page - 1) * RESULTS_PER_PAGE,
+    //             }),
     //         });
-    
+
     //         if (!response.ok) {
     //             throw new Error(`HTTP error! Status: ${response.status}`);
     //         }
-    
+
     //         const data = await response.json();
+
     //         if (data.success) {
     //             return data.data;
     //         } else {
     //             throw new Error(data.error || 'Unknown API error occurred');
     //         }
     //     } catch (error: any) {
-    //         console.error('Error fetching video results:', error.message || error);
+    //         console.error('Error fetching results:', error.message || error);
     //         return [];
     //     }
     // };
+
+
+    // video crawler but doesnt returns the thumbnail 
+    const fetchResults = async (query: string, num: number): Promise<any[]> => {
+        try {
+            const response = await fetch('/api/video', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query, num }),
+            });
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+    
+            const data = await response.json();
+            if (data.success) {
+                return data.data;
+            } else {
+                throw new Error(data.error || 'Unknown API error occurred');
+            }
+        } catch (error: any) {
+            console.error('Error fetching video results:', error.message || error);
+            return [];
+        }
+    };
     
 
     const trackSearchQuery = async (query: string) => {
