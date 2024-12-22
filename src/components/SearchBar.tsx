@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ArrowUpRight, Settings2, FileText } from 'lucide-react'
+import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown } from 'lucide-react'
 
 interface SearchBarProps {
     onSearch: (query: string) => void
@@ -24,6 +24,34 @@ const placeholderQueries = [
     "Let's find cutting-edge research...",
     "Let's find hidden knowledge..."
 ]
+
+// Aggiungi un componente per l'icona del file type
+const FileTypeIcon = ({ type }: { type: string }) => {
+    switch (type) {
+        case 'pdf':
+            return <FileText className="w-4 h-4 text-red-500" />
+        case 'doc':
+            return <FileType className="w-4 h-4 text-blue-500" />
+        case 'xls':
+            return <FileSpreadsheet className="w-4 h-4 text-green-500" />
+        case 'ppt':
+            return <Presentation className="w-4 h-4 text-orange-500" />
+        case 'txt':
+            return <FileText className="w-4 h-4 text-gray-500" />
+        case 'csv':
+            return <FileSpreadsheet className="w-4 h-4 text-green-400" />
+        case 'json':
+            return <FileJson className="w-4 h-4 text-yellow-500" />
+        case 'xml':
+            return <FileCode className="w-4 h-4 text-purple-500" />
+        case 'sql':
+            return <FileCode className="w-4 h-4 text-blue-400" />
+        case 'zip':
+            return <Archive className="w-4 h-4 text-gray-500" />
+        default:
+            return <FileText className="w-4 h-4 text-gray-400" />
+    }
+}
 
 export const SearchBar: React.FC<SearchBarProps> = ({ 
     onSearch, 
@@ -156,13 +184,23 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 <div className="flex items-stretch h-full divide-x divide-gray-200 dark:divide-gray-800">
                     <div className="px-2 flex items-center">
                         <Select value={selectedFileType} onValueChange={handleFileTypeChange}>
-                            <SelectTrigger className="w-40 border-0 bg-transparent focus:ring-0">
-                                <SelectValue placeholder="All Files" />
+                            <SelectTrigger className="w-12 border-0 bg-transparent focus:ring-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
+                                <div className="flex items-center gap-2">
+                                    <FileTypeIcon type={selectedFileType} />
+                                    <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" />
+                                </div>
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="w-48">
                                 {fileTypes.map((fileType) => (
-                                    <SelectItem key={fileType.value} value={fileType.value}>
-                                        {fileType.label}
+                                    <SelectItem 
+                                        key={fileType.value} 
+                                        value={fileType.value}
+                                        className="flex items-center gap-2 cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-2 w-full">
+                                            <FileTypeIcon type={fileType.value} />
+                                            <span className="flex-1">{fileType.label}</span>
+                                        </div>
                                     </SelectItem>
                                 ))}
                             </SelectContent>

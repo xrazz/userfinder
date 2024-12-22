@@ -97,3 +97,23 @@
     background-color: #a81d1d;
   }
 }
+
+.select-content {
+    @apply p-1;
+}
+
+.select-item {
+    @apply flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer;
+}
+
+.select-item[data-highlighted] {
+    @apply bg-gray-100 dark:bg-gray-800;
+}
+
+.select-trigger {
+    @apply flex items-center justify-between gap-2 px-2 py-1.5 rounded-md transition-colors;
+}
+
+.select-value {
+    @apply flex items-center gap-2;
+}
