@@ -2,8 +2,9 @@ import React, { useRef, useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Code, ArrowLeft } from 'lucide-react'
+import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Code, ArrowLeft, X } from 'lucide-react'
 import { Button } from "@/components/ui/button"
+import { Slider } from "@/components/ui/slider"
 
 interface SearchBarProps {
     onSearch: (query: string) => void
@@ -35,21 +36,24 @@ const SEARCH_HELPERS = [
                 description: 'Find pages with specific words in their title',
                 example: 'Machine Learning',
                 buildQuery: (text: string) => `intitle:"${text}"`,
-                placeholder: 'Enter words to find in title...'
+                placeholder: 'Enter words to find in title...',
+                icon: <Search className="w-4 h-4 text-red-500" />
             },
             { 
                 label: 'Exact phrase',
                 description: 'Find exact word combinations',
                 example: 'artificial intelligence',
                 buildQuery: (text: string) => `"${text}"`,
-                placeholder: 'Enter exact phrase...'
+                placeholder: 'Enter exact phrase...',
+                icon: <FileText className="w-4 h-4 text-red-500" />
             },
             {
                 label: 'Similar sites',
                 description: 'Find websites similar to a domain',
                 example: 'arxiv.org',
                 buildQuery: (text: string) => `related:${text}`,
-                placeholder: 'Enter website domain...'
+                placeholder: 'Enter website domain...',
+                icon: <ArrowUpRight className="w-4 h-4 text-red-500" />
             }
         ]
     },
@@ -60,19 +64,22 @@ const SEARCH_HELPERS = [
                 label: 'Academic papers',
                 description: 'Search for academic research',
                 buildQuery: (text: string) => `${text} site:edu OR site:ac.uk filetype:pdf`,
-                useExisting: true
+                useExisting: true,
+                icon: <FileSpreadsheet className="w-4 h-4 text-green-500" />
             },
             { 
                 label: 'Documentation',
                 description: 'Find technical documentation',
                 buildQuery: (text: string) => `${text} (site:docs.* OR site:*.io/docs)`,
-                useExisting: true
+                useExisting: true,
+                icon: <FileCode className="w-4 h-4 text-purple-500" />
             },
             {
                 label: 'Recent content',
                 description: 'Content from the last year',
                 buildQuery: (text: string) => `${text} after:${new Date().getFullYear() - 1}`,
-                useExisting: true
+                useExisting: true,
+                icon: <FileSpreadsheet className="w-4 h-4 text-green-500" />
             }
         ]
     },
@@ -84,14 +91,16 @@ const SEARCH_HELPERS = [
                 description: 'Remove results containing specific words',
                 example: 'chatgpt openai courses',
                 buildQuery: (text: string, currentQuery: string) => `${currentQuery} -${text}`,
-                placeholder: 'Enter terms to exclude...'
+                placeholder: 'Enter terms to exclude...',
+                icon: <X className="w-4 h-4 text-red-500" />
             },
             { 
                 label: 'Alternative terms',
                 description: 'Search for either term',
                 example: 'python javascript',
                 buildQuery: (text: string) => text.split(' ').join(' OR '),
-                placeholder: 'Enter alternative terms...'
+                placeholder: 'Enter alternative terms...',
+                icon: <Code className="w-4 h-4 text-blue-500" />
             }
         ]
     }
@@ -130,6 +139,94 @@ const getFileTypeLabel = (type: string, fileTypes: Array<{ value: string, label:
     return fileTypes.find(t => t.value === type)?.label.toLowerCase() || 'files';
 }
 
+// Aggiungi questi tipi
+interface ActiveFilter {
+    type: 'content' | 'date' | 'filetype' | 'domain';
+    value: string;
+    label: string;
+    icon?: React.ReactNode;
+}
+
+// Funzione helper per convertire il range in data
+const getDateFromRange = (range: number): string => {
+    const now = new Date()
+    const twoYearsAgo = new Date()
+    twoYearsAgo.setFullYear(now.getFullYear() - 2)
+    
+    const diff = now.getTime() - twoYearsAgo.getTime()
+    const date = new Date(twoYearsAgo.getTime() + (diff * (range / 100)))
+    
+    return date.toLocaleDateString('en-US', { 
+        year: 'numeric',
+        month: 'short'
+    })
+}
+
+// Componente per i filtri attivi
+const ActiveFilters = ({ 
+    filters, 
+    onRemove,
+    dateRange,
+    onDateRangeChange
+}: { 
+    filters: ActiveFilter[]
+    onRemove: (filter: ActiveFilter) => void
+    dateRange: number[]
+    onDateRangeChange: (value: number[]) => void
+}) => {
+    return (
+        <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-wrap items-center gap-2 mt-2"
+        >
+            {filters.map((filter) => (
+                <div
+                    key={`${filter.type}-${filter.value}`}
+                    className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full text-xs"
+                >
+                    {filter.icon}
+                    <span className="text-muted-foreground">{filter.label}</span>
+                    <button
+                        onClick={() => onRemove(filter)}
+                        className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"
+                    >
+                        <X className="w-3 h-3" />
+                    </button>
+                </div>
+            ))}
+            
+            {/* Date Range Slider */}
+            <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full">
+                <span className="text-xs text-muted-foreground">Time range:</span>
+                <div className="w-32">
+                    <Slider
+                        value={dateRange}
+                        onValueChange={onDateRangeChange}
+                        max={100}
+                        step={1}
+                        className="w-full"
+                    />
+                </div>
+                <span className="text-xs font-medium">
+                    {getDateFromRange(dateRange[0])}
+                </span>
+            </div>
+        </motion.div>
+    )
+}
+
+// Aggiungi questa interfaccia per il tipo helper
+interface SearchHelperType {
+    label: string;
+    description: string;
+    buildQuery: (text: string, currentQuery?: string) => string;
+    placeholder?: string;
+    useExisting?: boolean;
+    example?: string;
+    icon?: React.ReactNode;
+}
+
 export const SearchBar: React.FC<SearchBarProps> = ({ 
     onSearch, 
     typingQuery, 
@@ -150,13 +247,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const [isTyping, setIsTyping] = useState(true)
     const [searchTerm, setSearchTerm] = useState("")
     const [showDorkingHelper, setShowDorkingHelper] = useState(false)
-    const [activeHelper, setActiveHelper] = useState<{
-        label: string;
-        buildQuery: (text: string, currentQuery?: string) => string;
-        placeholder?: string;
-        useExisting?: boolean;
-    } | null>(null);
+    const [activeHelper, setActiveHelper] = useState<SearchHelperType | null>(null);
     const [helperInput, setHelperInput] = useState('');
+    const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
+    const [dateRange, setDateRange] = useState([100]) // 100 = now, 0 = 2 years ago
 
     // Effetto per l'animazione del placeholder
     useEffect(() => {
@@ -256,7 +350,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                         <button
                                             key={helper.label}
                                             className="p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
-                                            onClick={() => setActiveHelper(helper)}
+                                            onClick={() => setActiveHelper(helper as SearchHelperType)}
                                         >
                                             <div className="font-medium text-sm">{helper.label}</div>
                                             <div className="text-xs text-muted-foreground mt-1">
@@ -323,6 +417,31 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             </div>
         );
     };
+
+    const handleFilterAdd = (filter: ActiveFilter) => {
+        setActiveFilters(prev => [...prev, filter])
+        setShowDorkingHelper(false)
+    }
+
+    const handleFilterRemove = (filterToRemove: ActiveFilter) => {
+        setActiveFilters(prev => prev.filter(f => 
+            f.type !== filterToRemove.type || f.value !== filterToRemove.value
+        ))
+    }
+
+    const handleApplyFilter = () => {
+        if (activeHelper && helperInput) {
+            const newFilter: ActiveFilter = {
+                type: 'content',
+                value: helperInput,
+                label: `${activeHelper.label}: ${helperInput}`,
+                icon: activeHelper.icon
+            }
+            handleFilterAdd(newFilter)
+            setHelperInput('')
+            setActiveHelper(null)
+        }
+    }
 
     return (
         <>
@@ -456,6 +575,16 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 >
                     <SearchHelper onClose={() => setShowDorkingHelper(false)} />
                 </motion.div>
+            )}
+
+            {/* Active Filters */}
+            {(activeFilters.length > 0 || dateRange[0] < 100) && (
+                <ActiveFilters
+                    filters={activeFilters}
+                    onRemove={handleFilterRemove}
+                    dateRange={dateRange}
+                    onDateRangeChange={setDateRange}
+                />
             )}
         </>
     )
