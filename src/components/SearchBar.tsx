@@ -53,6 +53,11 @@ const FileTypeIcon = ({ type }: { type: string }) => {
     }
 }
 
+// Aggiungi questa funzione helper per ottenere il label del file type
+const getFileTypeLabel = (type: string, fileTypes: Array<{ value: string, label: string, dork: string }>) => {
+    return fileTypes.find(t => t.value === type)?.label.toLowerCase() || 'files';
+}
+
 export const SearchBar: React.FC<SearchBarProps> = ({ 
     onSearch, 
     typingQuery, 
@@ -157,70 +162,86 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     }
 
     return (
-        <div className={`w-full border rounded-xl overflow-hidden transition-all duration-300 bg-white/50 dark:bg-gray-900 ${
-            isSearchFocused ? 'border-primary shadow-lg' : 'border-gray-200 dark:border-gray-800'
-        } ${className}`}>
-            <div className="flex items-center h-full">
-                <div className="flex-grow relative flex items-center">
-                    <Input
-                        ref={searchInputRef}
-                        value={searchTerm}
-                        onChange={handleInputChange}
-                        onKeyDown={handleKeyDown}
-                        onFocus={() => {
-                            setIsSearchFocused(true)
-                            setShowSuggestions(true)
-                        }}
-                        onBlur={() => {
-                            setTimeout(() => {
-                                setIsSearchFocused(false)
-                                setShowSuggestions(false)
-                            }, 200)
-                        }}
-                        placeholder={currentPlaceholder}
-                        className="h-12 px-4 border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
-                    />
-                </div>
-                <div className="flex items-stretch h-full divide-x divide-gray-200 dark:divide-gray-800">
-                    <div className="px-2 flex items-center">
-                        <Select value={selectedFileType} onValueChange={handleFileTypeChange}>
-                            <SelectTrigger className="w-12 border-0 bg-transparent focus:ring-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
-                                <div className="flex items-center gap-2">
-                                    <FileTypeIcon type={selectedFileType} />
-                                    <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" />
-                                </div>
-                            </SelectTrigger>
-                            <SelectContent className="w-48">
-                                {fileTypes.map((fileType) => (
-                                    <SelectItem 
-                                        key={fileType.value} 
-                                        value={fileType.value}
-                                        className="flex items-center gap-2 cursor-pointer"
-                                    >
-                                        <div className="flex items-center gap-2 w-full">
-                                            <FileTypeIcon type={fileType.value} />
-                                            <span className="flex-1">{fileType.label}</span>
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+        <>
+            <div className={`w-full border rounded-xl overflow-hidden transition-all duration-300 bg-white/50 dark:bg-gray-900 ${
+                isSearchFocused ? 'border-primary shadow-lg' : 'border-gray-200 dark:border-gray-800'
+            } ${className}`}>
+                <div className="flex items-center h-full">
+                    <div className="flex-grow relative flex items-center">
+                        <Input
+                            ref={searchInputRef}
+                            value={searchTerm}
+                            onChange={handleInputChange}
+                            onKeyDown={handleKeyDown}
+                            onFocus={() => {
+                                setIsSearchFocused(true)
+                                setShowSuggestions(true)
+                            }}
+                            onBlur={() => {
+                                setTimeout(() => {
+                                    setIsSearchFocused(false)
+                                    setShowSuggestions(false)
+                                }, 200)
+                            }}
+                            placeholder={currentPlaceholder}
+                            className="h-12 px-4 border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+                        />
                     </div>
-                    <button
-                        onClick={handleSearch}
-                        className="px-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
-                    >
-                        <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                    </button>
-                    {showSettings && (
+                    <div className="flex items-stretch h-full divide-x divide-gray-200 dark:divide-gray-800">
+                        <div className="px-2 flex items-center">
+                            <Select value={selectedFileType} onValueChange={handleFileTypeChange}>
+                                <SelectTrigger className="w-12 border-0 bg-transparent focus:ring-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
+                                    <div className="flex items-center gap-2">
+                                        <FileTypeIcon type={selectedFileType} />
+                                        <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent className="w-48">
+                                    {fileTypes.map((fileType) => (
+                                        <SelectItem 
+                                            key={fileType.value} 
+                                            value={fileType.value}
+                                            className="flex items-center gap-2 cursor-pointer"
+                                        >
+                                            <div className="flex items-center gap-2 w-full">
+                                                <FileTypeIcon type={fileType.value} />
+                                                <span className="flex-1">{fileType.label}</span>
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <button
-                            onClick={onSettingsClick}
+                            onClick={handleSearch}
                             className="px-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
                         >
-                            <Settings2 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                            <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                         </button>
-                    )}
+                        {showSettings && (
+                            <button
+                                onClick={onSettingsClick}
+                                className="px-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
+                            >
+                                <Settings2 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                            </button>
+                        )}
+                    </div>
                 </div>
+
+                {/* Aggiungi questo badge informativo */}
+                {selectedFileType !== 'all' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"
+                    >
+                        <FileTypeIcon type={selectedFileType} />
+                        <span>
+                            Searching for {getFileTypeLabel(selectedFileType, fileTypes)} only
+                        </span>
+                    </motion.div>
+                )}
             </div>
 
             <AnimatePresence>
@@ -257,7 +278,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </>
     )
 }
 
