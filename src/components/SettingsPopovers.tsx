@@ -233,7 +233,7 @@ export const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = (
                     max={timeRanges.length - 1}
                     step={1}
                     className="py-4"
-                    onValueChange={([value]) => handleFilterChange(timeRanges[value].value)}
+                    onValueChange={(value: number[]) => handleFilterChange(timeRanges[value[0]].value)}
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
                     <span>24h</span>
