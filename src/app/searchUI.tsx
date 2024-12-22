@@ -253,8 +253,20 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
     // Aggiungi questa funzione helper per costruire la query in modo consistente
     const buildSearchQuery = (baseQuery: string, siteToSearch: string, dateFilter: string): string => {
-        const sitePrefix = baseQuery.toLowerCase().includes('filetype:') ? '' : `site:${siteToSearch} `
-        return `${sitePrefix}${baseQuery} ${dateFilter}`.trim()
+        // Se la query contiene già un filetype, usa quella
+        if (baseQuery.toLowerCase().includes('filetype:')) {
+            return `${baseQuery} ${dateFilter}`.trim();
+        }
+        
+        // Estrai il filetype dalla SearchBar component (se presente)
+        const filetypeMatch = baseQuery.match(/filetype:(\w+)/i);
+        const cleanQuery = baseQuery.replace(/\s*filetype:\w+\s*/i, '').trim();
+        
+        // Costruisci la query con il site: solo se non c'è un filetype
+        const sitePrefix = siteToSearch ? `site:${siteToSearch} ` : '';
+        
+        // Combina tutto
+        return `${sitePrefix}${cleanQuery} ${dateFilter}`.trim();
     }
 
     const handleSearch = async () => {
@@ -270,6 +282,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
                 const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
                 
+                // Usa la query originale che include il filetype se presente
                 const finalQuery = buildSearchQuery(searchQuery, siteToSearch, dateFilterString)
                 console.log('Final query:', finalQuery) // Debug log
                 
