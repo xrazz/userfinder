@@ -2,7 +2,8 @@ import React, { useRef, useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Code } from 'lucide-react'
+import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Code, ArrowLeft } from 'lucide-react'
+import { Button } from "@/components/ui/button"
 
 interface SearchBarProps {
     onSearch: (query: string) => void
@@ -25,84 +26,72 @@ const placeholderQueries = [
     "Let's find hidden knowledge..."
 ]
 
-const DORK_OPERATORS = [
+const SEARCH_HELPERS = [
     {
-        category: 'Content Search',
-        operators: [
+        category: 'Search Precision',
+        helpers: [
             { 
-                operator: 'intitle:',
-                description: 'Search in page title',
-                example: 'intitle:"machine learning"'
+                label: 'Search in title',
+                description: 'Find pages with specific words in their title',
+                example: 'Machine Learning',
+                buildQuery: (text: string) => `intitle:"${text}"`,
+                placeholder: 'Enter words to find in title...'
             },
             { 
-                operator: 'intext:',
-                description: 'Search in page content',
-                example: 'intext:quantum computing'
-            },
-            { 
-                operator: '"..."',
-                description: 'Exact match',
-                example: '"artificial intelligence"'
+                label: 'Exact phrase',
+                description: 'Find exact word combinations',
+                example: 'artificial intelligence',
+                buildQuery: (text: string) => `"${text}"`,
+                placeholder: 'Enter exact phrase...'
             },
             {
-                operator: 'related:',
-                description: 'Find similar websites',
-                example: 'related:arxiv.org'
+                label: 'Similar sites',
+                description: 'Find websites similar to a domain',
+                example: 'arxiv.org',
+                buildQuery: (text: string) => `related:${text}`,
+                placeholder: 'Enter website domain...'
             }
         ]
     },
     {
-        category: 'File & URL',
-        operators: [
+        category: 'Content Type',
+        helpers: [
             { 
-                operator: 'filetype:',
-                description: 'Search by file type',
-                example: 'filetype:pdf research'
+                label: 'Academic papers',
+                description: 'Search for academic research',
+                buildQuery: (text: string) => `${text} site:edu OR site:ac.uk filetype:pdf`,
+                useExisting: true
             },
             { 
-                operator: 'inurl:',
-                description: 'Search in URL',
-                example: 'inurl:research'
-            },
-            { 
-                operator: 'site:',
-                description: 'Search specific domain',
-                example: 'site:edu quantum'
-            }
-        ]
-    },
-    {
-        category: 'Filters',
-        operators: [
-            { 
-                operator: '-',
-                description: 'Exclude terms',
-                example: 'AI -chatgpt'
-            },
-            { 
-                operator: 'OR',
-                description: 'Match either term',
-                example: 'python OR javascript'
+                label: 'Documentation',
+                description: 'Find technical documentation',
+                buildQuery: (text: string) => `${text} (site:docs.* OR site:*.io/docs)`,
+                useExisting: true
             },
             {
-                operator: 'cache:',
-                description: 'View cached version',
-                example: 'cache:website.com'
+                label: 'Recent content',
+                description: 'Content from the last year',
+                buildQuery: (text: string) => `${text} after:${new Date().getFullYear() - 1}`,
+                useExisting: true
             }
         ]
     },
     {
-        category: 'Time & Date',
-        operators: [
+        category: 'Advanced Filters',
+        helpers: [
             { 
-                operator: 'before:',
-                description: 'Before date',
-                example: 'before:2023'
+                label: 'Exclude terms',
+                description: 'Remove results containing specific words',
+                example: 'chatgpt openai courses',
+                buildQuery: (text: string, currentQuery: string) => `${currentQuery} -${text}`,
+                placeholder: 'Enter terms to exclude...'
             },
             { 
-                operator: 'after:',
-                description: 'After date',
-                example: 'after:2022'
+                label: 'Alternative terms',
+                description: 'Search for either term',
+                example: 'python javascript',
+                buildQuery: (text: string) => text.split(' ').join(' OR '),
+                placeholder: 'Enter alternative terms...'
             }
         ]
     }
@@ -161,6 +150,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const [isTyping, setIsTyping] = useState(true)
     const [searchTerm, setSearchTerm] = useState("")
     const [showDorkingHelper, setShowDorkingHelper] = useState(false)
+    const [activeHelper, setActiveHelper] = useState<{
+        label: string;
+        buildQuery: (text: string, currentQuery?: string) => string;
+        placeholder?: string;
+        useExisting?: boolean;
+    } | null>(null);
+    const [helperInput, setHelperInput] = useState('');
 
     // Effetto per l'animazione del placeholder
     useEffect(() => {
@@ -245,50 +241,88 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         onSearch(suggestion)
     }
 
-    const DorkingHelper = () => {
+    const SearchHelper = ({ onClose }: { onClose: () => void }) => {
         return (
             <div className="absolute mt-1 p-2 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 w-full z-40">
-                <div className="space-y-4">
-                    {DORK_OPERATORS.map((category) => (
-                        <div key={category.category}>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-2 px-2">
-                                {category.category}
-                            </h3>
-                            <div className="grid grid-cols-2 gap-2">
-                                {category.operators.map((dork) => (
-                                    <div 
-                                        key={dork.operator}
-                                        className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md cursor-pointer transition-colors"
-                                        onClick={() => {
+                {!activeHelper ? (
+                    <div className="space-y-4">
+                        {SEARCH_HELPERS.map((category) => (
+                            <div key={category.category}>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-2 px-2">
+                                    {category.category}
+                                </h3>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {category.helpers.map((helper) => (
+                                        <button
+                                            key={helper.label}
+                                            className="p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
+                                            onClick={() => setActiveHelper(helper)}
+                                        >
+                                            <div className="font-medium text-sm">{helper.label}</div>
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                                {helper.description}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <button
+                                onClick={() => setActiveHelper(null)}
+                                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2"
+                            >
+                                <ArrowLeft className="w-4 h-4" />
+                                Back
+                            </button>
+                            <h3 className="text-sm font-medium">{activeHelper.label}</h3>
+                        </div>
+                        <div className="space-y-2">
+                            <Input
+                                value={helperInput}
+                                onChange={(e) => setHelperInput(e.target.value)}
+                                placeholder={activeHelper.placeholder || "Enter your search..."}
+                                className="w-full"
+                                autoFocus
+                            />
+                            <div className="flex justify-end gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setActiveHelper(null)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    onClick={() => {
+                                        if (helperInput) {
                                             const currentValue = searchInputRef.current?.value || '';
-                                            const newValue = `${currentValue} ${dork.operator} `.trim();
+                                            const newValue = activeHelper.useExisting 
+                                                ? activeHelper.buildQuery(currentValue)
+                                                : activeHelper.buildQuery(helperInput, currentValue);
+                                            
                                             if (searchInputRef.current) {
                                                 searchInputRef.current.value = newValue;
                                                 searchInputRef.current.focus();
                                                 setSearchTerm(newValue);
                                             }
-                                        }}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <code className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono">
-                                                {dork.operator}
-                                            </code>
-                                            <span className="text-xs text-muted-foreground">
-                                                {dork.description}
-                                            </span>
-                                        </div>
-                                        <div className="mt-1 text-xs text-muted-foreground/60 italic">
-                                            {dork.example}
-                                        </div>
-                                    </div>
-                                ))}
+                                            onClose();
+                                        }
+                                    }}
+                                >
+                                    Apply
+                                </Button>
                             </div>
                         </div>
-                    ))}
-                </div>
+                    </div>
+                )}
             </div>
-        )
-    }
+        );
+    };
 
     return (
         <>
@@ -420,7 +454,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                 >
-                    <DorkingHelper />
+                    <SearchHelper onClose={() => setShowDorkingHelper(false)} />
                 </motion.div>
             )}
         </>
