@@ -26,40 +26,85 @@ const placeholderQueries = [
 ]
 
 const DORK_OPERATORS = [
-    { 
-        operator: 'intitle:',
-        description: 'Search in page title',
-        example: 'intitle:"artificial intelligence"'
+    {
+        category: 'Content Search',
+        operators: [
+            { 
+                operator: 'intitle:',
+                description: 'Search in page title',
+                example: 'intitle:"machine learning"'
+            },
+            { 
+                operator: 'intext:',
+                description: 'Search in page content',
+                example: 'intext:quantum computing'
+            },
+            { 
+                operator: '"..."',
+                description: 'Exact match',
+                example: '"artificial intelligence"'
+            },
+            {
+                operator: 'related:',
+                description: 'Find similar websites',
+                example: 'related:arxiv.org'
+            }
+        ]
     },
-    { 
-        operator: 'inurl:',
-        description: 'Search in URL',
-        example: 'inurl:research'
+    {
+        category: 'File & URL',
+        operators: [
+            { 
+                operator: 'filetype:',
+                description: 'Search by file type',
+                example: 'filetype:pdf research'
+            },
+            { 
+                operator: 'inurl:',
+                description: 'Search in URL',
+                example: 'inurl:research'
+            },
+            { 
+                operator: 'site:',
+                description: 'Search specific domain',
+                example: 'site:edu quantum'
+            }
+        ]
     },
-    { 
-        operator: 'site:',
-        description: 'Search specific domain',
-        example: 'site:edu'
+    {
+        category: 'Filters',
+        operators: [
+            { 
+                operator: '-',
+                description: 'Exclude terms',
+                example: 'AI -chatgpt'
+            },
+            { 
+                operator: 'OR',
+                description: 'Match either term',
+                example: 'python OR javascript'
+            },
+            {
+                operator: 'cache:',
+                description: 'View cached version',
+                example: 'cache:website.com'
+            }
+        ]
     },
-    { 
-        operator: '-',
-        description: 'Exclude terms',
-        example: 'AI -chatgpt'
-    },
-    { 
-        operator: '"..."',
-        description: 'Exact match',
-        example: '"machine learning"'
-    },
-    { 
-        operator: 'before:',
-        description: 'Before date',
-        example: 'before:2023'
-    },
-    { 
-        operator: 'after:',
-        description: 'After date',
-        example: 'after:2022'
+    {
+        category: 'Time & Date',
+        operators: [
+            { 
+                operator: 'before:',
+                description: 'Before date',
+                example: 'before:2023'
+            },
+            { 
+                operator: 'after:',
+                description: 'After date',
+                example: 'after:2022'
+            }
+        ]
     }
 ]
 
@@ -203,31 +248,40 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const DorkingHelper = () => {
         return (
             <div className="absolute mt-1 p-2 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 w-full z-40">
-                <div className="grid grid-cols-2 gap-2">
-                    {DORK_OPERATORS.map((dork) => (
-                        <div 
-                            key={dork.operator}
-                            className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md cursor-pointer transition-colors"
-                            onClick={() => {
-                                // Inserisci l'operatore nella barra di ricerca
-                                const currentValue = searchInputRef.current?.value || '';
-                                const newValue = `${currentValue} ${dork.operator} `.trim();
-                                if (searchInputRef.current) {
-                                    searchInputRef.current.value = newValue;
-                                    searchInputRef.current.focus();
-                                }
-                            }}
-                        >
-                            <div className="flex items-center gap-2">
-                                <code className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono">
-                                    {dork.operator}
-                                </code>
-                                <span className="text-xs text-muted-foreground">
-                                    {dork.description}
-                                </span>
-                            </div>
-                            <div className="mt-1 text-xs text-muted-foreground/60 italic">
-                                {dork.example}
+                <div className="space-y-4">
+                    {DORK_OPERATORS.map((category) => (
+                        <div key={category.category}>
+                            <h3 className="text-sm font-medium text-muted-foreground mb-2 px-2">
+                                {category.category}
+                            </h3>
+                            <div className="grid grid-cols-2 gap-2">
+                                {category.operators.map((dork) => (
+                                    <div 
+                                        key={dork.operator}
+                                        className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md cursor-pointer transition-colors"
+                                        onClick={() => {
+                                            const currentValue = searchInputRef.current?.value || '';
+                                            const newValue = `${currentValue} ${dork.operator} `.trim();
+                                            if (searchInputRef.current) {
+                                                searchInputRef.current.value = newValue;
+                                                searchInputRef.current.focus();
+                                                setSearchTerm(newValue);
+                                            }
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <code className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono">
+                                                {dork.operator}
+                                            </code>
+                                            <span className="text-xs text-muted-foreground">
+                                                {dork.description}
+                                            </span>
+                                        </div>
+                                        <div className="mt-1 text-xs text-muted-foreground/60 italic">
+                                            {dork.example}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     ))}
