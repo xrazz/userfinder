@@ -174,13 +174,16 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     // new crawler for text
     const fetchResults = async (query: string, page: number): Promise<Post[]> => {
         try {
+            // Log della query per debug
+            console.log('Query being sent to API:', query);
+            
             const response = await fetch('/api/search', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    query: query,
+                    query: query,  // La query include già il filetype dalla SearchBar
                     num: RESULTS_PER_PAGE,
                     start: (page - 1) * RESULTS_PER_PAGE,
                 }),
@@ -191,6 +194,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             }
 
             const data = await response.json();
+            
+            // Log dei risultati per debug
+            console.log('API Response:', data);
 
             if (data.success) {
                 return data.data;
@@ -245,6 +251,12 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         }
     }
 
+    // Aggiungi questa funzione helper per costruire la query in modo consistente
+    const buildSearchQuery = (baseQuery: string, siteToSearch: string, dateFilter: string): string => {
+        const sitePrefix = baseQuery.toLowerCase().includes('filetype:') ? '' : `site:${siteToSearch} `
+        return `${sitePrefix}${baseQuery} ${dateFilter}`.trim()
+    }
+
     const handleSearch = async () => {
         if (searchQuery.trim() !== '') {
             setSearchData([])
@@ -257,8 +269,11 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
                 const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
                 const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
-                const Results = await fetchResults(`site:${siteToSearch} ${searchQuery} ${dateFilterString}`, 1)
-
+                
+                const finalQuery = buildSearchQuery(searchQuery, siteToSearch, dateFilterString)
+                console.log('Final query:', finalQuery) // Debug log
+                
+                const Results = await fetchResults(finalQuery, 1)
                 setSearchData(Results)
                 setHasResults(Results.length > 0)
             } catch (error) {
@@ -277,7 +292,10 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 const nextPage = pageNumber + 1
                 const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
                 const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
-                const newResults = await fetchResults(`site:${siteToSearch} ${searchQuery} ${dateFilterString}`, nextPage)
+                
+                // Usa la stessa logica di costruzione query di handleSearch
+                const finalQuery = buildSearchQuery(searchQuery, siteToSearch, dateFilterString)
+                const newResults = await fetchResults(finalQuery, nextPage)
 
                 if (newResults.length === 0) {
                     setHasMore(false)

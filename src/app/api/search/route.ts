@@ -17,6 +17,9 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { query, num, start } = body;
 
+        // Log per debug
+        console.log('API received query:', query);
+
         // Validazione dei parametri
         if (!query || typeof query !== 'string') {
             return NextResponse.json(
@@ -33,6 +36,7 @@ export async function POST(request: Request) {
 
         // Costruzione dell'URL della ricerca Google
         const url = `${GOOGLE_BASE_URL}?q=${encodeURIComponent(query)}&start=${start || 0}`;
+        console.log('Google search URL:', url);
         const headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
         };
