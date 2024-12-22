@@ -11,6 +11,9 @@ interface SearchBarProps {
     className?: string
     showSettings?: boolean
     onSettingsClick?: () => void
+    onFileTypeChange: (value: string) => void
+    selectedFileType: string
+    fileTypes: Array<{ value: string, label: string, dork: string }>
 }
 
 const placeholderQueries = [
@@ -22,28 +25,16 @@ const placeholderQueries = [
     "Let's find hidden knowledge..."
 ]
 
-// Definizione più precisa dei tipi di file con i relativi dork
-const fileTypes = [
-    { value: "all", label: "All Files", dork: "" },
-    { value: "pdf", label: "PDF Documents", dork: "filetype:pdf" },
-    { value: "doc", label: "Word Documents", dork: "(filetype:doc OR filetype:docx)" },
-    { value: "xls", label: "Excel Spreadsheets", dork: "(filetype:xls OR filetype:xlsx)" },
-    { value: "ppt", label: "PowerPoint", dork: "(filetype:ppt OR filetype:pptx)" },
-    { value: "txt", label: "Text Files", dork: "filetype:txt" },
-    { value: "csv", label: "CSV Files", dork: "filetype:csv" },
-    { value: "json", label: "JSON Files", dork: "filetype:json" },
-    { value: "xml", label: "XML Files", dork: "filetype:xml" },
-    { value: "sql", label: "SQL Files", dork: "filetype:sql" },
-    { value: "zip", label: "Archives", dork: "(filetype:zip OR filetype:rar)" }
-]
-
 export const SearchBar: React.FC<SearchBarProps> = ({ 
     onSearch, 
     typingQuery, 
     setTypingQuery, 
     className = '', 
     showSettings = false, 
-    onSettingsClick 
+    onSettingsClick, 
+    onFileTypeChange, 
+    selectedFileType, 
+    fileTypes 
 }) => {
     const searchInputRef = useRef<HTMLInputElement>(null)
     const [isSearchFocused, setIsSearchFocused] = useState(false)
@@ -52,7 +43,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const [placeholderIndex, setPlaceholderIndex] = useState(0)
     const [currentPlaceholder, setCurrentPlaceholder] = useState('')
     const [isTyping, setIsTyping] = useState(true)
-    const [selectedFileType, setSelectedFileType] = useState("all")
     const [searchTerm, setSearchTerm] = useState("")
 
     // Effetto per l'animazione del placeholder
@@ -82,21 +72,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         return () => clearInterval(typingInterval)
     }, [placeholderIndex, isTyping])
 
-    // Funzione per costruire la query di ricerca
-    const buildSearchQuery = (term: string, fileType: string): string => {
-        // Se c'è già un filetype: nella query, non modificarla
-        if (term.toLowerCase().includes('filetype:')) {
-            return term.trim();
-        }
-        
-        // Trova il dork corrispondente al tipo di file selezionato
-        const selectedType = fileTypes.find(t => t.value === fileType);
-        const dork = selectedType?.dork || '';
-        
-        // Se c'è un dork, aggiungilo alla query
-        return dork ? `${term.trim()} ${dork}` : term.trim();
-    }
-
     // Gestione delle suggestions
     const generateSuggestions = async (query: string) => {
         if (!query.trim()) {
@@ -123,9 +98,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const handleSearch = () => {
         if (!searchTerm.trim()) return
         
-        const finalQuery = buildSearchQuery(searchTerm, selectedFileType)
-        console.log('Final search query:', finalQuery) // Debug log
-        onSearch(finalQuery)
+        console.log('Final search query:', searchTerm) // Debug log
+        onSearch(searchTerm)
         setShowSuggestions(false)
     }
 
@@ -134,32 +108,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         setSearchTerm(value)
         setTypingQuery(value)
         debouncedGenerateSuggestions(value)
-
-        // Aggiorna il select se viene rilevato un filetype nella query
-        const filetypeMatch = value.toLowerCase().match(/filetype:(\w+)/)
-        if (filetypeMatch) {
-            const detectedType = filetypeMatch[1]
-            const matchingFileType = fileTypes.find(t => 
-                t.dork.toLowerCase().includes(detectedType)
-            )
-            if (matchingFileType) {
-                setSelectedFileType(matchingFileType.value)
-            }
-        }
     }
 
     const handleFileTypeChange = (value: string) => {
-        setSelectedFileType(value)
-
-        if (searchTerm.trim()) {
-            // Se c'è già un filetype nella query, non fare nulla
-            if (searchTerm.toLowerCase().includes('filetype:')) {
-                return;
-            }
-            // Altrimenti costruisci la nuova query
-            const finalQuery = buildSearchQuery(searchTerm, value)
-            onSearch(finalQuery)
-        }
+        onFileTypeChange(value)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -173,8 +125,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         setTypingQuery(suggestion)
         setShowSuggestions(false)
         // Esegui la ricerca immediatamente con la suggestion
-        const finalQuery = buildSearchQuery(suggestion, selectedFileType)
-        onSearch(finalQuery)
+        onSearch(suggestion)
     }
 
     return (
@@ -209,12 +160,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                 <SelectValue placeholder="All Files" />
                             </SelectTrigger>
                             <SelectContent>
-                                {fileTypes.map((type) => (
-                                    <SelectItem key={type.value} value={type.value}>
-                                        <div className="flex items-center">
-                                            <FileText className="w-4 h-4 mr-2" />
-                                            {type.label}
-                                        </div>
+                                {fileTypes.map((fileType) => (
+                                    <SelectItem key={fileType.value} value={fileType.value}>
+                                        {fileType.label}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

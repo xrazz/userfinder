@@ -86,6 +86,20 @@ const formatDomain = (domain: string): string => {
     return domain.replace(/^www\./, '')
 }
 
+const fileTypes = [
+    { value: "all", label: "All Files", dork: "" },
+    { value: "pdf", label: "PDF Documents", dork: "filetype:pdf" },
+    { value: "doc", label: "Word Documents", dork: "(filetype:doc OR filetype:docx)" },
+    { value: "xls", label: "Excel Spreadsheets", dork: "(filetype:xls OR filetype:xlsx)" },
+    { value: "ppt", label: "PowerPoint", dork: "(filetype:ppt OR filetype:pptx)" },
+    { value: "txt", label: "Text Files", dork: "filetype:txt" },
+    { value: "csv", label: "CSV Files", dork: "filetype:csv" },
+    { value: "json", label: "JSON Files", dork: "filetype:json" },
+    { value: "xml", label: "XML Files", dork: "filetype:xml" },
+    { value: "sql", label: "SQL Files", dork: "filetype:sql" },
+    { value: "zip", label: "Archives", dork: "(filetype:zip OR filetype:rar)" }
+]
+
 export default function SearchTab({ Membership = '', name = '', email = '', userId = '', imageUrl = '' }: SearchTabProps) {
     const [searchQuery, setSearchQuery] = useState('')
     const [currentFilter, setCurrentFilter] = useState('')
@@ -108,6 +122,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const { scrollY } = useScroll()
     const [isScrolled, setIsScrolled] = useState(false)
     const [settingsButtonRef, setSettingsButtonRef] = useState<HTMLButtonElement | null>(null);
+    const [selectedFileType, setSelectedFileType] = useState("all")
 
     useEffect(() => {
         firebaseAnalytics.logPageView('/')
@@ -253,20 +268,19 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
     // Aggiungi questa funzione helper per costruire la query in modo consistente
     const buildSearchQuery = (baseQuery: string, siteToSearch: string, dateFilter: string): string => {
-        // Se la query contiene già un filetype, usa quella
+        // Se la query contiene già un filetype manuale, usa quella
         if (baseQuery.toLowerCase().includes('filetype:')) {
-            return `${baseQuery} ${dateFilter}`.trim();
+            const sitePrefix = siteToSearch ? `site:${siteToSearch} ` : '';
+            return `${sitePrefix}${baseQuery} ${dateFilter}`.trim();
         }
         
-        // Estrai il filetype dalla SearchBar component (se presente)
-        const filetypeMatch = baseQuery.match(/filetype:(\w+)/i);
-        const cleanQuery = baseQuery.replace(/\s*filetype:\w+\s*/i, '').trim();
+        // Altrimenti, usa il filetype dal select se presente
+        const selectedType = fileTypes.find(t => t.value === selectedFileType);
+        const filetype = selectedType?.dork || '';
         
-        // Costruisci la query con il site: solo se non c'è un filetype
+        // Costruisci la query completa
         const sitePrefix = siteToSearch ? `site:${siteToSearch} ` : '';
-        
-        // Combina tutto
-        return `${sitePrefix}${cleanQuery} ${dateFilter}`.trim();
+        return `${sitePrefix}${baseQuery} ${filetype} ${dateFilter}`.trim();
     }
 
     const handleSearch = async () => {
@@ -404,6 +418,15 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         return () => unsubscribe()
     }, [scrollY])
 
+    // Aggiungi questa funzione per gestire il cambio di tipo file
+    const handleFileTypeChange = (value: string) => {
+        setSelectedFileType(value);
+        // Se c'è già una query, esegui subito una nuova ricerca
+        if (searchQuery.trim()) {
+            handleSearch();
+        }
+    }
+
     return (
         <main className="min-h-screen bg-background">
             <Toaster position="bottom-center" />
@@ -437,6 +460,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                     onSearch={handleSearch}
                                     typingQuery={typingQuery}
                                     setTypingQuery={handleSearchInputChange}
+                                    onFileTypeChange={handleFileTypeChange}
+                                    selectedFileType={selectedFileType}
+                                    fileTypes={fileTypes}
                                     className={`transition-all duration-300 ${
                                         isScrolled ? 'h-10' : 'h-12'
                                     }`}
@@ -544,6 +570,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                         onSearch={handleSearch}
                         typingQuery={typingQuery}
                         setTypingQuery={handleSearchInputChange}
+                        onFileTypeChange={handleFileTypeChange}
+                        selectedFileType={selectedFileType}
+                        fileTypes={fileTypes}
                     />
 
                     <motion.div 
