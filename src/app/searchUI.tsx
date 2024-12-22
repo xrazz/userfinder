@@ -8,13 +8,15 @@ import Cookies from "js-cookie"
 import { Header } from '@/components/Header'
 import { SearchBar } from '@/components/SearchBar'
 import { SearchResults } from '@/components/SearchResults'
-import { LoggedInSettingsPopover } from '@/components/SettingsPopovers'
+import { LoggedInSettingsPopover, LoggedOutSettingsPopover } from '@/components/SettingsPopovers'
 import TabDataSkeleton from '@/components/searchProgressUI'
+import QueryTutorialModal from './docs/QueryModal'
 import { Button } from "@/components/ui/button"
-import { Settings2, ShieldCheck, ShieldOff } from 'lucide-react'
+import { Settings2, Search, ShieldCheck, ShieldOff } from 'lucide-react'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
-import { motion, useScroll } from 'framer-motion'
+import { motion, useScroll, useTransform } from 'framer-motion'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 
@@ -36,13 +38,6 @@ interface Post {
     title: string
     link: string
     snippet: string
-    thumbnail: string | undefined
-    isVideo?: boolean
-}
-
-interface QueryAnalysis {
-    videoPreference: number
-    textPreference: number
 }
 
 const sites = [
@@ -66,88 +61,6 @@ const mapFilterToDate = (filter: string): DateFilter => {
     }
 }
 
-const formatDomain = (domain: string): string => {
-    return domain.replace(/^www\./, '')
-}
-
-
-
-
-const analyzeQuery = (query: string): QueryAnalysis => {
-    const queryLower = query.toLowerCase();
-
-    // Helper to count occurrences of words
-    const countMatches = (keywords: string[], text: string): number => 
-        keywords.reduce((count, keyword) => count + (text.includes(keyword) ? 1 : 0), 0);
-
-    // Keywords associated with "how-to" or instructional videos
-    const instructionalWords = ['how', 'to', 'guide', 'tutorial', 'step', 'watch'];
-    const informationalWords = ['research', 'analysis', 'study', 'report', 'comparison'];
-
-    // Question-based intent detection
-    const questionWords = ['how', 'what', 'why', 'where', 'when'];
-
-    // Analyze query for video-like or text-like intent
-    const hasInstructionalIntent = countMatches(instructionalWords, queryLower) > 0;
-    const hasInformationalIntent = countMatches(informationalWords, queryLower) > 0;
-    const isQuestion = countMatches(questionWords, queryLower) > 0;
-
-    // Calculate preferences dynamically
-    const videoPreference = hasInstructionalIntent || isQuestion ? 0.7 : 0.3;
-    const textPreference = hasInformationalIntent ? 1 - videoPreference : 0.5;
-
-    return { videoPreference, textPreference };
-};
-
-const mixResults = (
-    textResults: Post[],
-    videoResults: Post[],
-    analysis: QueryAnalysis,
-    targetLength: number
-): Post[] => {
-    const mixedResults: Post[] = [];
-    let textIndex = 0;
-    let videoIndex = 0;
-
-    // Calculate target video and text counts
-    const targetVideos = Math.min(
-        Math.round(targetLength * analysis.videoPreference),
-        videoResults.length
-    );
-    const targetText = Math.min(
-        targetLength - targetVideos,
-        textResults.length
-    );
-
-    // Alternate between text and video results
-    let useVideo = true;
-
-    while (mixedResults.length < targetLength) {
-        if (useVideo && videoIndex < targetVideos) {
-            mixedResults.push({ ...videoResults[videoIndex], isVideo: true });
-            videoIndex++;
-        } else if (!useVideo && textIndex < targetText) {
-            mixedResults.push({ ...textResults[textIndex], isVideo: false });
-            textIndex++;
-        }
-
-        useVideo = !useVideo;
-
-        // Fallback when one type is exhausted
-        if (videoIndex >= targetVideos && textIndex < targetText) {
-            mixedResults.push({ ...textResults[textIndex], isVideo: false });
-            textIndex++;
-        } else if (textIndex >= targetText && videoIndex < targetVideos) {
-            mixedResults.push({ ...videoResults[videoIndex], isVideo: true });
-            videoIndex++;
-        }
-
-        // Exit loop when both types are exhausted
-        if (videoIndex >= targetVideos && textIndex >= targetText) break;
-    }
-
-    return mixedResults;
-};
 interface SearchTabProps {
     Membership?: string
     name?: string
@@ -169,62 +82,11 @@ interface GeneralSearchData {
     filter?: string
 }
 
-const fetchCombinedResults = async (query: string, num: number, siteFilter: string = ''): Promise<Post[]> => {
-    try {
-        const siteQuery = siteFilter ? `site:${siteFilter} ` : '';
-        const fullQuery = `${siteQuery}${query}`;
+const formatDomain = (domain: string): string => {
+    return domain.replace(/^www\./, '')
+}
 
-        const [textResponse, videoResponse] = await Promise.all([
-            fetch('/api/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    query: fullQuery,
-                    num: num * 2,
-                    start: 0,
-                }),
-            }),
-            fetch('/api/video', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    query: fullQuery, 
-                    num: num * 2,
-                }),
-            }),
-        ]);
-
-        if (!textResponse.ok || !videoResponse.ok) {
-            throw new Error('One or more API requests failed');
-        }
-
-        const textData = await textResponse.json();
-        const videoData = await videoResponse.json();
-
-        if (!textData.success || !videoData.success) {
-            throw new Error('One or more APIs returned an error');
-        }
-
-        const textResults: Post[] = textData.data || [];
-        const videoResults: Post[] = videoData.data || [];
-
-        const queryAnalysis = analyzeQuery(query);
-        const mixedResults = mixResults(textResults, videoResults, queryAnalysis, num);
-
-        return mixedResults;
-    } catch (error: any) {
-        console.error('Error fetching combined results:', error.message || error);
-        return [];
-    }
-};
-
-export default function SearchTab({ 
-    Membership = '', 
-    name = '', 
-    email = '', 
-    userId = '', 
-    imageUrl = '' 
-}: SearchTabProps) {
+export default function SearchTab({ Membership = '', name = '', email = '', userId = '', imageUrl = '' }: SearchTabProps) {
     const [searchQuery, setSearchQuery] = useState('')
     const [currentFilter, setCurrentFilter] = useState('')
     const [loading, setLoading] = useState(false)
@@ -236,70 +98,119 @@ export default function SearchTab({
     const [pageNumber, setPageNumber] = useState(1)
     const [hasMore, setHasMore] = useState(true)
     const [isLoadingMore, setIsLoadingMore] = useState(false)
-    const RESULTS_PER_PAGE = 10
+    const RESULTS_PER_PAGE = 10 // Costante per il numero di risultati per pagina
     const [privacyMode, setPrivacyMode] = useState(() => {
+        // Check localStorage for saved preference
         const saved = localStorage.getItem('privacyMode')
         return saved ? JSON.parse(saved) : false
     })
     const [hasResults, setHasResults] = useState(false)
     const { scrollY } = useScroll()
     const [isScrolled, setIsScrolled] = useState(false)
-    const [settingsButtonRef, setSettingsButtonRef] = useState<HTMLButtonElement | null>(null)
+    const [settingsButtonRef, setSettingsButtonRef] = useState<HTMLButtonElement | null>(null);
 
     useEffect(() => {
         firebaseAnalytics.logPageView('/')
+        console.log("Firebase Analytics: Page view logged for '/'")
     }, [])
 
     useEffect(() => {
         if (!email) {
-            const guestCredits = Cookies.get('guestCredits')
-            const lastResetDate = Cookies.get('guestCreditsLastReset')
-            const today = new Date().toDateString()
+            // Handle non-registered users' credits
+            const guestCredits = Cookies.get('guestCredits');
+            const lastResetDate = Cookies.get('guestCreditsLastReset');
+            const today = new Date().toDateString();
 
             if (!guestCredits || !lastResetDate || lastResetDate !== today) {
                 Cookies.set('guestCredits', '3', {
-                    expires: new Date(new Date().setHours(24, 0, 0, 0))
-                })
+                    expires: new Date(new Date().setHours(24, 0, 0, 0)) // Expires at midnight
+                });
                 Cookies.set('guestCreditsLastReset', today, {
                     expires: new Date(new Date().setHours(24, 0, 0, 0))
-                })
-                setCredits(3)
+                });
+                setCredits(3);
             } else {
-                setCredits(parseInt(guestCredits))
+                setCredits(parseInt(guestCredits));
             }
-            return
+            return;
         }
 
-        const userDocRef = doc(db, 'users', email)
+        // Handle registered users' credits
+        const userDocRef = doc(db, 'users', email);
         const unsubscribe = onSnapshot(userDocRef, async (docSnapshot) => {
             if (docSnapshot.exists()) {
-                const userData = docSnapshot.data()
-                const lastReset = userData.lastCreditReset?.toDate()
-                const now = new Date()
+                const userData = docSnapshot.data();
+                const lastReset = userData.lastCreditReset?.toDate();
+                const now = new Date();
 
+                // Check if we need to reset credits (new day)
                 if (!lastReset || lastReset.toDateString() !== now.toDateString()) {
+                    // Reset credits to 10 at the start of each day
                     await updateDoc(userDocRef, {
                         credits: 5,
                         lastCreditReset: now
-                    })
+                    });
                 } else {
-                    setCredits(userData.credits || 0)
+                    setCredits(userData.credits || 0);
                 }
             } else {
+                // Initialize new user with 10 credits
                 await setDoc(userDocRef, {
                     credits: 10,
                     lastCreditReset: new Date()
-                })
+                });
             }
-        })
+        });
 
-        return () => unsubscribe()
-    }, [email])
+        return () => unsubscribe();
+    }, [email]);
+
+    useEffect(() => {
+        if (searchData.length > 0) {
+            setLoading(false)
+        }
+    }, [searchData])
+
+    // new crawler for text
+    const fetchResults = async (query: string, page: number): Promise<Post[]> => {
+        try {
+            const response = await fetch('/api/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: query,
+                    num: RESULTS_PER_PAGE,
+                    start: (page - 1) * RESULTS_PER_PAGE,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                return data.data;
+            } else {
+                throw new Error(data.error || 'Unknown API error occurred');
+            }
+        } catch (error: any) {
+            console.error('Error fetching results:', error.message || error);
+            return [];
+        }
+    };
 
     const trackSearchQuery = async (query: string) => {
-        if (privacyMode) return;
+        // Don't track anything if privacy mode is ON
+        if (privacyMode) {
+            return;
+        }
 
         try {
+            // Track general anonymous data
             const generalSearchData: GeneralSearchData = {
                 query: query.trim(),
                 timestamp: Date.now(),
@@ -307,9 +218,11 @@ export default function SearchTab({
                 ...(currentFilter && { filter: currentFilter })
             }
 
+            // Save to general search history collection
             const generalHistoryRef = collection(db, 'generalSearchHistory')
             await addDoc(generalHistoryRef, generalSearchData)
 
+            // Track user-specific data if user is logged in
             if (email) {
                 const searchQuery: SearchQuery = {
                     query: query.trim(),
@@ -317,10 +230,12 @@ export default function SearchTab({
                     userId: userId || undefined
                 }
 
+                // Save to Firebase for logged-in users
                 const userDocRef = doc(db, 'users', email)
                 const searchHistoryRef = collection(userDocRef, 'searchHistory')
                 await addDoc(searchHistoryRef, searchQuery)
 
+                // Save to localStorage
                 const localHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]')
                 localHistory.push(searchQuery)
                 localStorage.setItem('searchHistory', JSON.stringify(localHistory))
@@ -342,14 +257,10 @@ export default function SearchTab({
 
                 const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
                 const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
-                const results = await fetchCombinedResults(
-                    `${searchQuery} ${dateFilterString}`,
-                    RESULTS_PER_PAGE,
-                    siteToSearch
-                )
+                const Results = await fetchResults(`site:${siteToSearch} ${searchQuery} ${dateFilterString}`, 1)
 
-                setSearchData(results)
-                setHasResults(results.length > 0)
+                setSearchData(Results)
+                setHasResults(Results.length > 0)
             } catch (error) {
                 console.error("Error fetching data:", error)
                 setHasResults(false)
@@ -366,11 +277,7 @@ export default function SearchTab({
                 const nextPage = pageNumber + 1
                 const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
                 const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
-                const newResults = await fetchCombinedResults(
-                    `${searchQuery} ${dateFilterString}`,
-                    RESULTS_PER_PAGE,
-                    siteToSearch
-                )
+                const newResults = await fetchResults(`site:${siteToSearch} ${searchQuery} ${dateFilterString}`, nextPage)
 
                 if (newResults.length === 0) {
                     setHasMore(false)
@@ -419,7 +326,6 @@ export default function SearchTab({
     const handleCopyUrl = (link: string) => {
         navigator.clipboard.writeText(decodeURIComponent(link))
             .then(() => {
-                
                 toast("URL has been copied", {
                     action: {
                         label: "OK",
@@ -435,7 +341,7 @@ export default function SearchTab({
             })
     }
 
-     const handleSearchInputChange = (value: string) => {
+    const handleSearchInputChange = (value: string) => {
         setTypingQuery(value)
         setSearchQuery(value)
     }
@@ -449,10 +355,16 @@ export default function SearchTab({
     };
 
     useEffect(() => {
-        if (loading || hasResults) {
+        if (loading) {
             scrollToTop();
         }
-    }, [loading, hasResults]);
+    }, [loading]);
+
+    useEffect(() => {
+        if (hasResults) {
+            scrollToTop();
+        }
+    }, [hasResults]);
 
     useEffect(() => {
         const unsubscribe = scrollY.onChange(value => {
@@ -460,50 +372,6 @@ export default function SearchTab({
         })
         return () => unsubscribe()
     }, [scrollY])
-
-    function getDateFilterString(dateFilter: DateFilter): string {
-        const today = new Date()
-    
-        const formatDate = (date: Date): string => {
-            const year = date.getFullYear()
-            const month = String(date.getMonth() + 1).padStart(2, '0')
-            const day = String(date.getDate()).padStart(2, '0')
-            return `${year}-${month}-${day}`
-        }
-    
-        const twoMonthsAgo = new Date(today)
-        twoMonthsAgo.setMonth(today.getMonth() - 2)
-    
-        const twoYearsAgo = new Date(today)
-        twoYearsAgo.setFullYear(today.getFullYear() - 2)
-    
-        const yesterday = new Date(today)
-        yesterday.setDate(today.getDate() - 1)
-    
-        const oneWeekAgo = new Date(today)
-        oneWeekAgo.setDate(today.getDate() - 7)
-    
-        const todayStr = formatDate(today)
-        const twoMonthsAgoStr = formatDate(twoMonthsAgo)
-        const twoYearsAgoStr = formatDate(twoYearsAgo)
-        const yesterdayStr = formatDate(yesterday)
-        const oneWeekAgoStr = formatDate(oneWeekAgo)
-    
-        switch (dateFilter) {
-            case DateFilter.Today:
-                return `after:${yesterdayStr} before:${todayStr}`
-            case DateFilter.Week:
-                return `after:${oneWeekAgoStr} before:${todayStr}`
-            case DateFilter.Latest:
-                return `after:${twoMonthsAgoStr} before:${todayStr}`
-            case DateFilter.Oldest:
-                return `after:${twoYearsAgoStr} before:${todayStr}`
-            case DateFilter.Lifetime:
-                return ''
-            default:
-                return ''
-        }
-    }
 
     return (
         <main className="min-h-screen bg-background">
@@ -543,6 +411,7 @@ export default function SearchTab({
                                     }`}
                                     showSettings={isScrolled}
                                     onSettingsClick={() => {
+                                        // Programmatically trigger the popover
                                         if (settingsButtonRef) {
                                             settingsButtonRef.click();
                                         }
@@ -573,6 +442,31 @@ export default function SearchTab({
                                     />
                                 </Popover>
                             </div>
+
+                            {!isScrolled && (
+                                <div className="flex items-center gap-2">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="secondary"
+                                                size="icon"
+                                                className="w-8 h-8"
+                                            >
+                                                <Settings2 className="w-4 h-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <LoggedInSettingsPopover
+                                            selectedSite={selectedSite}
+                                            setSelectedSite={setSelectedSite}
+                                            currentFilter={currentFilter}
+                                            handleFilterChange={handleFilterChange}
+                                            customUrl={customUrl}
+                                            setCustomUrl={setCustomUrl}
+                                            membership={Membership}
+                                        />
+                                    </Popover>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </motion.div>
@@ -657,7 +551,7 @@ export default function SearchTab({
                                     <Button
                                         variant="secondary"
                                         size="icon"
-                                        className="w-8 h-8"
+                                        className="w-8 h-8 rounded-lg hover:bg-gray-100 hover:text-gray-900"
                                     >
                                         <Settings2 className="w-4 h-4" />
                                     </Button>
@@ -699,4 +593,48 @@ export default function SearchTab({
             </motion.div>
         </main>
     )
+}
+
+function getDateFilterString(dateFilter: DateFilter): string {
+    const today = new Date()
+
+    const formatDate = (date: Date): string => {
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
+
+    const twoMonthsAgo = new Date(today)
+    twoMonthsAgo.setMonth(today.getMonth() - 2)
+
+    const twoYearsAgo = new Date(today)
+    twoYearsAgo.setFullYear(today.getFullYear() - 2)
+
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+
+    const oneWeekAgo = new Date(today)
+    oneWeekAgo.setDate(today.getDate() - 7)
+
+    const todayStr = formatDate(today)
+    const twoMonthsAgoStr = formatDate(twoMonthsAgo)
+    const twoYearsAgoStr = formatDate(twoYearsAgo)
+    const yesterdayStr = formatDate(yesterday)
+    const oneWeekAgoStr = formatDate(oneWeekAgo)
+
+    switch (dateFilter) {
+        case DateFilter.Today:
+            return `after:${yesterdayStr} before:${todayStr}`
+        case DateFilter.Week:
+            return `after:${oneWeekAgoStr} before:${todayStr}`
+        case DateFilter.Latest:
+            return `after:${twoMonthsAgoStr} before:${todayStr}`
+        case DateFilter.Oldest:
+            return `after:${twoYearsAgoStr} before:${todayStr}`
+        case DateFilter.Lifetime:
+            return ''
+        default:
+            return ''
+    }
 }

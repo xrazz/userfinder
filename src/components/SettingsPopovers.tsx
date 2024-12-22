@@ -21,13 +21,6 @@ const sites = [
     { name: 'stackexchange.com', icon: '/stackexchange.svg' },
 ]
 
-const fileTypes = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'ppt', 'pptx']
-
-interface SearchSettings {
-    fileType: string;
-    excludeTerms: string;
-}
-
 interface LoggedOutSettingsPopoverProps {
     selectedSite: string
     badgetext: string
@@ -93,29 +86,6 @@ export const LoggedOutSettingsPopover: React.FC<LoggedOutSettingsPopoverProps> =
                     </SelectContent>
                 </Select>
             </div>
-
-            {/* Advanced Search Fields - Disabled for logged out users */}
-            <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Advanced Search</Label>
-                    <Link href='/subscription'>
-                        <ShadcnBadge className="text-xs">
-                            {badgetext}
-                        </ShadcnBadge>
-                    </Link>
-                </div>
-                <Select disabled>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select file type" />
-                    </SelectTrigger>
-                </Select>
-                <Input
-                    disabled
-                    placeholder="Terms to exclude (e.g., -spam -ads)"
-                />
-            </div>
-
-            {/* Rest of the content remains the same */}
             <div className="space-y-2">
                 <Label htmlFor="result-count">Result Count</Label>
                 <Select value={resultCount.toString()} onValueChange={onValueChange}>
@@ -168,8 +138,6 @@ interface LoggedInSettingsPopoverProps {
     customUrl: string
     setCustomUrl: (url: string) => void
     membership: string
-    searchSettings?: SearchSettings
-    onSearchSettingsChange?: (settings: SearchSettings) => void
 }
 
 export const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = ({
@@ -179,126 +147,87 @@ export const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = (
     handleFilterChange,
     customUrl,
     setCustomUrl,
-    membership,
-    searchSettings = { fileType: '', excludeTerms: '' },
-    onSearchSettingsChange = () => {}
-}) => {
-    const handleSearchSettingChange = (key: keyof SearchSettings, value: string) => {
-        onSearchSettingsChange({
-            ...searchSettings,
-            [key]: value
-        });
-    };
-
-    return (
-        <PopoverContent className="w-80 shadow-md">
-            <div className="space-y-4 p-2">
-                {/* Site selection */}
-                <div className="space-y-2">
-                    <Label htmlFor="site-select" className="text-sm font-medium">Site</Label>
-                    <Select
-                        value={selectedSite}
-                        onValueChange={(value) => {
-                            if (value === 'custom') {
-                                setSelectedSite('custom')
-                            } else {
-                                setSelectedSite(value)
-                            }
-                        }}
-                    >
-                        <SelectTrigger id="site-select" className="w-full">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                            {sites.map((site) => (
-                                <SelectItem key={site.name} value={site.name} className="py-2">
-                                    <div className="flex items-center">
-                                        <Image src={site.icon} alt={site.name} width={20} height={20} className="mr-3" />
-                                        {site.name}
-                                    </div>
-                                </SelectItem>
-                            ))}
-                            <SelectItem value="custom" className="border-t py-2">
+    membership
+}) => (
+    <PopoverContent className="w-80 shadow-md">
+        <div className="space-y-4 p-2">
+            <div className="space-y-2">
+                <Label htmlFor="site-select" className="text-sm font-medium">Site</Label>
+                <Select
+                    value={selectedSite}
+                    onValueChange={(value) => {
+                        if (value === 'custom') {
+                            setSelectedSite('custom')
+                        } else {
+                            setSelectedSite(value)
+                        }
+                    }}
+                >
+                    <SelectTrigger id="site-select" className="w-full">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                        {sites.map((site) => (
+                            <SelectItem key={site.name} value={site.name} className="py-2">
                                 <div className="flex items-center">
-                                    <PlusCircle className="w-5 h-5 mr-3" />
-                                    <span>{customUrl || "Custom Site"}</span>
+                                    <Image src={site.icon} alt={site.name} width={20} height={20} className="mr-3" />
+                                    {site.name}
                                 </div>
                             </SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                {/* Custom URL input */}
-                {selectedSite === 'custom' && (
-                    <div className="space-y-2">
-                        <Label htmlFor="custom-url" className="text-sm font-medium">Custom URL</Label>
-                        <div className="flex items-center gap-2">
-                            <Input
-                                id="custom-url"
-                                value={customUrl}
-                                onChange={(e) => setCustomUrl(e.target.value)}
-                                placeholder="Enter custom domain"
-                                className="flex-1"
-                            />
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => {
-                                    if (customUrl) {
-                                        setSelectedSite(customUrl)
-                                        toast.success("Custom domain set")
-                                    } else {
-                                        toast.error("Please enter a custom domain")
-                                    }
-                                }}
-                            >
-                                Set
-                            </Button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Advanced Search Fields */}
-                <div className="space-y-2">
-                    <Label className="text-sm font-medium">Advanced Search</Label>
-                    <Select
-                        value={searchSettings.fileType}
-                        onValueChange={(value) => handleSearchSettingChange('fileType', value)}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select file type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {fileTypes.map((type) => (
-                                <SelectItem key={type} value={type}>
-                                    .{type.toUpperCase()}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Input
-                        value={searchSettings.excludeTerms}
-                        onChange={(e) => handleSearchSettingChange('excludeTerms', e.target.value)}
-                        placeholder="Terms to exclude (e.g., -spam -ads)"
-                    />
-                </div>
-
-                {/* Filters */}
-                <div className="space-y-2">
-                    <Label className="text-sm font-medium">Filter by</Label>
-                    <RadioGroup value={currentFilter} onValueChange={handleFilterChange} className="space-y-2">
-                        {['today', 'week', 'newest', 'oldest', 'lifetime'].map((filter) => (
-                            <div key={filter} className="flex items-center space-x-3">
-                                <RadioGroupItem value={filter} id={filter} className="w-4 h-4" />
-                                <Label htmlFor={filter} className="text-sm">
-                                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                                </Label>
-                            </div>
                         ))}
-                    </RadioGroup>
-                </div>
+                        <SelectItem value="custom" className="border-t py-2">
+                            <div className="flex items-center">
+                                <PlusCircle className="w-5 h-5 mr-3" />
+                                <span>{customUrl || "Custom Site"}</span>
+                            </div>
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
-        </PopoverContent>
-    )
-}
+
+            {selectedSite === 'custom' && (
+                <div className="space-y-2">
+                    <Label htmlFor="custom-url" className="text-sm font-medium">Custom URL</Label>
+                    <div className="flex items-center gap-2">
+                        <Input
+                            id="custom-url"
+                            value={customUrl}
+                            onChange={(e) => setCustomUrl(e.target.value)}
+                            placeholder="Enter custom domain"
+                            className="flex-1"
+                        />
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                                if (customUrl) {
+                                    setSelectedSite(customUrl)
+                                    toast.success("Custom domain set")
+                                } else {
+                                    toast.error("Please enter a custom domain")
+                                }
+                            }}
+                        >
+                            Set
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            <div className="space-y-2">
+                <Label className="text-sm font-medium">Filter by</Label>
+                <RadioGroup value={currentFilter} onValueChange={handleFilterChange} className="space-y-2">
+                    {['today', 'week', 'newest', 'oldest', 'lifetime'].map((filter) => (
+                        <div key={filter} className="flex items-center space-x-3">
+                            <RadioGroupItem value={filter} id={filter} className="w-4 h-4" />
+                            <Label htmlFor={filter} className="text-sm">
+                                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                            </Label>
+                        </div>
+                    ))}
+                </RadioGroup>
+            </div>
+        </div>
+    </PopoverContent>
+) 

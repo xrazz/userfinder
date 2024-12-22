@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ArrowUpRight, Settings2 } from 'lucide-react'
+import { Search, ArrowUpRight, Settings2, FileText } from 'lucide-react'
 
 interface SearchBarProps {
     onSearch: (query: string) => void
@@ -21,7 +22,29 @@ const placeholderQueries = [
     "Let's find hidden knowledge..."
 ]
 
-export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, setTypingQuery, className = '', showSettings = false, onSettingsClick }) => {
+// Definizione più precisa dei tipi di file con i relativi dork
+const fileTypes = [
+    { value: "all", label: "All Files", dork: "" },
+    { value: "pdf", label: "PDF Documents", dork: "filetype:pdf" },
+    { value: "doc", label: "Word Documents", dork: "(filetype:doc OR filetype:docx)" },
+    { value: "xls", label: "Excel Spreadsheets", dork: "(filetype:xls OR filetype:xlsx)" },
+    { value: "ppt", label: "PowerPoint", dork: "(filetype:ppt OR filetype:pptx)" },
+    { value: "txt", label: "Text Files", dork: "filetype:txt" },
+    { value: "csv", label: "CSV Files", dork: "filetype:csv" },
+    { value: "json", label: "JSON Files", dork: "filetype:json" },
+    { value: "xml", label: "XML Files", dork: "filetype:xml" },
+    { value: "sql", label: "SQL Files", dork: "filetype:sql" },
+    { value: "zip", label: "Archives", dork: "(filetype:zip OR filetype:rar)" }
+]
+
+export const SearchBar: React.FC<SearchBarProps> = ({ 
+    onSearch, 
+    typingQuery, 
+    setTypingQuery, 
+    className = '', 
+    showSettings = false, 
+    onSettingsClick 
+}) => {
     const searchInputRef = useRef<HTMLInputElement>(null)
     const [isSearchFocused, setIsSearchFocused] = useState(false)
     const [suggestions, setSuggestions] = useState<string[]>([])
@@ -29,43 +52,50 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
     const [placeholderIndex, setPlaceholderIndex] = useState(0)
     const [currentPlaceholder, setCurrentPlaceholder] = useState('')
     const [isTyping, setIsTyping] = useState(true)
+    const [selectedFileType, setSelectedFileType] = useState("all")
+    const [searchTerm, setSearchTerm] = useState("")
 
+    // Effetto per l'animazione del placeholder
     useEffect(() => {
-        let currentText = placeholderQueries[placeholderIndex]
-        let currentIndex = 0
+        const text = placeholderQueries[placeholderIndex]
+        let index = 0
         let typingInterval: NodeJS.Timeout
-        let deletingTimeout: NodeJS.Timeout
-
+        
         if (isTyping) {
             typingInterval = setInterval(() => {
-                if (currentIndex <= currentText.length) {
-                    setCurrentPlaceholder(currentText.slice(0, currentIndex))
-                    currentIndex++
+                if (index <= text.length) {
+                    setCurrentPlaceholder(text.slice(0, index))
+                    index++
                 } else {
                     clearInterval(typingInterval)
-                    deletingTimeout = setTimeout(() => {
-                        const deleteInterval = setInterval(() => {
-                            setCurrentPlaceholder(prev => {
-                                if (prev.length <= 0) {
-                                    clearInterval(deleteInterval)
-                                    setIsTyping(true)
-                                    setPlaceholderIndex(prevIndex => (prevIndex + 1) % placeholderQueries.length)
-                                    return ''
-                                }
-                                return prev.slice(0, -1)
-                            })
-                        }, 50)
+                    setTimeout(() => {
+                        setIsTyping(false)
+                        setTimeout(() => {
+                            setIsTyping(true)
+                            setPlaceholderIndex((prev) => (prev + 1) % placeholderQueries.length)
+                        }, 2000)
                     }, 1000)
                 }
             }, 100)
         }
 
-        return () => {
-            clearInterval(typingInterval)
-            clearTimeout(deletingTimeout)
-        }
+        return () => clearInterval(typingInterval)
     }, [placeholderIndex, isTyping])
 
+    // Funzione per costruire la query di ricerca
+    const buildSearchQuery = (term: string, fileType: string): string => {
+        // Rimuovi eventuali dork esistenti
+        const cleanTerm = term.replace(/\s*filetype:\S+/gi, '').trim()
+        
+        // Trova il dork corrispondente al tipo di file selezionato
+        const selectedType = fileTypes.find(t => t.value === fileType)
+        const dork = selectedType?.dork || ''
+        
+        // Se c'è un dork, aggiungilo alla query
+        return dork ? `${cleanTerm} ${dork}` : cleanTerm
+    }
+
+    // Gestione delle suggestions
     const generateSuggestions = async (query: string) => {
         if (!query.trim()) {
             setSuggestions([])
@@ -82,42 +112,50 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
         }
     }
 
-    const debounce = (func: Function, wait: number) => {
-        let timeout: NodeJS.Timeout
-        return (...args: any[]) => {
-            clearTimeout(timeout)
-            timeout = setTimeout(() => func(...args), wait)
-        }
+    const debouncedGenerateSuggestions = React.useCallback(
+        debounce((query: string) => generateSuggestions(query), 300),
+        []
+    )
+
+    // Handlers
+    const handleSearch = () => {
+        if (!searchTerm.trim()) return
+        
+        const finalQuery = buildSearchQuery(searchTerm, selectedFileType)
+        console.log('Final search query:', finalQuery) // Debug log
+        onSearch(finalQuery)
+        setShowSuggestions(false)
     }
 
-    const debouncedGenerateSuggestions = debounce(generateSuggestions, 300)
-
-    const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value
+        setSearchTerm(value)
         setTypingQuery(value)
         debouncedGenerateSuggestions(value)
     }
 
+    const handleFileTypeChange = (value: string) => {
+        setSelectedFileType(value)
+
+        if (searchTerm.trim()) {
+            const finalQuery = buildSearchQuery(searchTerm, value)
+            onSearch(finalQuery)
+        }
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && searchTerm.trim()) {
+            handleSearch()
+        }
+    }
+
     const handleSuggestionClick = (suggestion: string) => {
+        setSearchTerm(suggestion)
         setTypingQuery(suggestion)
         setShowSuggestions(false)
-        if (searchInputRef.current) {
-            searchInputRef.current.focus()
-        }
-    }
-
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === 'Enter' && typingQuery.trim() !== '') {
-            onSearch(typingQuery)
-            setShowSuggestions(false)
-        }
-    }
-
-    const handleSearch = () => {
-        if (typingQuery.trim() !== '') {
-            onSearch(typingQuery)
-            setShowSuggestions(false)
-        }
+        // Esegui la ricerca immediatamente con la suggestion
+        const finalQuery = buildSearchQuery(suggestion, selectedFileType)
+        onSearch(finalQuery)
     }
 
     return (
@@ -128,9 +166,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
                 <div className="flex-grow relative flex items-center">
                     <Input
                         ref={searchInputRef}
+                        value={searchTerm}
+                        onChange={handleInputChange}
                         onKeyDown={handleKeyDown}
-                        value={typingQuery}
-                        onChange={handleSearchInputChange}
                         onFocus={() => {
                             setIsSearchFocused(true)
                             setShowSuggestions(true)
@@ -146,6 +184,23 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
                     />
                 </div>
                 <div className="flex items-stretch h-full divide-x divide-gray-200 dark:divide-gray-800">
+                    <div className="px-2 flex items-center">
+                        <Select value={selectedFileType} onValueChange={handleFileTypeChange}>
+                            <SelectTrigger className="w-40 border-0 bg-transparent focus:ring-0">
+                                <SelectValue placeholder="All Files" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {fileTypes.map((type) => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                        <div className="flex items-center">
+                                            <FileText className="w-4 h-4 mr-2" />
+                                            {type.label}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <button
                         onClick={handleSearch}
                         className="px-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
@@ -162,6 +217,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
                     )}
                 </div>
             </div>
+
             <AnimatePresence>
                 {showSuggestions && suggestions.length > 0 && (
                     <motion.div
@@ -200,3 +256,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, typingQuery, set
     )
 }
 
+// Utility function for debouncing
+function debounce(func: Function, wait: number) {
+    let timeout: NodeJS.Timeout
+    return function executedFunction(...args: any[]) {
+        const later = () => {
+            clearTimeout(timeout)
+            func(...args)
+        }
+        clearTimeout(timeout)
+        timeout = setTimeout(later, wait)
+    }
+}

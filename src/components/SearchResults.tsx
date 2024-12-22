@@ -12,13 +12,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 interface Post {
-    thumbnail: string | undefined
     title: string
     link: string
     snippet: string
     searchQuery?: string
 }
-
 
 interface SearchResultsProps {
     platform: string
@@ -76,7 +74,7 @@ const parseHtmlContent = (content: string): React.ReactNode => {
                 </a>
             );
         }
-
+        
         // Handle strong tags (bold)
         if (part.startsWith('<strong>')) {
             const textMatch = part.match(/>([^<]*)</) || [];
@@ -110,7 +108,78 @@ const parseHtmlContent = (content: string): React.ReactNode => {
     }).filter(Boolean); // Remove null values
 };
 
+interface PresetQuestion {
+    question: string
+    onClick: () => void
+    disabled: boolean
+}
 
+const QuestionsSkeleton = () => (
+    <div className="space-y-3">
+        {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="animate-pulse flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-primary/20" />
+                <div className="flex-1">
+                    <div className="h-8 bg-muted rounded-lg w-full" />
+                </div>
+            </div>
+        ))}
+    </div>
+)
+
+const PresetQuestionButton = ({ question, onClick, disabled }: PresetQuestion) => (
+    <Button
+        variant="outline"
+        size="sm"
+        onClick={onClick}
+        disabled={disabled}
+        className="text-sm text-left whitespace-normal h-auto py-2 px-4 
+            hover:bg-primary/10 hover:text-primary 
+            transition-colors duration-200
+            border border-muted-foreground/20
+            rounded-lg
+            flex items-center gap-2"
+    >
+        <SparklesIcon className="w-4 h-4 text-primary/60" />
+        <span className="flex-1">{question}</span>
+    </Button>
+)
+
+// Add this helper function to format messages with markdown-style content
+const formatMessage = (content: string): React.ReactNode => {
+    return content.split('\n').map((line, index) => {
+        if (line.startsWith('**') && line.endsWith('**')) {
+            // Section headers
+            return (
+                <h3 key={index} className="text-base font-semibold mt-4 mb-2 text-primary">
+                    {line.replace(/\*\*/g, '')}
+                </h3>
+            )
+        } else if (line.startsWith('• ')) {
+            // Bullet points
+            return (
+                <div key={index} className="ml-4 my-1 flex items-start">
+                    <span className="mr-2 text-primary">•</span>
+                    <span>{line.substring(2)}</span>
+                </div>
+            )
+        } else if (line.startsWith('💡') || line.startsWith('📄') || line.startsWith('❓') || line.startsWith('ℹ️')) {
+            // Emoji headers
+            return (
+                <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
+                    <span>{line.charAt(0)}</span>
+                    <span>{line.substring(1).trim()}</span>
+                </h3>
+            )
+        } else if (line.trim() === '') {
+            // Empty lines
+            return <div key={index} className="h-2" />
+        } else {
+            // Regular text
+            return <p key={index} className="my-1">{line}</p>
+        }
+    })
+}
 
 // Add this helper function to generate contextual questions
 const generateContextualQuestions = (content: string, title: string, limit: number = 3): string => {
@@ -158,21 +227,20 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
                         // Process the content through AI to generate a more digestible summary
                         const aiResponse = await axios.post('/api/prompt', {
                             systemPrompt: `You are an expert at summarizing content clearly and concisely. Given the following content, create:
-    1. A brief 2-3 sentence summary in plain language
-    2. 3-4 key takeaways that capture the main points
-    3. The most important implications or findings
+1. A brief 2-3 sentence summary in plain language
+2. 3-4 key takeaways that capture the main points
+3. The most important implications or findings
 
-    Format the response as:
-    📄 **Summary**
-    [2-3 sentence summary]
+Format the response as:
+📄 **Summary**
+[2-3 sentence summary]
 
-    💡 **Key Points**
-    • key point 1
-    • key point 2
-    • key point 3
+💡 **Key Points**
+• key point 1
+• key point 2
+• key point 3
 
-❓ **Follow-up Questions**
-[generated questions]`,
+`,
                             userPrompt: response.data.summary.mainContent,
                             email: email
                         });
@@ -246,23 +314,22 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
   🔍 **Analysis**
   Brief detailed explanation
   
-  ❓ **Follow-up Questions**
-  3 relevant questions for deeper understanding`,
+`,
                 userPrompt: `Content Title: ${post.title}
 Content: ${post.snippet}
 Question: ${newMessage}
 
-    Format the response using the specified structure with clear sections and concise information.`,
+Format the response using the specified structure with clear sections and concise information.`,
                 email: email
             }, {
                 headers: { 'Authorization': `Bearer ${email}` }
             })
 
             // Format the AI response to ensure consistent structure
-            const formattedResponse = response.data.output.includes('**Summary**')
-                ? response.data.output
-                : `📌 **Summary**\n${response.data.output}\n\n❓ **Follow-up Questions**\n` +
-                generateContextualQuestions(response.data.output, post.title, 3)
+            const formattedResponse = response.data.output.includes('**Summary**') 
+                ? response.data.output 
+                : `📌 **Summary**\n${response.data.output}\n\n` +
+                  generateContextualQuestions(response.data.output, post.title, 3)
 
             const aiMessage: Message = {
                 id: Date.now(),
@@ -291,11 +358,11 @@ Question: ${newMessage}
         const imgRegex = /<img[^>]+src="([^">]+)"/g;
         const urls: string[] = [];
         let match;
-
+        
         while ((match = imgRegex.exec(content)) !== null) {
             urls.push(match[1]);
         }
-
+        
         return urls;
     }
 
@@ -303,13 +370,13 @@ Question: ${newMessage}
     const formatMessageWithClickableQuestions = (content: string): React.ReactNode => {
         // First extract any images from the content
         const imageUrls = extractImageUrls(content);
-
+        
         // Remove the img tags from content but keep the rest
         const cleanContent = content.replace(/<img[^>]+>/g, '{{IMAGE_PLACEHOLDER}}');
-
+        
         let imageIndex = 0;
         let isInQuestionsSection = false;  // Add this flag
-
+        
         return cleanContent.split('\n').map((line, index) => {
             if (line.includes('{{IMAGE_PLACEHOLDER}}')) {
                 const imageUrl = imageUrls[imageIndex++];
@@ -336,20 +403,20 @@ Question: ${newMessage}
             }
 
             // Check if we're entering the questions section
-            if (line.includes('**Follow-up Questions**')) {
-                isInQuestionsSection = true;
-                return (
-                    <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
-                        <span>❓</span>
-                        <span>Follow-up Questions</span>
-                    </h3>
-                );
-            }
+            // if (line.includes('**Follow-up Questions**')) {
+            //     isInQuestionsSection = true;
+            //     return (
+            //         <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
+            //             <span>❓</span>
+            //             <span>Follow-up Questions</span>
+            //         </h3>
+            //     );
+            // }
 
             // Reset the flag if we hit another section
-            if (line.includes('**') && !line.includes('Follow-up Questions')) {
-                isInQuestionsSection = false;
-            }
+            // if (line.includes('**') && !line.includes('Follow-up Questions')) {
+            //     isInQuestionsSection = false;
+            // }
 
             // Handle any text with ** markers
             if (line.includes('**')) {
@@ -375,9 +442,9 @@ Question: ${newMessage}
                             key={index}
                             onClick={() => setNewMessage(line.substring(2))}
                             className="ml-4 my-1 flex items-start w-full rounded-lg p-3 
-                                    bg-primary/5 hover:bg-primary/10 
-                                    border border-primary/10 hover:border-primary/20
-                                    transition-all duration-200 text-left group"
+                                bg-primary/5 hover:bg-primary/10 
+                                border border-primary/10 hover:border-primary/20
+                                transition-all duration-200 text-left group"
                         >
                             <span className="mr-2 text-primary group-hover:scale-110 transition-transform">•</span>
                             <span className="text-primary/90 group-hover:text-primary transition-colors">
@@ -434,7 +501,7 @@ Question: ${newMessage}
                             </p>
                         </div>
                     </div>
-
+                    
                     {/* Add Visit Page button */}
                     <a
                         href={post.link}
@@ -442,8 +509,8 @@ Question: ${newMessage}
                         rel="noopener noreferrer"
                         onClick={() => onEngage?.(post.link)}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg 
-                                bg-primary text-primary-foreground hover:bg-primary/90 
-                                transition-colors text-sm font-medium"
+                            bg-primary text-primary-foreground hover:bg-primary/90 
+                            transition-colors text-sm font-medium"
                     >
                         <ArrowUpRight className="w-4 h-4" />
                         Visit Page
@@ -465,10 +532,11 @@ Question: ${newMessage}
                                     className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
                                     <div
-                                        className={`rounded-lg px-6 py-4 ${message.sender === 'user'
+                                        className={`rounded-lg px-6 py-4 ${
+                                            message.sender === 'user'
                                                 ? 'bg-primary text-primary-foreground ml-4 max-w-[80%]'
                                                 : 'bg-muted mr-4 w-full'
-                                            }`}
+                                        }`}
                                     >
                                         <div className="text-sm whitespace-pre-wrap">
                                             {formatMessageWithClickableQuestions(message.content)}
@@ -562,9 +630,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     const [newMessage, setNewMessage] = React.useState('');
     const scrollAreaRef = React.useRef<HTMLDivElement>(null);
     const [pendingSearch, setPendingSearch] = React.useState(false);
-    const [failedImages, setFailedImages] = React.useState<Set<string>>(new Set());
 
-   
     const scrollToBottom = () => {
         if (scrollAreaRef.current) {
             scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
@@ -606,25 +672,25 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                 },
                 body: JSON.stringify({
                     systemPrompt: `You are having a conversation about search results. Follow these rules:
-    - Use information ONLY from the provided sources
-    - Citations must be HTML links that open the source URL when clicked
-    - Format each citation as: <a href="source_url" target="_blank">[1]</a>
-    - Every fact or insight must have at least one citation
-    - If information isn't in the sources, say so explicitly
-    - Maintain conversation context while providing accurate citations
+- Use information ONLY from the provided sources
+- Citations must be HTML links that open the source URL when clicked
+- Format each citation as: <a href="source_url" target="_blank">[1]</a>
+- Every fact or insight must have at least one citation
+- If information isn't in the sources, say so explicitly
+- Maintain conversation context while providing accurate citations
 
-    Example format:
-    "Based on recent studies <a href="url1" target="_blank">[1]</a>, the key point is X. This relates to your question about Y <a href="url2" target="_blank">[2]</a>..."
+Example format:
+"Based on recent studies <a href="url1" target="_blank">[1]</a>, the key point is X. This relates to your question about Y <a href="url2" target="_blank">[2]</a>..."
 
-    Previous summary: "${summary}"
-    Context: Search query was "${searchQuery}" with ${posts.length} results.
-    Previous messages: ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}
+Previous summary: "${summary}"
+Context: Search query was "${searchQuery}" with ${posts.length} results.
+Previous messages: ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}
 
-    Available Sources:
-    ${searchResults.map(result =>
+Available Sources:
+${searchResults.map(result =>
                         `[${result.id}] "${result.title}"
-        URL: ${result.url}
-        Content: ${result.snippet}`
+    URL: ${result.url}
+    Content: ${result.snippet}`
                     ).join('\n\n')}`,
                     userPrompt: newMessage,
                     email: email
@@ -681,36 +747,36 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                 },
                 body: JSON.stringify({
                     systemPrompt: `You are a skilled content analyzer providing clear, structured insights. Follow these rules:
-    - ONLY use information from the provided search results
-    - Use HTML/Markdown formatting for better readability:
-    * Use <strong> or ** for section titles and important concepts
-    * Use <em> or * for emphasis and key terms
-    * Use bullet points for lists
-    * Add line breaks between sections
-    * Use headings like "Key Points:", "Main Findings:", "Analysis:", etc.
-    - Citations must be HTML links that open the source URL when clicked
-    - Format each citation as: <a href="source_url" target="_blank">[1]</a>
-    - Every fact or insight must have at least one citation
-    - Structure your response with clear sections and bullet points
-    - If information isn't in the sources, explicitly state that
+- ONLY use information from the provided search results
+- Use HTML/Markdown formatting for better readability:
+  * Use <strong> or ** for section titles and important concepts
+  * Use <em> or * for emphasis and key terms
+  * Use bullet points for lists
+  * Add line breaks between sections
+  * Use headings like "Key Points:", "Main Findings:", "Analysis:", etc.
+- Citations must be HTML links that open the source URL when clicked
+- Format each citation as: <a href="source_url" target="_blank">[1]</a>
+- Every fact or insight must have at least one citation
+- Structure your response with clear sections and bullet points
+- If information isn't in the sources, explicitly state that
 
-    Example format:
-    "<strong>Key Findings:</strong>
-    • The main concept is <em>X</em> <a href="url1" target="_blank">[1]</a>
-    • Research shows that <em>Y</em> <a href="url2" target="_blank">[2]</a>
+Example format:
+"<strong>Key Findings:</strong>
+• The main concept is <em>X</em> <a href="url1" target="_blank">[1]</a>
+• Research shows that <em>Y</em> <a href="url2" target="_blank">[2]</a>
 
-    <strong>Detailed Analysis:</strong>
-    ..."`,
+<strong>Detailed Analysis:</strong>
+..."`,
                     userPrompt: prompt || `Analyze these ${posts.length} search results for "${searchQuery}" and provide a clear, structured summary with citations:
 
-    Available Sources:
-    ${searchResults.map(result =>
+Available Sources:
+${searchResults.map(result =>
                         `[${result.id}] "${result.title}"
-        URL: ${result.url}
-        Content: ${result.snippet}`
+    URL: ${result.url}
+    Content: ${result.snippet}`
                     ).join('\n\n')}
 
-    Provide a comprehensive analysis with clickable citation numbers that open source URLs when clicked.`,
+Provide a comprehensive analysis with clickable citation numbers that open source URLs when clicked.`,
                     email: email
                 }),
             });
@@ -787,8 +853,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         return <div></div>
     }
 
-    
-   
     return (
         <div className="min-w-full mx-auto md:px-0 mt-3">
             {/* AI Analysis Section */}
@@ -947,8 +1011,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                                                         }`}
                                                 >
                                                     <div className="text-sm whitespace-pre-wrap prose dark:prose-invert max-w-none prose-sm">
-                                                        {message.sender === 'user'
-                                                            ? message.content
+                                                        {message.sender === 'user' 
+                                                            ? message.content 
                                                             : parseHtmlContent(message.content)
                                                         }
                                                     </div>
@@ -1055,21 +1119,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                                         {post.title}
                                     </a>
                                 </h3>
-                                <div className="flex-shrink-0">
-                                    {post.thumbnail && post.thumbnail.trim() !== '' && (
-                                        <div className="flex-shrink-0">
-                                            <img
-                                                src={post.thumbnail}
-                                                alt={post.title}
-                                                className="object-cover rounded-md"
-                                                onError={(e) => {
-                                                    const target = e.target as HTMLImageElement;
-                                                    target.src = '';
-                                                }}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
 
                                 {/* Snippet Section - remains the same */}
                                 <p className="text-sm text-muted-foreground leading-relaxed">
