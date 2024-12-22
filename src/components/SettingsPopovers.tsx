@@ -10,6 +10,7 @@ import { PopoverContent } from "@/components/ui/popover"
 import { Badge as ShadcnBadge } from "@/components/ui/badge"
 import { PlusCircle } from 'lucide-react'
 import { toast } from "sonner"
+import { Slider } from "@/components/ui/slider"
 
 const sites = [
     { name: 'Universal search', icon: '/logo.svg' },
@@ -19,6 +20,16 @@ const sites = [
     { name: 'news.ycombinator.com', icon: '/y-combinator.svg' },
     { name: 'Dev.to', icon: '/dev.svg' },
     { name: 'stackexchange.com', icon: '/stackexchange.svg' },
+]
+
+const timeRanges = [
+    { value: "24h", label: "Last 24 hours" },
+    { value: "week", label: "Last week" },
+    { value: "month", label: "Last month" },
+    { value: "3months", label: "Last 3 months" },
+    { value: "6months", label: "Last 6 months" },
+    { value: "year", label: "Last year" },
+    { value: "all", label: "All time" }
 ]
 
 interface LoggedOutSettingsPopoverProps {
@@ -215,18 +226,22 @@ export const LoggedInSettingsPopover: React.FC<LoggedInSettingsPopoverProps> = (
                 </div>
             )}
 
-            <div className="space-y-2">
-                <Label className="text-sm font-medium">Filter by</Label>
-                <RadioGroup value={currentFilter} onValueChange={handleFilterChange} className="space-y-2">
-                    {['today', 'week', 'newest', 'oldest', 'lifetime'].map((filter) => (
-                        <div key={filter} className="flex items-center space-x-3">
-                            <RadioGroupItem value={filter} id={filter} className="w-4 h-4" />
-                            <Label htmlFor={filter} className="text-sm">
-                                {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                            </Label>
-                        </div>
-                    ))}
-                </RadioGroup>
+            <div className="space-y-4">
+                <Label className="text-sm font-medium">Time Range</Label>
+                <Slider
+                    defaultValue={[timeRanges.findIndex(t => t.value === currentFilter)]}
+                    max={timeRanges.length - 1}
+                    step={1}
+                    className="py-4"
+                    onValueChange={([value]) => handleFilterChange(timeRanges[value].value)}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>24h</span>
+                    <span>All time</span>
+                </div>
+                <div className="text-sm font-medium text-center text-primary">
+                    {timeRanges.find(t => t.value === currentFilter)?.label}
+                </div>
             </div>
         </div>
     </PopoverContent>
