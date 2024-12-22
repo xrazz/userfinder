@@ -84,15 +84,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     // Funzione per costruire la query di ricerca
     const buildSearchQuery = (term: string, fileType: string): string => {
-        // Rimuovi eventuali dork esistenti
-        const cleanTerm = term.replace(/\s*filetype:\S+/gi, '').trim()
+        // Se c'è già un filetype: nella query, non modificarla
+        if (term.toLowerCase().includes('filetype:')) {
+            return term.trim();
+        }
         
         // Trova il dork corrispondente al tipo di file selezionato
-        const selectedType = fileTypes.find(t => t.value === fileType)
-        const dork = selectedType?.dork || ''
+        const selectedType = fileTypes.find(t => t.value === fileType);
+        const dork = selectedType?.dork || '';
         
         // Se c'è un dork, aggiungilo alla query
-        return dork ? `${cleanTerm} ${dork}` : cleanTerm
+        return dork ? `${term.trim()} ${dork}` : term.trim();
     }
 
     // Gestione delle suggestions
