@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown } from 'lucide-react'
+import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Code } from 'lucide-react'
 
 interface SearchBarProps {
     onSearch: (query: string) => void
@@ -23,6 +23,44 @@ const placeholderQueries = [
     "Let's find expert insights...",
     "Let's find cutting-edge research...",
     "Let's find hidden knowledge..."
+]
+
+const DORK_OPERATORS = [
+    { 
+        operator: 'intitle:',
+        description: 'Search in page title',
+        example: 'intitle:"artificial intelligence"'
+    },
+    { 
+        operator: 'inurl:',
+        description: 'Search in URL',
+        example: 'inurl:research'
+    },
+    { 
+        operator: 'site:',
+        description: 'Search specific domain',
+        example: 'site:edu'
+    },
+    { 
+        operator: '-',
+        description: 'Exclude terms',
+        example: 'AI -chatgpt'
+    },
+    { 
+        operator: '"..."',
+        description: 'Exact match',
+        example: '"machine learning"'
+    },
+    { 
+        operator: 'before:',
+        description: 'Before date',
+        example: 'before:2023'
+    },
+    { 
+        operator: 'after:',
+        description: 'After date',
+        example: 'after:2022'
+    }
 ]
 
 // Aggiungi un componente per l'icona del file type
@@ -77,6 +115,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const [currentPlaceholder, setCurrentPlaceholder] = useState('')
     const [isTyping, setIsTyping] = useState(true)
     const [searchTerm, setSearchTerm] = useState("")
+    const [showDorkingHelper, setShowDorkingHelper] = useState(false)
 
     // Effetto per l'animazione del placeholder
     useEffect(() => {
@@ -161,6 +200,42 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         onSearch(suggestion)
     }
 
+    const DorkingHelper = () => {
+        return (
+            <div className="absolute mt-1 p-2 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 w-full z-40">
+                <div className="grid grid-cols-2 gap-2">
+                    {DORK_OPERATORS.map((dork) => (
+                        <div 
+                            key={dork.operator}
+                            className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md cursor-pointer transition-colors"
+                            onClick={() => {
+                                // Inserisci l'operatore nella barra di ricerca
+                                const currentValue = searchInputRef.current?.value || '';
+                                const newValue = `${currentValue} ${dork.operator} `.trim();
+                                if (searchInputRef.current) {
+                                    searchInputRef.current.value = newValue;
+                                    searchInputRef.current.focus();
+                                }
+                            }}
+                        >
+                            <div className="flex items-center gap-2">
+                                <code className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono">
+                                    {dork.operator}
+                                </code>
+                                <span className="text-xs text-muted-foreground">
+                                    {dork.description}
+                                </span>
+                            </div>
+                            <div className="mt-1 text-xs text-muted-foreground/60 italic">
+                                {dork.example}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )
+    }
+
     return (
         <>
             <div className={`w-full border rounded-xl overflow-hidden transition-all duration-300 bg-white/50 dark:bg-gray-900 ${
@@ -226,6 +301,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                 <Settings2 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                             </button>
                         )}
+                        <button
+                            onClick={() => setShowDorkingHelper(!showDorkingHelper)}
+                            className="px-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
+                        >
+                            <Code className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                        </button>
                     </div>
                 </div>
 
@@ -278,6 +359,16 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {showDorkingHelper && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                >
+                    <DorkingHelper />
+                </motion.div>
+            )}
         </>
     )
 }
