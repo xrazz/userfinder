@@ -134,12 +134,29 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         setSearchTerm(value)
         setTypingQuery(value)
         debouncedGenerateSuggestions(value)
+
+        // Aggiorna il select se viene rilevato un filetype nella query
+        const filetypeMatch = value.toLowerCase().match(/filetype:(\w+)/)
+        if (filetypeMatch) {
+            const detectedType = filetypeMatch[1]
+            const matchingFileType = fileTypes.find(t => 
+                t.dork.toLowerCase().includes(detectedType)
+            )
+            if (matchingFileType) {
+                setSelectedFileType(matchingFileType.value)
+            }
+        }
     }
 
     const handleFileTypeChange = (value: string) => {
         setSelectedFileType(value)
 
         if (searchTerm.trim()) {
+            // Se c'è già un filetype nella query, non fare nulla
+            if (searchTerm.toLowerCase().includes('filetype:')) {
+                return;
+            }
+            // Altrimenti costruisci la nuova query
             const finalQuery = buildSearchQuery(searchTerm, value)
             onSearch(finalQuery)
         }
