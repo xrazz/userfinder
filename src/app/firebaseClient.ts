@@ -53,6 +53,7 @@ export const createUserSettings = async (user: User) => {
       credits: 10,
       membershipLevel: 'Free',
       membership_start: null,
+      lastCreditReset: new Date()
     });
     console.log("User settings created with default membership level: Free and membership_start: null");
   } else {

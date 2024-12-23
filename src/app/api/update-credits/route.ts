@@ -61,7 +61,7 @@ export async function POST(req: Request) {
         lastCreditReset: new Date(),
         stripeCustomerId: (session.customer as Stripe.Customer)?.id,
         subscriptionStatus: (session.subscription as Stripe.Subscription)?.status || 'active',
-        subscriptionPlan: 'pro',
+        subscriptionPlan: 'Pro',
         updatedAt: new Date(),
         email: customerEmail, // Add email to the document
       };

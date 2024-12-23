@@ -76,7 +76,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const [placeholderIndex, setPlaceholderIndex] = useState(0)
     const [currentPlaceholder, setCurrentPlaceholder] = useState('')
     const [isTyping, setIsTyping] = useState(true)
-    const [searchTerm, setSearchTerm] = useState("")
+    const [searchTerm, setSearchTerm] = useState(typingQuery)
+
+    useEffect(() => {
+        setSearchTerm(typingQuery)
+    }, [typingQuery])
 
     // Effetto per l'animazione del placeholder
     useEffect(() => {
@@ -130,8 +134,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     // Handlers
     const handleSearch = () => {
         if (!searchTerm.trim()) return
-        
-        console.log('Final search query:', searchTerm) // Debug log
+        setTypingQuery(searchTerm)
         onSearch(searchTerm)
         setShowSuggestions(false)
     }
@@ -157,8 +160,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         setSearchTerm(suggestion)
         setTypingQuery(suggestion)
         setShowSuggestions(false)
-        // Esegui la ricerca immediatamente con la suggestion
-        onSearch(suggestion)
+        setTimeout(() => {
+            onSearch(suggestion)
+        }, 0)
     }
 
     return (

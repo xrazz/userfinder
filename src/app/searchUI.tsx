@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { toast, Toaster } from "sonner"
-import { doc, onSnapshot, updateDoc, setDoc, collection, addDoc } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc, setDoc, collection, addDoc, Timestamp } from 'firebase/firestore'
 import { auth, db, firebaseAnalytics } from '@/app/firebaseClient'
 import Cookies from "js-cookie"
 import { Header } from '@/components/Header'
@@ -155,15 +155,37 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         const unsubscribe = onSnapshot(userDocRef, async (docSnapshot) => {
             if (docSnapshot.exists()) {
                 const userData = docSnapshot.data();
-                const lastReset = userData.lastCreditReset?.toDate();
-                const now = new Date();
+                const lastReset = userData.lastCreditReset;
+                let lastResetDate: Date | null = null;
 
-                // Check if we need to reset credits (new day)
-                if (!lastReset || lastReset.toDateString() !== now.toDateString()) {
-                    // Reset credits to 10 at the start of each day
+                // Handle different timestamp formats
+                if (lastReset) {
+                    if (lastReset instanceof Timestamp) {
+                        lastResetDate = lastReset.toDate();
+                    } else if (lastReset instanceof Date) {
+                        lastResetDate = lastReset;
+                    } else if (typeof lastReset === 'string') {
+                        lastResetDate = new Date(lastReset);
+                    }
+                }
+
+                const now = new Date();
+                const shouldReset = !lastResetDate || 
+                    lastResetDate.toDateString() !== now.toDateString();
+
+                if (shouldReset) {
+                    const membershipLevel = userData.membershipLevel || 'Free';
+                    let creditsToSet = 10;
+
+                    if (membershipLevel === 'Free') {
+                        creditsToSet = 10;
+                    } else if (membershipLevel === 'Pro' || membershipLevel === 'Basic') {
+                        creditsToSet = 100;
+                    }
+
                     await updateDoc(userDocRef, {
-                        credits: 5,
-                        lastCreditReset: now
+                        credits: creditsToSet,
+                        lastCreditReset: Timestamp.fromDate(now)
                     });
                 } else {
                     setCredits(userData.credits || 0);
@@ -283,21 +305,33 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         return `${sitePrefix}${baseQuery} ${filetype} ${dateFilter}`.trim();
     }
 
-    const handleSearch = async () => {
-        if (searchQuery.trim() !== '') {
+    const handleSearchInputChange = (value: string) => {
+        setTypingQuery(value)
+        setSearchQuery(value)
+    }
+
+    const handleSearch = async (queryToUse?: string) => {
+        // Use provided query or current search query
+        const queryToSearch = (queryToUse || searchQuery).trim()
+        if (queryToSearch !== '') {
             setSearchData([])
             setLoading(true)
             setPageNumber(1)
             setHasMore(true)
 
             try {
-                await trackSearchQuery(searchQuery)
+                // Update the search query state if a new query was provided
+                if (queryToUse) {
+                    setSearchQuery(queryToUse)
+                    setTypingQuery(queryToUse)
+                }
+
+                await trackSearchQuery(queryToSearch)
 
                 const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
                 const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
                 
-                // Usa la query originale che include il filetype se presente
-                const finalQuery = buildSearchQuery(searchQuery, siteToSearch, dateFilterString)
+                const finalQuery = buildSearchQuery(queryToSearch, siteToSearch, dateFilterString)
                 console.log('Final query:', finalQuery) // Debug log
                 
                 const Results = await fetchResults(finalQuery, 1)
@@ -384,11 +418,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     description: "An error occurred while copying the URL.",
                 })
             })
-    }
-
-    const handleSearchInputChange = (value: string) => {
-        setTypingQuery(value)
-        setSearchQuery(value)
     }
 
     useEffect(() => {

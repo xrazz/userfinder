@@ -1,4 +1,4 @@
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/app/firebaseClient';
 import Cookies from 'js-cookie';
 
@@ -12,7 +12,7 @@ export class UserCreditManager implements CreditManager {
   private email: string;
   private defaultCredits: number;
   
-  constructor(email: string, defaultCredits: number = 5) {
+  constructor(email: string, defaultCredits: number = 10) {
     this.email = email;
     this.defaultCredits = defaultCredits;
   }
@@ -48,26 +48,61 @@ export class UserCreditManager implements CreditManager {
   }
 
   async resetDailyCredits(): Promise<void> {
-    const userDocRef = doc(db, 'users', this.email);
-    const docSnap = await this.getUserDoc();
-    const userData = docSnap.data();
-    
-    const lastReset = userData?.lastCreditReset?.toDate();
-    const now = new Date();
+    try {
+      const userDocRef = doc(db, 'users', this.email);
+      const docSnap = await this.getUserDoc();
+      
+      if (!docSnap.exists()) {
+        await this.initializeUser();
+        return;
+      }
 
-    if (!lastReset || lastReset.toDateString() !== now.toDateString()) {
-      await updateDoc(userDocRef, {
-        credits: this.defaultCredits,
-        lastCreditReset: now
-      });
+      const userData = docSnap.data();
+      const now = new Date();
+      
+      // Handle the last reset date
+      let lastResetDate: Date | null = null;
+      const lastReset = userData?.lastCreditReset;
+
+      if (lastReset) {
+        if (lastReset instanceof Timestamp) {
+          lastResetDate = lastReset.toDate();
+        } else if (lastReset instanceof Date) {
+          lastResetDate = lastReset;
+        } else if (typeof lastReset === 'string') {
+          lastResetDate = new Date(lastReset);
+        }
+      }
+
+      // Check if we need to reset credits
+      const shouldReset = !lastResetDate || 
+        lastResetDate.toDateString() !== now.toDateString();
+
+      if (shouldReset) {
+        const membershipLevel = userData?.membershipLevel || 'Free';
+        let creditsToSet = 10;
+
+        if (membershipLevel === 'Free') {
+          creditsToSet = 10;
+        } else if (membershipLevel === 'Pro' || membershipLevel === 'Basic') {
+          creditsToSet = 100;
+        }
+
+        await updateDoc(userDocRef, {
+          credits: creditsToSet,
+          lastCreditReset: Timestamp.fromDate(now)  // Store as Firestore Timestamp
+        });
+      }
+    } catch (error) {
+      console.error('Error resetting daily credits:', error);
     }
   }
 
   private async initializeUser(): Promise<void> {
     const userDocRef = doc(db, 'users', this.email);
     await setDoc(userDocRef, {
-      credits: this.defaultCredits,
-      lastCreditReset: new Date(),
+      credits: 10,
+      lastCreditReset: Timestamp.fromDate(new Date()),  // Store as Firestore Timestamp
       membershipLevel: 'Free'
     });
   }

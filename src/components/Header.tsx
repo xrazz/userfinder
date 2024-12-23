@@ -20,6 +20,7 @@ interface HeaderProps {
     imageUrl?: string
     onLogout: () => void
     subscriptionStatus?: string
+    subscriptionPlan?: string
 }
 
 const gradientTextStyle = {
@@ -27,7 +28,7 @@ const gradientTextStyle = {
     animation: 'shine 3s linear infinite',
 }
 
-export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, onLogout, subscriptionStatus }) => {
+export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, onLogout, subscriptionStatus, subscriptionPlan }) => {
     const router = useRouter()
     const [credits, setCredits] = useState<number>(0)
     const hasShownToast = useRef(false)
@@ -84,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
                         <Sparkles className="h-3 w-3" />
                         {credits} credit{credits !== 1 ? 's' : ''} {!userId && 'remaining'}
                     </Badge>
-                    {userId && subscriptionStatus !== 'active' && (
+                    {userId && subscriptionStatus === 'active' && subscriptionPlan !== 'Pro' && (
                         <Button 
                             variant="premium"
                             size="sm"
@@ -126,7 +127,6 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
                                     </div>
                                 </div>
                                 <div className="mt-5 pt-5 border-t space-y-3">
-                                    {/* Show credits and premium button in mobile view */}
                                     <div className="sm:hidden space-y-3">
                                         <Badge 
                                             variant={credits <= 1 ? "destructive" : "outline"} 
@@ -135,7 +135,7 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
                                             <Sparkles className="h-3 w-3" />
                                             {credits} credit{credits !== 1 ? 's' : ''} remaining
                                         </Badge>
-                                        {userId && subscriptionStatus !== 'active' && (
+                                        {userId && subscriptionStatus === 'active' && subscriptionPlan !== 'Pro' && (
                                             <Button 
                                                 variant="premium"
                                                 size="sm"

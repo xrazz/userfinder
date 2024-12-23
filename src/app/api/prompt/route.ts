@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import axios from 'axios';
+import OpenAI from 'openai';
 import { db } from '@/app/firebaseClient';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { cookies } from 'next/headers';
@@ -54,37 +54,30 @@ export async function POST(request: Request) {
       });
     }
 
-    const payload = {
-      stream: false,
-      system: "groq",
-      modelId: "mixtral-8x7b-32768",
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
       messages: [
         {
-          name: "system",
-          content: systemPrompt,
           role: "system",
+          content: systemPrompt,
         },
         {
-          name: "user",
-          content: userPrompt,
           role: "user",
+          content: userPrompt,
         },
       ],
-    };
-
-    const headers = {
-      'x-api-key': 'udsk_n8vrdUwlvWa32M1yEOYWGdyb3FYgpqMuwGqGLHN4F9IShOX9Jbh',
-    };
-
-    const aiResponse = await axios.post('https://dev.undrstnd-labs.com/api', payload, { headers });
+    });
 
     return NextResponse.json({
-      output: aiResponse.data.output,
-      funding: aiResponse.data.funding,
-      usage: aiResponse.data.usage,
+      output: response.choices[0].message.content,
+      usage: response.usage,
     });
   } catch (error) {
-    console.error('Error communicating with AI model:', error);
+    console.error('Error communicating with OpenAI:', error);
     return NextResponse.json(
       { error: 'An error occurred while processing the prompt.' },
       { status: 500 }

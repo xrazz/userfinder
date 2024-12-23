@@ -10,6 +10,7 @@ import axios from 'axios'
 import { useInView } from 'react-intersection-observer'
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { useRef } from 'react'
 
 interface Post {
     title: string
@@ -209,39 +210,29 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
     const scrollAreaRef = React.useRef<HTMLDivElement>(null)
     const [contentFetched, setContentFetched] = React.useState(false)
     const [isApiLoading, setIsApiLoading] = React.useState(false)
+    const contentRef = useRef<string>('')
 
-    // Initialize with scraped content
+    // Modify the initial content fetch
     React.useEffect(() => {
         if (isOpen && !contentFetched && !isApiLoading && messages.length === 0) {
             const fetchContent = async () => {
                 setInitialLoading(true)
                 setIsApiLoading(true)
                 try {
-                    console.log('Executing scrape on URL:', post.link)
                     const response = await axios.post('/api/scrape', {
                         url: post.link,
                         email: email
                     })
 
                     if (response.data.summary?.mainContent) {
-                        // Process the content through AI to generate a more digestible summary
-                        const aiResponse = await axios.post('/api/prompt', {
-                            systemPrompt: `You are an expert at summarizing content clearly and concisely. Given the following content, create:
-1. A brief 2-3 sentence summary in plain language
-2. 3-4 key takeaways that capture the main points
-3. The most important implications or findings
+                        // Store the content for RAG
+                        contentRef.current = response.data.summary.mainContent
 
-Format the response as:
-📄 **Summary**
-[2-3 sentence summary]
-
-💡 **Key Points**
-• key point 1
-• key point 2
-• key point 3
-
-`,
-                            userPrompt: response.data.summary.mainContent,
+                        // Initial analysis prompt
+                        const aiResponse = await axios.post('/api/rag', {
+                            content: response.data.summary.mainContent,
+                            query: "Provide a clear summary of the main points and key findings from this content.",
+                            url: post.link,
                             email: email
                         });
 
@@ -254,8 +245,6 @@ Format the response as:
                             }])
                             setContentFetched(true)
                         }
-                    } else {
-                        throw new Error('No content available')
                     }
                 } catch (error) {
                     toast.error("Limited AI Analysis", {
@@ -273,15 +262,7 @@ Format the response as:
         }
     }, [isOpen, post.link, email, onClose, contentFetched, isApiLoading, messages.length])
 
-    // Reset states when dialog closes
-    React.useEffect(() => {
-        if (!isOpen) {
-            setContentFetched(false)
-            setIsApiLoading(false)
-            setMessages([])
-        }
-    }, [isOpen])
-
+    // Modify the message handling to use RAG
     const handleSendMessage = async () => {
         if (!newMessage.trim() || !email || isApiLoading) return
 
@@ -298,42 +279,16 @@ Format the response as:
         setIsApiLoading(true)
 
         try {
-            const response = await axios.post('/api/prompt', {
-                systemPrompt: `You are an AI assistant helping to analyze content. Follow these guidelines:
-- Structure your responses with clear sections using markdown-style formatting
-- Keep responses concise and focused
-- Use bullet points for lists
-- Include a brief summary at the start
-- Format your response with these sections:
-  📌 **Summary**
-  A 2-3 line overview
-  
-  💡 **Key Points**
-  Bullet points of main findings
-  
-  🔍 **Analysis**
-  Brief detailed explanation
-  
-`,
-                userPrompt: `Content Title: ${post.title}
-Content: ${post.snippet}
-Question: ${newMessage}
-
-Format the response using the specified structure with clear sections and concise information.`,
+            const response = await axios.post('/api/rag', {
+                content: contentRef.current,
+                query: newMessage,
+                url: post.link,
                 email: email
-            }, {
-                headers: { 'Authorization': `Bearer ${email}` }
             })
-
-            // Format the AI response to ensure consistent structure
-            const formattedResponse = response.data.output.includes('**Summary**') 
-                ? response.data.output 
-                : `📌 **Summary**\n${response.data.output}\n\n` +
-                  generateContextualQuestions(response.data.output, post.title, 3)
 
             const aiMessage: Message = {
                 id: Date.now(),
-                content: formattedResponse,
+                content: response.data.output,
                 sender: 'ai',
                 timestamp: new Date().toISOString(),
             }
@@ -341,6 +296,10 @@ Format the response using the specified structure with clear sections and concis
             setMessages(prev => [...prev, aiMessage])
         } catch (error) {
             console.error('Error in chat:', error)
+            toast.error("Failed to get response", {
+                description: "Please try again or rephrase your question.",
+                duration: 3000,
+            })
         } finally {
             setLoading(false)
             setIsApiLoading(false)
