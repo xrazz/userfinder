@@ -69,7 +69,7 @@ export default function AdminPage() {
     useEffect(() => {
         const auth = getAuth()
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user?.email === 'cartin.denis@gmail.com') {
+            if (user?.email === 'cartin.denis@gmail.com' || user?.email === 'rajtripathi2580@gmail.com') {
                 setAuthorized(true)
                 fetchQueries()
             } else {
