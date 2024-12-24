@@ -35,6 +35,8 @@ interface SearchResultsProps {
     setCustomUrl: (url: string) => void
     setSelectedSite: (site: string) => void
     handleSearch: () => void
+    credits: number
+    onCreditUpdate?: () => void
 }
 
 interface Message {
@@ -182,19 +184,7 @@ const formatMessage = (content: string): React.ReactNode => {
     })
 }
 
-// Add this helper function to generate contextual questions
-const generateContextualQuestions = (content: string, title: string, limit: number = 3): string => {
-    const questions = [
-        `• What are the key findings about ${title}?`,
-        '• What methodology or approach was used?',
-        '• What are the practical implications?',
-        '• How does this compare to other research?',
-        '• What are the main conclusions?'
-    ]
 
-    // Return only the specified number of questions
-    return questions.slice(0, limit).join('\n')
-}
 
 const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
     post: Post,
@@ -578,7 +568,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     isLoadingMore,
     setCustomUrl,
     setSelectedSite,
-    handleSearch
+    handleSearch,
+    credits,
+    onCreditUpdate
 }) => {
     const [isGenerating, setIsGenerating] = React.useState(false);
     const [summary, setSummary] = React.useState('');
@@ -684,6 +676,26 @@ ${searchResults.map(result =>
     };
 
     const generateSummary = async (prompt?: string) => {
+        if (credits <= 0) {
+            toast.error(
+                "You're out of credits!", 
+                {
+                    description: (
+                        <div className="flex items-center gap-1">
+                            <span>Upgrade to </span>
+                            <button 
+                                onClick={() => window.location.href = '/subscription'}
+                                className="font-medium text-purple-500 hover:text-purple-600 underline underline-offset-2"
+                            >
+                                get 100 daily credits
+                            </button>
+                        </div>
+                    ),
+                }
+            );
+            return;
+        }
+
         setIsGenerating(true);
         try {
             if (!email) {
@@ -750,6 +762,10 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
 
             const data = await response.json();
             setSummary(data.output);
+
+            // Se la generazione ha successo, aggiorna i crediti
+            onCreditUpdate?.();
+
         } catch (error) {
             console.error('Error generating content:', error);
             setSummary(error instanceof Error ? error.message : 'Failed to generate content. Please try again.');
@@ -804,8 +820,29 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
     };
 
     const handleAIClick = (post: Post) => {
-        setSelectedPost(post)
-        setIsDialogOpen(true)
+        if (credits <= 0) {
+            toast.error(
+                "You're out of credits!", 
+                {
+                    description: (
+                        <div className="flex items-center gap-1">
+                            <span>Upgrade to </span>
+                            <button 
+                                onClick={() => window.location.href = '/subscription'}
+                                className="font-medium text-purple-500 hover:text-purple-600 underline underline-offset-2"
+                            >
+                                get 100 daily credits
+                            </button>
+                        </div>
+                    ),
+                }
+            );
+            return;
+        }
+
+        setSelectedPost(post);
+        setIsDialogOpen(true);
+        onCreditUpdate?.();
     }
 
     if (posts.length === 0) {

@@ -19,6 +19,7 @@ import { motion, useScroll, useTransform } from 'framer-motion'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { useRouter, useSearchParams } from 'next/navigation'
 
 const MEMBERSHIP_LEVELS = {
     FREE: 'Free',
@@ -27,11 +28,13 @@ const MEMBERSHIP_LEVELS = {
 } as const
 
 enum DateFilter {
-    Today = 'today',
-    Week = 'last week',
-    Latest = 'last 2 months',
-    Oldest = 'last 2 years',
-    Lifetime = 'no date filter'
+    Today = '24h',
+    Week = 'week',
+    Month = 'month',
+    ThreeMonths = '3months',
+    SixMonths = '6months',
+    Year = 'year',
+    Lifetime = 'all'
 }
 
 interface Post {
@@ -50,13 +53,28 @@ const sites = [
     { name: 'stackexchange.com', icon: '/stackexchange.svg' },
 ]
 
+const mapFilterToDisplayText = (filter: string): string => {
+    switch (filter) {
+        case '24h': return 'Last 24 hours'
+        case 'week': return 'Last week'
+        case 'month': return 'Last month'
+        case '3months': return 'Last 3 months'
+        case '6months': return 'Last 6 months'
+        case 'year': return 'Last year'
+        case 'all': return 'All time'
+        default: return ''
+    }
+}
+
 const mapFilterToDate = (filter: string): DateFilter => {
     switch (filter) {
-        case 'today': return DateFilter.Today
+        case '24h': return DateFilter.Today
         case 'week': return DateFilter.Week
-        case 'newest': return DateFilter.Latest
-        case 'oldest': return DateFilter.Oldest
-        case 'lifetime': return DateFilter.Lifetime
+        case 'month': return DateFilter.Month
+        case '3months': return DateFilter.ThreeMonths
+        case '6months': return DateFilter.SixMonths
+        case 'year': return DateFilter.Year
+        case 'all': return DateFilter.Lifetime
         default: return DateFilter.Lifetime
     }
 }
@@ -123,6 +141,8 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [isScrolled, setIsScrolled] = useState(false)
     const [settingsButtonRef, setSettingsButtonRef] = useState<HTMLButtonElement | null>(null);
     const [selectedFileType, setSelectedFileType] = useState("all")
+    const router = useRouter()
+    const searchParams = useSearchParams()
 
     useEffect(() => {
         firebaseAnalytics.logPageView('/')
@@ -310,23 +330,30 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         setSearchQuery(value)
     }
 
-    const handleSearch = async (queryToUse?: string) => {
-        // Use provided query or current search query
-        const queryToSearch = (queryToUse || searchQuery).trim()
-        if (queryToSearch !== '') {
-            setSearchData([])
-            setLoading(true)
-            setPageNumber(1)
-            setHasMore(true)
+   // ... existing code ...
+const handleSearch = async (queryToUse?: string) => {
+    // Use provided query or current search query
+    const queryToSearch = (queryToUse || searchQuery).trim()
+    if (queryToSearch !== '') {
+        // Aggiorna l'URL con il termine di ricerca
+        router.push(`/search?q=${encodeURIComponent(queryToSearch)}`)
+        
+        setSearchData([])
+        setLoading(true)
+        setPageNumber(1)
+        setHasMore(true)
 
-            try {
-                // Update the search query state if a new query was provided
-                if (queryToUse) {
-                    setSearchQuery(queryToUse)
-                    setTypingQuery(queryToUse)
-                }
+        try {
+            // Rimosso il controllo dei crediti
+            
+            // Update the search query state if a new query was provided
+            if (queryToUse) {
+                setSearchQuery(queryToUse)
+                setTypingQuery(queryToUse)
+            }
 
-                await trackSearchQuery(queryToSearch)
+            await trackSearchQuery(queryToSearch)
+// ... existing code ...
 
                 const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
                 const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
@@ -394,8 +421,16 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     }
 
     const handleLogout = async () => {
-        Cookies.remove("token")
-        window.location.reload()
+        try {
+            await auth.signOut()
+            Cookies.remove("token")
+            router.push('/') // Reindirizza alla home page dopo il logout
+        } catch (error) {
+            console.error('Error during logout:', error)
+            toast.error("Error during logout", {
+                description: "Please try again.",
+            })
+        }
     }
 
     const handleEngage = (link: string) => {
@@ -455,6 +490,30 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             handleSearch();
         }
     }
+
+    // Modifica useEffect per controllare i parametri di ricerca all'avvio
+    useEffect(() => {
+        if (!searchParams) return
+        const query = searchParams.get('q')
+        if (query) {
+            setSearchQuery(query)
+            setTypingQuery(query)
+            handleSearch(query)
+        }
+    }, [])
+
+    const handleCreditUpdate = async () => {
+        if (!email) return;
+        
+        try {
+            const userDocRef = doc(db, 'users', email);
+            await updateDoc(userDocRef, {
+                credits: credits - 1
+            });
+        } catch (error) {
+            console.error('Error updating credits:', error);
+        }
+    };
 
     return (
         <main className="min-h-screen bg-background">
@@ -614,9 +673,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                             <Badge size="1" color="crimson">
                                 {selectedSite === 'custom' ? (customUrl || 'Custom Site') : selectedSite}
                             </Badge>
-                            {currentFilter && (
+                            {currentFilter && mapFilterToDisplayText(currentFilter) && (
                                 <Badge size="1" color="orange">
-                                    {mapFilterToDate(currentFilter).replace('last', '')}
+                                    {mapFilterToDisplayText(currentFilter)}
                                 </Badge>
                             )}
                         </div>
@@ -677,6 +736,8 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                         setCustomUrl={setCustomUrl}
                         setSelectedSite={setSelectedSite}
                         handleSearch={handleSearch}
+                        credits={credits}
+                        onCreditUpdate={handleCreditUpdate}
                     />
                 )}
             </motion.div>
@@ -686,41 +747,30 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
 function getDateFilterString(dateFilter: DateFilter): string {
     const today = new Date()
-
     const formatDate = (date: Date): string => {
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const day = String(date.getDate()).padStart(2, '0')
-        return `${year}-${month}-${day}`
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     }
 
-    const twoMonthsAgo = new Date(today)
-    twoMonthsAgo.setMonth(today.getMonth() - 2)
-
-    const twoYearsAgo = new Date(today)
-    twoYearsAgo.setFullYear(today.getFullYear() - 2)
-
-    const yesterday = new Date(today)
-    yesterday.setDate(today.getDate() - 1)
-
-    const oneWeekAgo = new Date(today)
-    oneWeekAgo.setDate(today.getDate() - 7)
-
     const todayStr = formatDate(today)
-    const twoMonthsAgoStr = formatDate(twoMonthsAgo)
-    const twoYearsAgoStr = formatDate(twoYearsAgo)
-    const yesterdayStr = formatDate(yesterday)
-    const oneWeekAgoStr = formatDate(oneWeekAgo)
+    const getDateBefore = (days: number) => {
+        const date = new Date(today)
+        date.setDate(today.getDate() - days)
+        return formatDate(date)
+    }
 
     switch (dateFilter) {
         case DateFilter.Today:
-            return `after:${yesterdayStr} before:${todayStr}`
+            return `after:${getDateBefore(1)} before:${todayStr}`
         case DateFilter.Week:
-            return `after:${oneWeekAgoStr} before:${todayStr}`
-        case DateFilter.Latest:
-            return `after:${twoMonthsAgoStr} before:${todayStr}`
-        case DateFilter.Oldest:
-            return `after:${twoYearsAgoStr} before:${todayStr}`
+            return `after:${getDateBefore(7)} before:${todayStr}`
+        case DateFilter.Month:
+            return `after:${getDateBefore(30)} before:${todayStr}`
+        case DateFilter.ThreeMonths:
+            return `after:${getDateBefore(90)} before:${todayStr}`
+        case DateFilter.SixMonths:
+            return `after:${getDateBefore(180)} before:${todayStr}`
+        case DateFilter.Year:
+            return `after:${getDateBefore(365)} before:${todayStr}`
         case DateFilter.Lifetime:
             return ''
         default:

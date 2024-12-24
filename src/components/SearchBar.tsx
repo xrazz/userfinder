@@ -166,7 +166,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     }
 
     return (
-        <>
+        <div className="relative w-full">
             <div className={`w-full border rounded-xl overflow-hidden transition-all duration-300 bg-white/50 dark:bg-gray-900 ${
                 isSearchFocused ? 'border-primary shadow-lg' : 'border-gray-200 dark:border-gray-800'
             } ${className}`}>
@@ -254,7 +254,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="absolute w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 z-50"
+                        className="absolute left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 dark:bg-gray-900 z-50 max-h-[300px] overflow-y-auto"
+                        style={{ 
+                            width: "calc(100% - 1rem)",
+                            margin: "0.5rem",
+                            top: "100%"
+                        }}
                     >
                         {suggestions.map((suggestion, index) => (
                             <motion.div
@@ -262,18 +267,18 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.05 }}
-                                className="flex items-center px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                className="flex items-center px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                             >
                                 <div 
-                                    className="flex-1 flex items-center cursor-pointer"
+                                    className="flex-1 flex items-center"
                                     onClick={() => handleSuggestionClick(suggestion)}
                                 >
                                     <Search className="w-4 h-4 mr-2 text-gray-400" />
-                                    <span>{suggestion}</span>
+                                    <span className="truncate">{suggestion}</span>
                                 </div>
                                 <button
                                     onClick={() => handleSuggestionClick(suggestion)}
-                                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full ml-2"
                                 >
                                     <ArrowUpRight className="w-4 h-4 text-gray-400" />
                                 </button>
@@ -282,7 +287,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     </motion.div>
                 )}
             </AnimatePresence>
-        </>
+        </div>
     )
 }
 
