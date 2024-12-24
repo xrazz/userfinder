@@ -168,7 +168,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     return (
         <div className="relative w-full">
             <div className={`w-full border rounded-xl overflow-hidden transition-all duration-300 bg-white/50 dark:bg-gray-900 ${
-                isSearchFocused ? 'border-primary shadow-lg' : 'border-gray-200 dark:border-gray-800'
+                isSearchFocused ? 'border-gray-500 shadow-none' : 'border-gray-200 dark:border-gray-800'
+                // 'border-gray-200 dark:border-gray-800'
             } ${className}`}>
                 <div className="flex items-center h-full">
                     <div className="flex-grow relative flex items-center">
@@ -194,10 +195,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     <div className="flex items-stretch h-full divide-x divide-gray-200 dark:divide-gray-800">
                         <div className="px-2 flex items-center">
                             <Select value={selectedFileType} onValueChange={handleFileTypeChange}>
-                                <SelectTrigger className="w-12 border-0 bg-transparent focus:ring-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
+                                <SelectTrigger className="w-full border-0 bg-transparent focus:ring-0 shadow-none hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
                                     <div className="flex items-center gap-2">
                                         <FileTypeIcon type={selectedFileType} />
-                                        <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" />
+                                        {/* <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" /> */}
                                     </div>
                                 </SelectTrigger>
                                 <SelectContent className="w-48">
@@ -238,7 +239,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"
+                        className="m-3 flex items-center gap-2 text-xs text-muted-foreground"
                     >
                         <FileTypeIcon type={selectedFileType} />
                         <span>

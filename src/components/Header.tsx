@@ -35,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
 
     useEffect(() => {
         const creditManager = getCreditManager(email)
-        
+
         const updateCredits = async () => {
             await creditManager.resetDailyCredits()
             const currentCredits = await creditManager.getCredits()
@@ -62,11 +62,11 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
           <span className="font-bold text-lg">Search</span>
 
                     </div> */}
-                      {/* <Image src="/logo.svg" alt="UserFinder AI Logo" width={30} height={30} /> */}
-                      
+            {/* <Image src="/logo.svg" alt="UserFinder AI Logo" width={30} height={30} /> */}
+
             <div className="flex items-center">
                 <Link href="/" className="flex items-center gap-1.5 select-none group">
-                    <span 
+                    <span
                         className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-indigo-500 to-primary"
                         style={{
                             ...gradientTextStyle,
@@ -77,30 +77,32 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
                 </Link>
             </div>
             <div className="flex items-center gap-2 md:gap-4">
-                <div className="hidden sm:flex items-center gap-2">
-                    <Badge 
-                        variant={credits <= 1 ? "destructive" : "outline"} 
-                        className="flex items-center gap-1"
-                    >
-                        <Sparkles className="h-3 w-3" />
-                        {credits} credit{credits !== 1 ? 's' : ''} {!userId && 'remaining'}
-                    </Badge>
-                    {userId && subscriptionStatus === 'active' && subscriptionPlan !== 'Pro' && (
-                        <Button 
-                            variant="premium"
-                            size="sm"
-                            className="text-xs bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-1.5"
-                            onClick={() => router.push('/subscription')}
-                        >
-                            <Crown className="h-3.5 w-3.5 text-yellow-200" />
-                            <span className="hidden sm:inline">Get 100 credits daily</span>
-                            <span className="sm:hidden">Upgrade</span>
-                        </Button>
-                    )}
-                </div>
+            <div className="flex items-center gap-4">
+      <Badge 
+        variant={credits <= 1 ? "destructive" : "secondary"}
+        className={`px-2 py-1 text-xs font-medium ${
+          credits <= 1 ? 'bg-red-200 text-red-700 hover:bg-red-300' : ''
+        }`}
+      >
+        <Sparkles className="mr-1 h-3 w-3" />
+        {credits} credit{credits !== 1 ? 's' : ''} {!userId && 'remaining'}
+      </Badge>
+      {userId && subscriptionStatus === 'active' && subscriptionPlan !== 'Pro' && (
+        <Button 
+          variant="outline"
+          size="sm"
+          className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white hover:from-violet-600 hover:to-fuchsia-600 transition-all duration-300 shadow-md hover:shadow-lg"
+          onClick={() => router.push('/subscription')}
+        >
+          <Crown className="mr-1.5 h-3.5 w-3.5 text-yellow-200" />
+          <span className="hidden sm:inline">Upgrade to Pro</span>
+          <span className="sm:hidden">Pro</span>
+        </Button>
+      )}
+    </div>
                 {userId ? (
                     <>
-                        <Button onClick={() => router.push('/bookmarks')} variant="default" size="icon" className="rounded-full">
+                        <Button onClick={() => router.push('/bookmarks')} variant="ghost" size="icon" className="rounded-full">
                             <Bookmark className="h-5 w-5" />
                             <span className="sr-only">Bookmarks</span>
                         </Button>
@@ -128,15 +130,15 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
                                 </div>
                                 <div className="mt-5 pt-5 border-t space-y-3">
                                     <div className="sm:hidden space-y-3">
-                                        <Badge 
-                                            variant={credits <= 1 ? "destructive" : "outline"} 
+                                        <Badge
+                                            variant={credits <= 1 ? "destructive" : "outline"}
                                             className="flex items-center gap-1 w-full justify-center py-1"
                                         >
                                             <Sparkles className="h-3 w-3" />
                                             {credits} credit{credits !== 1 ? 's' : ''} remaining
                                         </Badge>
                                         {userId && subscriptionStatus === 'active' && subscriptionPlan !== 'Pro' && (
-                                            <Button 
+                                            <Button
                                                 variant="premium"
                                                 size="sm"
                                                 className="w-full text-xs bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5"

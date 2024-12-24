@@ -77,7 +77,7 @@ const parseHtmlContent = (content: string): React.ReactNode => {
                 </a>
             );
         }
-        
+
         // Handle strong tags (bold)
         if (part.startsWith('<strong>')) {
             const textMatch = part.match(/>([^<]*)</) || [];
@@ -307,11 +307,11 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
         const imgRegex = /<img[^>]+src="([^">]+)"/g;
         const urls: string[] = [];
         let match;
-        
+
         while ((match = imgRegex.exec(content)) !== null) {
             urls.push(match[1]);
         }
-        
+
         return urls;
     }
 
@@ -319,13 +319,13 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
     const formatMessageWithClickableQuestions = (content: string): React.ReactNode => {
         // First extract any images from the content
         const imageUrls = extractImageUrls(content);
-        
+
         // Remove the img tags from content but keep the rest
         const cleanContent = content.replace(/<img[^>]+>/g, '{{IMAGE_PLACEHOLDER}}');
-        
+
         let imageIndex = 0;
         let isInQuestionsSection = false;  // Add this flag
-        
+
         return cleanContent.split('\n').map((line, index) => {
             if (line.includes('{{IMAGE_PLACEHOLDER}}')) {
                 const imageUrl = imageUrls[imageIndex++];
@@ -450,7 +450,7 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
                             </p>
                         </div>
                     </div>
-                    
+
                     {/* Add Visit Page button */}
                     <a
                         href={post.link}
@@ -481,11 +481,10 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
                                     className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
                                     <div
-                                        className={`rounded-lg px-6 py-4 ${
-                                            message.sender === 'user'
+                                        className={`rounded-lg px-6 py-4 ${message.sender === 'user'
                                                 ? 'bg-primary text-primary-foreground ml-4 max-w-[80%]'
                                                 : 'bg-muted mr-4 w-full'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="text-sm whitespace-pre-wrap">
                                             {formatMessageWithClickableQuestions(message.content)}
@@ -678,12 +677,12 @@ ${searchResults.map(result =>
     const generateSummary = async (prompt?: string) => {
         if (credits <= 0) {
             toast.error(
-                "You're out of credits!", 
+                "You're out of credits!",
                 {
                     description: (
                         <div className="flex items-center gap-1">
                             <span>Upgrade to </span>
-                            <button 
+                            <button
                                 onClick={() => window.location.href = '/subscription'}
                                 className="font-medium text-purple-500 hover:text-purple-600 underline underline-offset-2"
                             >
@@ -822,12 +821,12 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
     const handleAIClick = (post: Post) => {
         if (credits <= 0) {
             toast.error(
-                "You're out of credits!", 
+                "You're out of credits!",
                 {
                     description: (
                         <div className="flex items-center gap-1">
                             <span>Upgrade to </span>
-                            <button 
+                            <button
                                 onClick={() => window.location.href = '/subscription'}
                                 className="font-medium text-purple-500 hover:text-purple-600 underline underline-offset-2"
                             >
@@ -884,9 +883,9 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                             <div className="p-6">
                                 <div className="prose dark:prose-invert max-w-none">
                                     <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
+                                        <div className="flex items-center gap-2 text-sm ">
                                             <SparklesIcon className={`w-5 h-5 ${isGenerating ? 'animate-pulse' : ''}`} />
-                                            <span className="font-medium">AI Analysis</span>
+                                            <span className="font-semibold">AI Analysis</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Button
@@ -899,11 +898,11 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                                         timestamp: new Date().toISOString(),
                                                     }]);
                                                 }}
-                                                variant="outline"
+                                                variant="default"
                                                 size="sm"
-                                                className="text-xs border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300"
+                                                className="text-xs font-semibold"
                                             >
-                                                <MessageSquareIcon className="w-3.5 h-3.5 mr-1.5" />
+                                                <MessageSquareIcon className="w-3.5 h-3.5 mr-1.5 font-semibold" />
                                                 Continue in Chat
                                             </Button>
                                             <Button
@@ -912,7 +911,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                                 }}
                                                 variant="ghost"
                                                 size="sm"
-                                                className="text-xs text-purple-700 dark:text-purple-300"
+                                                className="text-xs font-semibold"
                                                 disabled={isGenerating}
                                             >
                                                 New Analysis
@@ -1007,8 +1006,8 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                                         }`}
                                                 >
                                                     <div className="text-sm whitespace-pre-wrap prose dark:prose-invert max-w-none prose-sm">
-                                                        {message.sender === 'user' 
-                                                            ? message.content 
+                                                        {message.sender === 'user'
+                                                            ? message.content
                                                             : parseHtmlContent(message.content)
                                                         }
                                                     </div>

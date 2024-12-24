@@ -552,7 +552,7 @@ const handleSearch = async (queryToUse?: string) => {
                                     selectedFileType={selectedFileType}
                                     fileTypes={fileTypes}
                                     className={`transition-all duration-300 ${
-                                        isScrolled ? 'h-10' : 'h-12'
+                                        isScrolled ? 'h-20' : 'h-12'
                                     }`}
                                     showSettings={isScrolled}
                                     onSettingsClick={() => {
