@@ -78,15 +78,17 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
             </div>
             <div className="flex items-center gap-2 md:gap-4">
             <div className="flex items-center gap-4">
-      <Badge 
-        variant={credits <= 1 ? "destructive" : "secondary"}
-        className={`px-2 py-1 text-xs font-medium ${
-          credits <= 1 ? 'bg-red-200 text-red-700 hover:bg-red-300' : ''
-        }`}
-      >
-        <Sparkles className="mr-1 h-3 w-3" />
-        {credits} credit{credits !== 1 ? 's' : ''} {!userId && 'remaining'}
-      </Badge>
+      {email && (
+        <Badge 
+          variant={credits <= 1 ? "destructive" : "secondary"}
+          className={`px-2 py-1 text-xs font-medium ${
+            credits <= 1 ? 'bg-red-200 text-red-700 hover:bg-red-300' : ''
+          }`}
+        >
+          <Sparkles className="mr-1 h-3 w-3" />
+          {credits} credit{credits !== 1 ? 's' : ''} remaining
+        </Badge>
+      )}
       {userId && subscriptionStatus === 'active' && subscriptionPlan !== 'Pro' && (
         <Button 
           variant="outline"

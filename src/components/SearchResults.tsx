@@ -47,6 +47,21 @@ interface Message {
     timestamp: string;
 }
 
+interface ScrapedContent {
+    mainContent: string;
+    images?: string[];
+    title?: string;
+    description?: string;
+    url?: string;
+}
+
+interface MultimediaContent {
+    type: 'video' | 'image' | 'social' | 'audio';
+    url: string;
+    embedUrl?: string;
+    platform?: string;
+}
+
 // Aggiorna la funzione parseHtmlContent
 const parseHtmlContent = (content: string): React.ReactNode => {
     if (!content) return null;
@@ -494,6 +509,199 @@ const formatDomain = (domain: string): string => {
     return domain.replace(/^www\./, '')
 }
 
+// Add this helper function to get multimedia content info
+const getMultimediaInfo = (url: string): MultimediaContent | null => {
+    const urlLower = url.toLowerCase();
+    
+    // YouTube - using privacy-enhanced mode
+    if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
+        const videoId = urlLower.includes('youtube.com') 
+            ? url.split('v=')[1]?.split('&')[0]
+            : url.split('youtu.be/')[1]?.split('?')[0];
+        
+        if (videoId) {
+            return {
+                type: 'video',
+                url: url,
+                // Use youtube-nocookie.com for privacy-enhanced mode
+                embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
+                platform: 'youtube'
+            };
+        }
+    }
+    
+    // Vimeo
+    if (urlLower.includes('vimeo.com')) {
+        const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
+        if (videoId) {
+            return {
+                type: 'video',
+                url: url,
+                embedUrl: `https://player.vimeo.com/video/${videoId}`,
+                platform: 'vimeo'
+            };
+        }
+    }
+
+    // Social Media
+    if (urlLower.includes('twitter.com')) {
+        return {
+            type: 'social',
+            url: url,
+            platform: 'twitter'
+        };
+    }
+
+    if (urlLower.includes('instagram.com')) {
+        return {
+            type: 'social',
+            url: url,
+            platform: 'instagram'
+        };
+    }
+
+    // Images
+    if (['.jpg', '.jpeg', '.png', '.gif'].some(ext => urlLower.includes(ext))) {
+        return {
+            type: 'image',
+            url: url
+        };
+    }
+
+    return null;
+};
+
+// Add this new component for rendering multimedia content
+const MultimediaPreview: React.FC<{ content: MultimediaContent }> = ({ content }) => {
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
+
+    if (content.type === 'video') {
+        if (hasError) {
+            // Fallback view when embed fails
+            return (
+                <a
+                    href={content.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full p-4 mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-lg">
+                            {content.platform === 'youtube' ? (
+                                <svg className="w-6 h-6 text-red-600" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                                </svg>
+                            ) : (
+                                <svg className="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M23.977 6.416c-.105 2.338-1.739 5.543-4.894 9.609-3.268 4.247-6.026 6.37-8.29 6.37-1.409 0-2.578-1.294-3.553-3.881L5.322 11.4C4.603 8.816 3.834 7.522 3.01 7.522c-.179 0-.806.378-1.881 1.132L0 7.197c1.185-1.044 2.351-2.084 3.501-3.128C5.08 2.701 6.266 1.984 7.055 1.91c1.867-.18 3.016 1.1 3.447 3.838.465 2.953.789 4.789.971 5.507.539 2.45 1.131 3.674 1.776 3.674.502 0 1.256-.796 2.265-2.385 1.004-1.589 1.54-2.797 1.612-3.628.144-1.371-.395-2.061-1.614-2.061-.574 0-1.167.121-1.777.391 1.186-3.868 3.434-5.757 6.762-5.637 2.473.06 3.628 1.664 3.493 4.797l-.013.01z"/>
+                                </svg>
+                            )}
+                        </div>
+                        <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                Watch on {content.platform === 'youtube' ? 'YouTube' : 'Vimeo'}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                Click to open in a new tab
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            );
+        }
+
+        return (
+            <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 mb-4">
+                {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    </div>
+                )}
+                <iframe
+                    src={content.embedUrl}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    onLoad={() => setIsLoading(false)}
+                    onError={() => {
+                        setIsLoading(false);
+                        setHasError(true);
+                    }}
+                />
+            </div>
+        );
+    }
+
+    if (content.type === 'image') {
+        if (hasError) {
+            return (
+                <a
+                    href={content.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full p-4 mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-lg">
+                            <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                View Image
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                Click to open in a new tab
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            );
+        }
+
+        return (
+            <div className="relative w-full max-h-[300px] rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 mb-4">
+                {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    </div>
+                )}
+                <img
+                    src={content.url}
+                    alt="Content preview"
+                    className="w-full h-full object-contain"
+                    onLoad={() => setIsLoading(false)}
+                    onError={() => {
+                        setIsLoading(false);
+                        setHasError(true);
+                    }}
+                />
+            </div>
+        );
+    }
+
+    return null;
+};
+
+// Add this helper function at the top of the file
+const getFaviconUrl = (url: string) => {
+    try {
+        const hostname = new URL(url).hostname;
+        // Use a try-catch when creating the image
+        const img = new Image();
+        img.onerror = () => {
+            // Silently fail - no console error
+            img.src = '/favicon.ico'; // fallback to default favicon
+        };
+        return `https://www.google.com/s2/favicons?sz=16&domain_url=${hostname}`;
+    } catch (e) {
+        // Silently return default favicon
+        return '/favicon.ico';
+    }
+};
+
 export const SearchResults: React.FC<SearchResultsProps> = ({
     platform,
     posts,
@@ -525,6 +733,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     const [selectedPosts, setSelectedPosts] = useState<Post[]>([])
     const [isAnalyzing, setIsAnalyzing] = useState(false)
     const [batchAnalysisDialog, setBatchAnalysisDialog] = useState(false)
+    const [showContentDialog, setShowContentDialog] = useState(false);
+    const [scrapedContent, setScrapedContent] = useState<ScrapedContent>({ mainContent: '' });
+    const [isLoadingContent, setIsLoadingContent] = useState(false);
 
     const scrollToBottom = () => {
         if (scrollAreaRef.current) {
@@ -802,13 +1013,84 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
         onCreditUpdate?.();
     }
 
-    const handleAddToAI = (post: Post) => {
+    const handleAddToAI = async (post: Post) => {
+        // If already selected, allow removal regardless of content type
         if (selectedPosts.some(p => p.link === post.link)) {
-            setSelectedPosts(prev => prev.filter(p => p.link !== post.link))
-        } else {
-            setSelectedPosts(prev => [...prev, post])
+            setSelectedPosts(prev => prev.filter(p => p.link !== post.link));
+            return;
         }
-    }
+
+        // Check if it's a video URL first
+        const multimediaInfo = getMultimediaInfo(post.link);
+        if (multimediaInfo?.type === 'video') {
+            toast.error("Content not available", {
+                description: "Video content cannot be used for AI analysis.",
+                duration: 3000,
+            });
+            return;
+        }
+
+        // Check for unsupported content types
+        const url = post.link.toLowerCase();
+        const unsupportedPatterns = [
+            { pattern: 'youtube.com', message: 'YouTube videos cannot be analyzed' },
+            { pattern: 'youtu.be', message: 'YouTube videos cannot be analyzed' },
+            { pattern: 'vimeo.com', message: 'Video content cannot be analyzed' },
+            { pattern: 'twitter.com', message: 'Twitter/X posts cannot be analyzed' },
+            { pattern: 'instagram.com', message: 'Instagram content cannot be analyzed' },
+            { pattern: 'tiktok.com', message: 'TikTok content cannot be analyzed' },
+            { pattern: 'facebook.com', message: 'Facebook content cannot be analyzed' },
+            { pattern: 'linkedin.com', message: 'LinkedIn content cannot be analyzed' },
+            { pattern: 'spotify.com', message: 'Audio content cannot be analyzed' },
+            { pattern: '.mp4', message: 'Video files cannot be analyzed' },
+            { pattern: '.mp3', message: 'Audio files cannot be analyzed' },
+            { pattern: '.wav', message: 'Audio files cannot be analyzed' },
+            { pattern: '.jpg', message: 'Image files cannot be analyzed' },
+            { pattern: '.jpeg', message: 'Image files cannot be analyzed' },
+            { pattern: '.png', message: 'Image files cannot be analyzed' },
+            { pattern: '.gif', message: 'Image files cannot be analyzed' }
+        ];
+
+        // Check if URL matches any unsupported pattern
+        const unsupportedMatch = unsupportedPatterns.find(({ pattern }) => url.includes(pattern));
+        if (unsupportedMatch) {
+            toast.error("Content not supported", {
+                description: unsupportedMatch.message,
+                duration: 3000,
+            });
+            return;
+        }
+
+        // Check content availability before adding
+        try {
+            const response = await axios.post('/api/scrape', {
+                url: post.link,
+                email: email
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${email}`
+                }
+            });
+
+            if (!response.data.summary?.mainContent || 
+                response.data.summary.mainContent.trim().length < 50) {
+                toast.error("Content not available", {
+                    description: "This content cannot be used for AI analysis.",
+                    duration: 3000,
+                });
+                return;
+            }
+
+            setSelectedPosts(prev => [...prev, post]);
+
+        } catch (error) {
+            console.error('Error checking content:', error);
+            toast.error("Content check failed", {
+                description: "Unable to verify content availability for AI analysis.",
+                duration: 3000,
+            });
+        }
+    };
 
     const handleBatchAnalysis = async () => {
         if (credits <= 0) {
@@ -896,6 +1178,110 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
             setIsAnalyzing(false)
         }
     }
+
+    const handleViewContent = async (post: Post) => {
+        // Check if it's a video URL first
+        const multimediaInfo = getMultimediaInfo(post.link);
+        if (multimediaInfo?.type === 'video') {
+            toast.error("Content not available", {
+                description: "Video content cannot be viewed in this format.",
+                duration: 3000,
+            });
+            return;
+        }
+
+        setIsLoadingContent(true);
+        try {
+            const response = await axios.post('/api/scrape', {
+                url: post.link,
+                email: email
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${email}`
+                }
+            });
+
+            setScrapedContent({
+                mainContent: response.data.summary?.mainContent || 'Content not available',
+                images: response.data.summary?.images || [],
+                title: response.data.summary?.title,
+                description: response.data.summary?.description
+            });
+            setShowContentDialog(true);
+        } catch (error) {
+            console.error('Error fetching content:', error);
+            toast.error("Failed to load content", {
+                description: "Could not retrieve the page content. Please try again.",
+            });
+        } finally {
+            setIsLoadingContent(false);
+        }
+    };
+
+    // Content Dialog Component
+    const ContentDialog = ({ 
+        isOpen, 
+        onClose, 
+        content 
+    }: { 
+        isOpen: boolean, 
+        onClose: () => void, 
+        content: ScrapedContent 
+    }) => {
+        return (
+            <Dialog open={isOpen} onOpenChange={onClose}>
+                <DialogContent className="w-screen h-screen max-w-4xl max-h-[90vh] p-0 overflow-hidden flex flex-col bg-white dark:bg-gray-900">
+                    {/* Header */}
+                    <div className="p-4 border-b flex items-center justify-between bg-background sticky top-0 z-10">
+                        <div className="flex-1 min-w-0">
+                            <DialogTitle className="text-xl font-semibold truncate pr-4">
+                                {content.title || 'Article Content'}
+                            </DialogTitle>
+                            {content.description && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    {content.description}
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" onClick={onClose}>
+                                <XIcon className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <ScrollArea className="flex-1">
+                        <div className="max-w-3xl mx-auto px-8 py-6">
+                            <article className="prose prose-gray dark:prose-invert max-w-none">
+                                <div 
+                                    className="text-base text-gray-700 dark:text-gray-300 leading-relaxed"
+                                    dangerouslySetInnerHTML={{ 
+                                        __html: content.mainContent
+                                    }} 
+                                />
+                            </article>
+                        </div>
+                    </ScrollArea>
+
+                    {/* Footer */}
+                    <div className="p-4 border-t bg-background">
+                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                            <a 
+                                href={content.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 hover:text-primary transition-colors"
+                            >
+                                <Link2 className="w-4 h-4" />
+                                <span>View original article</span>
+                            </a>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
+    };
 
     if (posts.length === 0) {
         return <div></div>
@@ -1133,8 +1519,8 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                             className="min-h-[44px] max-h-32 resize-none"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter' && !e.shiftKey) {
-                                                    e.preventDefault();
-                                                    handleSendMessage();
+                                                    e.preventDefault()
+                                                    handleSendMessage()
                                                 }
                                             }}
                                         />
@@ -1182,9 +1568,15 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-full">
                                         <img
-                                            src={`https://www.google.com/s2/favicons?sz=16&domain_url=${new URL(post.link).hostname}`}
+                                            src={getFaviconUrl(post.link)}
                                             alt=""
                                             className="w-4 h-4"
+                                            onError={(e) => {
+                                                // Silently handle error by setting default favicon
+                                                e.currentTarget.src = '/favicon.ico';
+                                                // Prevent further error events
+                                                e.currentTarget.onerror = null;
+                                            }}
                                         />
                                         <span>{new URL(post.link).hostname.replace('www.', '')}</span>
                                     </div>
@@ -1203,6 +1595,11 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                     </a>
                                 </h3>
 
+                                {/* Add Multimedia Preview */}
+                                {getMultimediaInfo(post.link) && (
+                                    <MultimediaPreview content={getMultimediaInfo(post.link)!} />
+                                )}
+
                                 {/* Snippet Section - remains the same */}
                                 <p className="text-sm text-muted-foreground leading-relaxed">
                                     {post.snippet}
@@ -1214,26 +1611,39 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                         {/* Mobile-first order */}
                                         <button
                                             onClick={() => handleAddToAI(post)}
+                                            disabled={getMultimediaInfo(post.link)?.type === 'video' && !selectedPosts.some(p => p.link === post.link)}
                                             className={`flex-1 sm:flex-none text-sm px-4 py-2 rounded-full 
                                                 ${selectedPosts.some(p => p.link === post.link)
                                                     ? 'bg-primary text-white'
-                                                    : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                                                    : getMultimediaInfo(post.link)?.type === 'video'
+                                                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                                                        : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                                                 } 
                                                 flex items-center justify-center gap-2 transition-colors order-1 sm:order-1`}
                                         >
                                             {selectedPosts.some(p => p.link === post.link) ? (
                                                 <XIcon className="w-4 h-4" />
                                             ) : (
-                                                <Plus className="w-4 h-4" />
+                                                <SparklesIcon className="w-4 h-4" />
                                             )}
                                             <span>{selectedPosts.some(p => p.link === post.link) ? 'Remove' : 'Sources'}</span>
                                         </button>
                                         <button
-                                            onClick={() => handleAIClick(post)}
-                                            className="flex-1 sm:flex-none text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-2 transition-colors order-2 sm:order-2"
+                                            onClick={() => handleViewContent(post)}
+                                            disabled={getMultimediaInfo(post.link)?.type === 'video'}
+                                            className={`flex-1 sm:flex-none text-sm px-4 py-2 rounded-full 
+                                                ${getMultimediaInfo(post.link)?.type === 'video' 
+                                                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                                                    : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                                                } 
+                                                flex items-center justify-center gap-2 transition-colors order-2 sm:order-2`}
                                         >
-                                            <SparklesIcon className="w-4 h-4" />
-                                            <span>AI</span>
+                                            {isLoadingContent ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <ChevronDownIcon className="w-4 h-4" />
+                                            )}
+                                            <span>Expand</span>
                                         </button>
                                         <button
                                             onClick={() => onBookmark(post)}
@@ -1400,7 +1810,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     placeholder="Ask a question about the selected items..."
-                                    className="min-h-[60px] max-h-[120px] resize-none"
+                                    className="min-h-[60px] max-h-32 resize-none"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
                                             e.preventDefault()
@@ -1425,6 +1835,13 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                     </DialogContent>
                 </Dialog>
             )}
+
+            {/* Add the ContentDialog component */}
+            <ContentDialog 
+                isOpen={showContentDialog} 
+                onClose={() => setShowContentDialog(false)} 
+                content={scrapedContent} 
+            />
         </div>
     )
 } 
