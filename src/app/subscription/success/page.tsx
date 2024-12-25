@@ -108,7 +108,7 @@ function SuccessContent() {
           <div className="space-y-2">
             <h3 className="font-medium">What's included:</h3>
             <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-              <li>100 AI credits daily</li>
+              <li>50 AI credits daily</li>
               <li>Advanced AI summaries</li>
               <li>Priority support</li>
               <li>Credits reset every day</li>
@@ -116,7 +116,7 @@ function SuccessContent() {
           </div>
           <Alert>
             <AlertDescription>
-              Your credits have been reset to 100. They will automatically reset every day at midnight.
+              Your credits have been reset to 50. They will automatically reset every day at midnight.
             </AlertDescription>
           </Alert>
           <Button 

@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Card } from "@/components/ui/card"
-import { SparklesIcon, MessageSquareIcon, XIcon, Bookmark, Link2, MessageSquare, SendHorizontal, ArrowLeft, Loader2, ChevronUpIcon, ChevronDownIcon, ArrowUpRight, ThumbsUp, ThumbsDown, MessageCircle, Search } from 'lucide-react'
+import { SparklesIcon, MessageSquareIcon, XIcon, Bookmark, Link2, MessageSquare, SendHorizontal, ArrowLeft, Loader2, ChevronUpIcon, ChevronDownIcon, ArrowUpRight, ThumbsUp, ThumbsDown, MessageCircle, Search, Plus } from 'lucide-react'
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -17,6 +17,7 @@ interface Post {
     link: string
     snippet: string
     searchQuery?: string
+    selected?: boolean
 }
 
 interface SearchResultsProps {
@@ -148,41 +149,41 @@ const PresetQuestionButton = ({ question, onClick, disabled }: PresetQuestion) =
     </Button>
 )
 
-// Add this helper function to format messages with markdown-style content
+// Update the formatMessage function to better handle HTML content
 const formatMessage = (content: string): React.ReactNode => {
+    // If the content contains any HTML tags, render it directly
+    if (/<[^>]*>/g.test(content)) {
+        // Clean up any markdown-style formatting that might be mixed with HTML
+        const cleanedContent = content
+            // Replace markdown-style bold with HTML strong tags
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // Replace markdown-style bullet points with HTML list items
+            .replace(/^• (.*?)$/gm, '<li class="flex gap-2"><span class="text-primary">•</span><span>$1</span></li>');
+
+        return (
+            <div 
+                className="prose dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: cleanedContent }} 
+            />
+        );
+    }
+
+    // Fallback to plain text formatting
     return content.split('\n').map((line, index) => {
-        if (line.startsWith('**') && line.endsWith('**')) {
-            // Section headers
-            return (
-                <h3 key={index} className="text-base font-semibold mt-4 mb-2 text-primary">
-                    {line.replace(/\*\*/g, '')}
-                </h3>
-            )
-        } else if (line.startsWith('• ')) {
-            // Bullet points
+        if (line.startsWith('• ')) {
             return (
                 <div key={index} className="ml-4 my-1 flex items-start">
                     <span className="mr-2 text-primary">•</span>
                     <span>{line.substring(2)}</span>
                 </div>
-            )
-        } else if (line.startsWith('💡') || line.startsWith('📄') || line.startsWith('❓') || line.startsWith('ℹ️')) {
-            // Emoji headers
-            return (
-                <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
-                    <span>{line.charAt(0)}</span>
-                    <span>{line.substring(1).trim()}</span>
-                </h3>
-            )
+            );
         } else if (line.trim() === '') {
-            // Empty lines
-            return <div key={index} className="h-2" />
+            return <div key={index} className="h-2" />;
         } else {
-            // Regular text
-            return <p key={index} className="my-1">{line}</p>
+            return <p key={index} className="my-1">{line}</p>;
         }
-    })
-}
+    });
+};
 
 
 
@@ -193,64 +194,78 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
     email?: string,
     onEngage?: (link: string) => void
 }) => {
-    const [messages, setMessages] = React.useState<Message[]>([])
-    const [newMessage, setNewMessage] = React.useState('')
-    const [loading, setLoading] = React.useState(false)
-    const [initialLoading, setInitialLoading] = React.useState(true)
-    const scrollAreaRef = React.useRef<HTMLDivElement>(null)
-    const [contentFetched, setContentFetched] = React.useState(false)
-    const [isApiLoading, setIsApiLoading] = React.useState(false)
-    const contentRef = useRef<string>('')
+    const [messages, setMessages] = React.useState<Message[]>([]);
+    const [newMessage, setNewMessage] = React.useState('');
+    const [loading, setLoading] = React.useState(false);
+    const [initialLoading, setInitialLoading] = React.useState(true);
+    const [isApiLoading, setIsApiLoading] = React.useState(false);
+    const [pageContent, setPageContent] = React.useState<any>(null);
+    const contentRef = useRef<string>('');
 
-    // Modify the initial content fetch
+    // Modify the fetchContent function in useEffect
     React.useEffect(() => {
-        if (isOpen && !contentFetched && !isApiLoading && messages.length === 0) {
-            const fetchContent = async () => {
-                setInitialLoading(true)
-                setIsApiLoading(true)
+        const fetchContent = async () => {
+            if (isOpen && post.link) {
+                setInitialLoading(true);
+                setIsApiLoading(true);
                 try {
                     const response = await axios.post('/api/scrape', {
                         url: post.link,
                         email: email
-                    })
-
-                    if (response.data.summary?.mainContent) {
-                        // Store the content for RAG
-                        contentRef.current = response.data.summary.mainContent
-
-                        // Initial analysis prompt
-                        const aiResponse = await axios.post('/api/rag', {
-                            content: response.data.summary.mainContent,
-                            query: "Provide a clear summary of the main points and key findings from this content.",
-                            url: post.link,
-                            email: email
-                        });
-
-                        if (aiResponse.data.output) {
-                            setMessages([{
-                                id: Date.now(),
-                                content: aiResponse.data.output,
-                                sender: 'ai',
-                                timestamp: new Date().toISOString()
-                            }])
-                            setContentFetched(true)
+                    }, {
+                        headers: {
+                            'Authorization': `Bearer ${email}`
                         }
+                    });
+
+                    // Check if semanticContent is empty
+                    if (!response.data.summary?.mainContent || 
+                        (Array.isArray(response.data.semanticContent) && 
+                         response.data.semanticContent.length === 0)) {
+                        toast.error("Limited AI Analysis", {
+                            description: "Detailed AI information is not available for this content.",
+                            duration: 4000,
+                        });
+                        onClose();
+                        return;
+                    }
+
+                    // Store the content for RAG
+                    contentRef.current = response.data.summary.mainContent;
+                    setPageContent(response.data);
+
+                    // Initial analysis prompt
+                    const aiResponse = await axios.post('/api/rag', {
+                        content: response.data.summary.mainContent,
+                        query: "Provide a clear summary of the main points and key findings from this content.",
+                        url: post.link,
+                        email: email
+                    });
+
+                    if (aiResponse.data.output) {
+                        setMessages([{
+                            id: Date.now(),
+                            content: aiResponse.data.output,
+                            sender: 'ai',
+                            timestamp: new Date().toISOString()
+                        }]);
                     }
                 } catch (error) {
-                    toast.error("Limited AI Analysis", {
-                        description: "Detailed AI information is not available for this directory.",
-                        duration: 4000,
-                    })
-                    onClose()
+                    console.error('Error fetching page content:', error);
+                    toast.error("Error Loading Content", {
+                        description: "Failed to load content details. Please try again.",
+                        duration: 3000,
+                    });
+                    onClose();
                 } finally {
-                    setInitialLoading(false)
-                    setIsApiLoading(false)
+                    setInitialLoading(false);
+                    setIsApiLoading(false);
                 }
             }
+        };
 
-            fetchContent()
-        }
-    }, [isOpen, post.link, email, onClose, contentFetched, isApiLoading, messages.length])
+        fetchContent();
+    }, [isOpen, post.link, email, onClose]);
 
     // Modify the message handling to use RAG
     const handleSendMessage = async () => {
@@ -317,104 +332,31 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
 
     // Update the formatMessageWithClickableQuestions function
     const formatMessageWithClickableQuestions = (content: string): React.ReactNode => {
-        // First extract any images from the content
-        const imageUrls = extractImageUrls(content);
+        // If the content contains any HTML tags, render it directly
+        if (/<[^>]*>/g.test(content)) {
+            // Clean up any markdown-style formatting that might be mixed with HTML
+            const cleanedContent = content
+                // Replace markdown-style bold with HTML strong tags
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                // Replace markdown-style bullet points with HTML list items
+                .replace(/^• (.*?)$/gm, '<li class="flex gap-2"><span class="text-primary">•</span><span>$1</span></li>');
 
-        // Remove the img tags from content but keep the rest
-        const cleanContent = content.replace(/<img[^>]+>/g, '{{IMAGE_PLACEHOLDER}}');
+            return (
+                <div 
+                    className="prose dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{ __html: cleanedContent }} 
+                />
+            );
+        }
 
-        let imageIndex = 0;
-        let isInQuestionsSection = false;  // Add this flag
-
-        return cleanContent.split('\n').map((line, index) => {
-            if (line.includes('{{IMAGE_PLACEHOLDER}}')) {
-                const imageUrl = imageUrls[imageIndex++];
-                return (
-                    <div key={`img-${index}`} className="my-4 flex justify-center">
-                        <div className="relative max-w-[90%] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
-                            <img
-                                src={imageUrl}
-                                alt="Content visualization"
-                                className="w-full h-auto"
-                                loading="lazy"
-                            />
-                            <div className="absolute top-2 right-2 flex gap-2">
-                                <button
-                                    onClick={() => window.open(imageUrl, '_blank')}
-                                    className="p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
-                                >
-                                    <ArrowUpRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
-
-            // Check if we're entering the questions section
-            // if (line.includes('**Follow-up Questions**')) {
-            //     isInQuestionsSection = true;
-            //     return (
-            //         <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
-            //             <span>❓</span>
-            //             <span>Follow-up Questions</span>
-            //         </h3>
-            //     );
-            // }
-
-            // Reset the flag if we hit another section
-            // if (line.includes('**') && !line.includes('Follow-up Questions')) {
-            //     isInQuestionsSection = false;
-            // }
-
-            // Handle any text with ** markers
-            if (line.includes('**')) {
-                const parts = line.split('**');
-                return (
-                    <div key={index} className="text-base">
-                        {parts.map((part, i) => {
-                            return i % 2 === 0 ? (
-                                <span key={i}>{part}</span>
-                            ) : (
-                                <span key={i} className="font-semibold text-primary">
-                                    {part}
-                                </span>
-                            );
-                        })}
-                    </div>
-                );
-            } else if (line.startsWith('• ')) {
-                // Make only questions clickable, regular bullet points stay normal
-                if (isInQuestionsSection) {
-                    return (
-                        <button
-                            key={index}
-                            onClick={() => setNewMessage(line.substring(2))}
-                            className="ml-4 my-1 flex items-start w-full rounded-lg p-3 
-                                bg-primary/5 hover:bg-primary/10 
-                                border border-primary/10 hover:border-primary/20
-                                transition-all duration-200 text-left group"
-                        >
-                            <span className="mr-2 text-primary group-hover:scale-110 transition-transform">•</span>
-                            <span className="text-primary/90 group-hover:text-primary transition-colors">
-                                {line.substring(2)}
-                            </span>
-                        </button>
-                    );
-                }
-                // Regular bullet points (non-clickable)
+        // Fallback to plain text formatting
+        return content.split('\n').map((line, index) => {
+            if (line.startsWith('• ')) {
                 return (
                     <div key={index} className="ml-4 my-1 flex items-start">
                         <span className="mr-2 text-primary">•</span>
                         <span>{line.substring(2)}</span>
                     </div>
-                );
-            } else if (line.startsWith('📄') || line.startsWith('❓')) {
-                return (
-                    <h3 key={index} className="text-base font-semibold mt-4 mb-2 flex items-center gap-2">
-                        <span>{line.charAt(0)}</span>
-                        <span>{line.substring(1).trim()}</span>
-                    </h3>
                 );
             } else if (line.trim() === '') {
                 return <div key={index} className="h-2" />;
@@ -580,6 +522,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     const [newMessage, setNewMessage] = React.useState('');
     const scrollAreaRef = React.useRef<HTMLDivElement>(null);
     const [pendingSearch, setPendingSearch] = React.useState(false);
+    const [selectedPosts, setSelectedPosts] = useState<Post[]>([])
+    const [isAnalyzing, setIsAnalyzing] = useState(false)
+    const [batchAnalysisDialog, setBatchAnalysisDialog] = useState(false)
 
     const scrollToBottom = () => {
         if (scrollAreaRef.current) {
@@ -621,16 +566,28 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                     'Authorization': `Bearer ${email}`
                 },
                 body: JSON.stringify({
-                    systemPrompt: `You are having a conversation about search results. Follow these rules:
-- Use information ONLY from the provided sources
-- Citations must be HTML links that open the source URL when clicked
-- Format each citation as: <a href="source_url" target="_blank">[1]</a>
-- Every fact or insight must have at least one citation
-- If information isn't in the sources, say so explicitly
-- Maintain conversation context while providing accurate citations
+                    systemPrompt: `You are a knowledgeable assistant analyzing search results. Format your responses using HTML for better readability:
+
+Key formatting rules:
+- Use semantic HTML tags for structure and styling
+- Wrap section titles in <h3> tags with appropriate classes
+- Use <ul> and <li> for lists
+- Add proper spacing between sections
+- Include citations as clickable links
+- Use emphasis tags for key terms
+- Format code snippets in <pre> and <code> tags if needed
 
 Example format:
-"Based on recent studies <a href="url1" target="_blank">[1]</a>, the key point is X. This relates to your question about Y <a href="url2" target="_blank">[2]</a>..."
+<h3 class="text-lg font-semibold text-primary mb-3">Key Findings</h3>
+<p class="mb-4">The main concept involves <em>key term</em> as shown in <a href="url" target="_blank" class="text-primary hover:underline">[1]</a>.</p>
+
+<h3 class="text-lg font-semibold text-primary mb-3">Detailed Analysis</h3>
+<ul class="space-y-2 mb-4">
+  <li class="flex gap-2">
+    <span class="text-primary">•</span>
+    <span>Finding with <a href="url" target="_blank" class="text-primary hover:underline">[2]</a></span>
+  </li>
+</ul>
 
 Previous summary: "${summary}"
 Context: Search query was "${searchQuery}" with ${posts.length} results.
@@ -638,10 +595,10 @@ Previous messages: ${messages.map(m => `${m.sender}: ${m.content}`).join('\n')}
 
 Available Sources:
 ${searchResults.map(result =>
-                        `[${result.id}] "${result.title}"
+    `[${result.id}] "${result.title}"
     URL: ${result.url}
     Content: ${result.snippet}`
-                    ).join('\n\n')}`,
+).join('\n\n')}`,
                     userPrompt: newMessage,
                     email: email
                 }),
@@ -686,7 +643,7 @@ ${searchResults.map(result =>
                                 onClick={() => window.location.href = '/subscription'}
                                 className="font-medium text-purple-500 hover:text-purple-600 underline underline-offset-2"
                             >
-                                get 100 daily credits
+                                get 50 daily credits
                             </button>
                         </div>
                     ),
@@ -719,9 +676,10 @@ ${searchResults.map(result =>
                     systemPrompt: `You are a skilled content analyzer providing clear, structured insights. Follow these rules:
 - ONLY use information from the provided search results
 - Use HTML/Markdown formatting for better readability:
-  * Use <strong> or ** for section titles and important concepts
-  * Use <em> or * for emphasis and key terms
+  * Use <strong> for section titles and important concepts
+  * Use <em> for emphasis and key terms
   * Use bullet points for lists
+  * never use * or ** for emphasis
   * Add line breaks between sections
   * Use headings like "Key Points:", "Main Findings:", "Analysis:", etc.
 - Citations must be HTML links that open the source URL when clicked
@@ -830,7 +788,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                 onClick={() => window.location.href = '/subscription'}
                                 className="font-medium text-purple-500 hover:text-purple-600 underline underline-offset-2"
                             >
-                                get 100 daily credits
+                                get 50 daily credits
                             </button>
                         </div>
                     ),
@@ -844,8 +802,138 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
         onCreditUpdate?.();
     }
 
+    const handleAddToAI = (post: Post) => {
+        if (selectedPosts.some(p => p.link === post.link)) {
+            setSelectedPosts(prev => prev.filter(p => p.link !== post.link))
+        } else {
+            setSelectedPosts(prev => [...prev, post])
+        }
+    }
+
+    const handleBatchAnalysis = async () => {
+        if (credits <= 0) {
+            toast.error("You're out of credits!", {
+                description: (
+                    <div className="flex items-center gap-1">
+                        <span>Upgrade to </span>
+                        <button
+                            onClick={() => window.location.href = '/subscription'}
+                            className="font-medium text-purple-500 hover:text-purple-600 underline underline-offset-2"
+                        >
+                            get 50 daily credits
+                        </button>
+                    </div>
+                ),
+            })
+            return
+        }
+
+        setIsAnalyzing(true)
+        setBatchAnalysisDialog(true)
+
+        try {
+            // Scrape all selected posts
+            const scrapedResults = await Promise.all(
+                selectedPosts.map(async post => {
+                    try {
+                        const response = await axios.post('/api/scrape', {
+                            url: post.link,
+                            email: email
+                        }, {
+                            headers: {
+                                'Authorization': `Bearer ${email}`
+                            }
+                        })
+                        return {
+                            ...post,
+                            content: response.data.summary?.mainContent || ''
+                        }
+                    } catch (error) {
+                        console.error('Error scraping:', error)
+                        return {
+                            ...post,
+                            content: post.snippet // Fallback to snippet if scraping fails
+                        }
+                    }
+                })
+            )
+
+            // Create a virtual combined URL for batch analysis
+            const batchUrl = `batch-analysis-${Date.now()}`
+
+            // Combine all content for RAG
+            const combinedContent = scrapedResults
+                .map((result, index) => 
+                    `[${index + 1}] "${result.title}"\nURL: ${result.link}\nContent: ${result.content}`
+                ).join('\n\n')
+
+            // Initial analysis
+            const aiResponse = await axios.post('/api/rag', {
+                content: combinedContent,
+                query: "Provide a comprehensive analysis of these sources, highlighting key findings, connections, and insights. Include specific citations to the sources.",
+                email: email,
+                url: batchUrl // Add the required url parameter
+            })
+
+            if (aiResponse.data.output) {
+                setMessages([{
+                    id: Date.now(),
+                    content: aiResponse.data.output,
+                    sender: 'ai',
+                    timestamp: new Date().toISOString()
+                }])
+            }
+
+            onCreditUpdate?.()
+        } catch (error: any) {
+            console.error('Error in batch analysis:', error)
+            toast.error("Error analyzing content", {
+                description: error.response?.data?.error || "Failed to analyze the selected content. Please try again.",
+            })
+            // Close the dialog if there's an error
+            setBatchAnalysisDialog(false)
+        } finally {
+            setIsAnalyzing(false)
+        }
+    }
+
     if (posts.length === 0) {
         return <div></div>
+    }
+
+    function formatMessageWithClickableQuestions(content: string): React.ReactNode {
+        // If the content contains any HTML tags, render it directly
+        if (/<[^>]*>/g.test(content)) {
+            // Clean up any markdown-style formatting that might be mixed with HTML
+            const cleanedContent = content
+                // Replace markdown-style bold with HTML strong tags
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                // Replace markdown-style bullet points with HTML list items
+                .replace(/^• (.*?)$/gm, '<li class="flex gap-2"><span class="text-primary">•</span><span>$1</span></li>');
+
+            return (
+                <div 
+                    className="prose dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{ __html: cleanedContent }} 
+                />
+            );
+        }
+
+        // Fallback to plain text formatting
+        return content.split('\n').map((line, index) => {
+            if (line.startsWith('• ')) {
+                return (
+                    <div key={index} className="ml-4 my-1 flex items-start">
+                        <span className="mr-2 text-primary">•</span>
+                        <span>{line.substring(2)}</span>
+                    </div>
+                );
+            } else if (line.trim() === '') {
+                return <div key={index} className="h-2" />;
+            } else {
+                return <p key={index} className="my-1">{line}</p>;
+            }
+        });
     }
 
     return (
@@ -1125,11 +1213,20 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                     <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                                         {/* Mobile-first order */}
                                         <button
-                                            onClick={() => onCopyUrl(post.link)}
-                                            className="flex-1 sm:flex-none text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-2 transition-colors order-1 sm:order-4"
+                                            onClick={() => handleAddToAI(post)}
+                                            className={`flex-1 sm:flex-none text-sm px-4 py-2 rounded-full 
+                                                ${selectedPosts.some(p => p.link === post.link)
+                                                    ? 'bg-primary text-white'
+                                                    : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                                                } 
+                                                flex items-center justify-center gap-2 transition-colors order-1 sm:order-1`}
                                         >
-                                            <Link2 className="w-4 h-4" />
-                                            <span>Share</span>
+                                            {selectedPosts.some(p => p.link === post.link) ? (
+                                                <XIcon className="w-4 h-4" />
+                                            ) : (
+                                                <Plus className="w-4 h-4" />
+                                            )}
+                                            <span>{selectedPosts.some(p => p.link === post.link) ? 'Remove' : 'Sources'}</span>
                                         </button>
                                         <button
                                             onClick={() => handleAIClick(post)}
@@ -1214,6 +1311,124 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                     </div>
                 </div>
             )}
+
+            {/* Floating AI Analysis Button */}
+            {selectedPosts.length > 0 && (
+                <div className="fixed bottom-6 right-6 z-50">
+                    <div className="relative">
+                        <Button
+                            onClick={handleBatchAnalysis}
+                            disabled={isAnalyzing}
+                            className="rounded-full px-6 py-6 bg-primary text-white hover:bg-primary/90 shadow-lg flex items-center gap-3"
+                        >
+                            {isAnalyzing ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <span>Analyzing {selectedPosts.length} items...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <SparklesIcon className="w-5 h-5" />
+                                    <span>Analyze {selectedPosts.length} items</span>
+                                </>
+                            )}
+                        </Button>
+                        <div className="absolute -top-2 -right-2 bg-primary text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                            {selectedPosts.length}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Batch Analysis Dialog */}
+            {batchAnalysisDialog && (
+                <Dialog open={batchAnalysisDialog} onOpenChange={() => setBatchAnalysisDialog(false)}>
+                    <DialogContent className="w-screen h-screen max-w-full max-h-screen p-0 overflow-hidden flex flex-col">
+                        {/* Header */}
+                        <div className="p-4 border-b flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={() => setBatchAnalysisDialog(false)}
+                                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                                >
+                                    <ArrowLeft className="w-5 h-5" />
+                                </button>
+                                <div>
+                                    <DialogTitle className="text-lg font-medium">
+                                        AI Analysis
+                                    </DialogTitle>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        Analyzing {selectedPosts.length} selected items
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Chat Messages */}
+                        <ScrollArea className="flex-1 p-6 overflow-y-auto">
+                            <div className="max-w-3xl mx-auto space-y-6">
+                                {messages.map((message) => (
+                                    <div
+                                        key={message.id}
+                                        className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    >
+                                        <div
+                                            className={`rounded-lg px-6 py-4 ${message.sender === 'user'
+                                                ? 'bg-primary text-primary-foreground ml-4 max-w-[80%]'
+                                                : 'bg-muted mr-4 w-full'
+                                                }`}
+                                        >
+                                            <div className="text-sm whitespace-pre-wrap">
+                                                {formatMessageWithClickableQuestions(message.content)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {isAnalyzing && (
+                                    <div className="flex items-center gap-3 text-muted-foreground">
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <span>Analyzing content...</span>
+                                    </div>
+                                )}
+                            </div>
+                        </ScrollArea>
+
+                        {/* Input Area */}
+                        <div className="p-4 border-t bg-background">
+                            <div className="max-w-3xl mx-auto flex gap-3">
+                                <Textarea
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    placeholder="Ask a question about the selected items..."
+                                    className="min-h-[60px] max-h-[120px] resize-none"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault()
+                                            handleSendMessage()
+                                        }
+                                    }}
+                                />
+                                <Button
+                                    onClick={handleSendMessage}
+                                    disabled={isAnalyzing || !newMessage.trim()}
+                                    size="icon"
+                                    className="self-end h-[60px] w-[60px]"
+                                >
+                                    {isAnalyzing ? (
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                    ) : (
+                                        <SendHorizontal className="h-5 w-5" />
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     )
 } 
+
+function setPageContent(data: any) {
+    throw new Error('Function not implemented.')
+}

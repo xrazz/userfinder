@@ -63,7 +63,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     typingQuery, 
     setTypingQuery, 
     className = '', 
-    showSettings = false, 
+    showSettings = false,
     onSettingsClick, 
     onFileTypeChange, 
     selectedFileType, 
@@ -169,7 +169,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         <div className="relative w-full">
             <div className={`w-full border rounded-xl overflow-hidden transition-all duration-300 bg-white/50 dark:bg-gray-900 ${
                 isSearchFocused ? 'border-gray-500 shadow-none' : 'border-gray-200 dark:border-gray-800'
-                // 'border-gray-200 dark:border-gray-800'
             } ${className}`}>
                 <div className="flex items-center h-full">
                     <div className="flex-grow relative flex items-center">
@@ -189,16 +188,19 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                 }, 200)
                             }}
                             placeholder={currentPlaceholder}
-                            className="h-12 px-4 border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+                            className={`border-none font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent ${
+                                showSettings ? 'h-9 px-3' : 'h-12 px-4'
+                            }`}
                         />
                     </div>
                     <div className="flex items-stretch h-full divide-x divide-gray-200 dark:divide-gray-800">
-                        <div className="px-2 flex items-center">
+                        <div className={`flex items-center ${showSettings ? 'px-1.5' : 'px-2'}`}>
                             <Select value={selectedFileType} onValueChange={handleFileTypeChange}>
-                                <SelectTrigger className="w-full border-0 bg-transparent focus:ring-0 shadow-none hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
+                                <SelectTrigger className={`w-full border-0 bg-transparent focus:ring-0 shadow-none hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors ${
+                                    showSettings ? 'h-7' : 'h-9'
+                                }`}>
                                     <div className="flex items-center gap-2">
                                         <FileTypeIcon type={selectedFileType} />
-                                        {/* <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" /> */}
                                     </div>
                                 </SelectTrigger>
                                 <SelectContent className="w-48">
@@ -219,23 +221,26 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         </div>
                         <button
                             onClick={handleSearch}
-                            className="px-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
+                            className={`hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center ${
+                                showSettings ? 'px-2' : 'px-3'
+                            }`}
                         >
-                            <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                            <Search className={`text-gray-500 dark:text-gray-400 ${
+                                showSettings ? 'w-4 h-4' : 'w-5 h-5'
+                            }`} />
                         </button>
                         {showSettings && (
                             <button
                                 onClick={onSettingsClick}
-                                className="px-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
+                                className="px-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"
                             >
-                                <Settings2 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                                <Settings2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                             </button>
                         )}
                     </div>
                 </div>
 
-                {/* Aggiungi questo badge informativo */}
-                {selectedFileType !== 'all' && (
+                {selectedFileType !== 'all' && !showSettings && (
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}

@@ -38,20 +38,10 @@ export async function POST(request: Request) {
       }
     } else {
       // Guest user - handle credits through cookies
-      const cookieStore = cookies();
-      const guestCredits = parseInt(cookieStore.get('guestCredits')?.value || '3');
-      
-      if (guestCredits <= 0) {
-        return NextResponse.json(
-          { error: 'No guest credits remaining. Please sign up for more credits.' },
-          { status: 403 }
-        );
-      }
-
-      // Deduct guest credit and update cookie
-      cookieStore.set('guestCredits', (guestCredits - 1).toString(), {
-        expires: new Date(new Date().setHours(24, 0, 0, 0)) // Expires at midnight
-      });
+      return NextResponse.json(
+        { error: 'Please sign in to get 10 free credits daily. Create your account now to start using AI features!' },
+        { status: 403 }
+      );
     }
 
     const openai = new OpenAI({
