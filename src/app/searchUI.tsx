@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { toast, Toaster } from "sonner"
 import { doc, onSnapshot, updateDoc, setDoc, collection, addDoc, Timestamp } from 'firebase/firestore'
 import { auth, db, firebaseAnalytics } from '@/app/firebaseClient'
@@ -143,6 +143,23 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [selectedFileType, setSelectedFileType] = useState("all")
     const router = useRouter()
     const searchParams = useSearchParams()
+    const [searchInProgress, setSearchInProgress] = useState(false)
+    const initialSearchRef = useRef(false)
+    const urlTriggeredRef = useRef(false)
+
+    const reloadPage = useCallback(() => {
+        // Soft reload using router
+        router.refresh()
+        
+        // If we need a hard reload, uncomment this:
+        // window.location.reload()
+    }, [router])
+
+    const autoReload = useCallback((delay: number = 5000) => {
+        setTimeout(() => {
+            reloadPage()
+        }, delay)
+    }, [reloadPage])
 
     useEffect(() => {
         firebaseAnalytics.logPageView('/')
@@ -152,21 +169,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     useEffect(() => {
         if (!email) {
             // Handle non-registered users' credits
-            const guestCredits = Cookies.get('guestCredits');
-            const lastResetDate = Cookies.get('guestCreditsLastReset');
-            const today = new Date().toDateString();
-
-            if (!guestCredits || !lastResetDate || lastResetDate !== today) {
-                Cookies.set('guestCredits', '3', {
-                    expires: new Date(new Date().setHours(24, 0, 0, 0)) // Expires at midnight
-                });
-                Cookies.set('guestCreditsLastReset', today, {
-                    expires: new Date(new Date().setHours(24, 0, 0, 0))
-                });
-                setCredits(3);
-            } else {
-                setCredits(parseInt(guestCredits));
-            }
+            setCredits(0);
             return;
         }
 
@@ -195,12 +198,19 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
                 if (shouldReset) {
                     const membershipLevel = userData.membershipLevel || 'Free';
-                    let creditsToSet = 10;
+                    let creditsToSet = 5;  // Default to Free tier credits
 
-                    if (membershipLevel === 'Free') {
-                        creditsToSet = 10;
-                    } else if (membershipLevel === 'Pro' || membershipLevel === 'Basic') {
-                        creditsToSet = 100;
+                    // Normalize membership level to handle different cases
+                    const normalizedLevel = membershipLevel.toLowerCase();
+                    if (normalizedLevel === 'free') {
+                        creditsToSet = 5;
+                    } else if (normalizedLevel === 'pro' || normalizedLevel === 'basic') {
+                        creditsToSet = 50;
+                    }
+
+                    // If user has an active subscription, ensure they get Pro credits
+                    if (userData?.isSubscribed && userData?.subscriptionStatus === 'active') {
+                        creditsToSet = 50;
                     }
 
                     await updateDoc(userDocRef, {
@@ -332,46 +342,58 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
    // ... existing code ...
 const handleSearch = async (queryToUse?: string) => {
+    // Prevent multiple simultaneous searches
+    if (searchInProgress) {
+        console.log('Search already in progress, skipping...')
+        return
+    }
+
     // Use provided query or current search query
     const queryToSearch = (queryToUse || searchQuery).trim()
-    if (queryToSearch !== '') {
-        // Aggiorna l'URL con il termine di ricerca
-        router.push(`/search?q=${encodeURIComponent(queryToSearch)}`)
-        
+    if (!queryToSearch) return
+
+    try {
+        setSearchInProgress(true)
         setSearchData([])
         setLoading(true)
         setPageNumber(1)
         setHasMore(true)
 
-        try {
-            // Rimosso il controllo dei crediti
-            
-            // Update the search query state if a new query was provided
-            if (queryToUse) {
-                setSearchQuery(queryToUse)
-                setTypingQuery(queryToUse)
-            }
-
-            await trackSearchQuery(queryToSearch)
-// ... existing code ...
-
-                const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
-                const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
-                
-                const finalQuery = buildSearchQuery(queryToSearch, siteToSearch, dateFilterString)
-                console.log('Final query:', finalQuery) // Debug log
-                
-                const Results = await fetchResults(finalQuery, 1)
-                setSearchData(Results)
-                setHasResults(Results.length > 0)
-            } catch (error) {
-                console.error("Error fetching data:", error)
-                setHasResults(false)
-            } finally {
-                setLoading(false)
-            }
+        // Only update search query state if a new query is provided
+        if (queryToUse) {
+            setSearchQuery(queryToUse)
+            setTypingQuery(queryToUse)
         }
+
+        // Only track search if it's not URL-triggered
+        if (!urlTriggeredRef.current) {
+            await trackSearchQuery(queryToSearch)
+        }
+        
+        const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
+        const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
+        
+        const finalQuery = buildSearchQuery(queryToSearch, siteToSearch, dateFilterString)
+        console.log('Final query:', finalQuery)
+        
+        const Results = await fetchResults(finalQuery, 1)
+        setSearchData(Results)
+        setHasResults(Results.length > 0)
+    } catch (error) {
+        console.error("Error fetching data:", error)
+        setHasResults(false)
+        
+        if (error instanceof Error && error.message.includes('network')) {
+            toast.error("Network error. Retrying in 5 seconds...")
+            autoReload(5000)
+        }
+    } finally {
+        setLoading(false)
+        setSearchInProgress(false)
+        // Reset URL trigger flag after search is complete
+        urlTriggeredRef.current = false
     }
+}
 
     const handleLoadMore = async () => {
         if (!isLoadingMore && hasMore) {
@@ -485,22 +507,25 @@ const handleSearch = async (queryToUse?: string) => {
     // Aggiungi questa funzione per gestire il cambio di tipo file
     const handleFileTypeChange = (value: string) => {
         setSelectedFileType(value);
-        // Se c'è già una query, esegui subito una nuova ricerca
-        if (searchQuery.trim()) {
-            handleSearch();
+        // Only trigger a new search if there's an active search query and it's not the first search
+        if (searchQuery.trim() && initialSearchRef.current) {
+            handleSearch(searchQuery);
         }
     }
 
-    // Modifica useEffect per controllare i parametri di ricerca all'avvio
+    // Modify useEffect for URL-based search
     useEffect(() => {
-        if (!searchParams) return
-        const query = searchParams.get('q')
-        if (query) {
+        const query = searchParams?.get('q')
+        
+        // Only proceed if we have a query and haven't done the initial search
+        if (query && !initialSearchRef.current && !searchInProgress) {
+            initialSearchRef.current = true
+            urlTriggeredRef.current = true
             setSearchQuery(query)
             setTypingQuery(query)
             handleSearch(query)
         }
-    }, [])
+    }, [searchParams, searchInProgress])
 
     const handleCreditUpdate = async () => {
         if (!email) return;
@@ -531,7 +556,7 @@ const handleSearch = async (queryToUse?: string) => {
                         isScrolled ? 'translate-y-0 border-b shadow-sm dark:bg-gray-950/95 bg-gray-100/45' : '-translate-y-full'
                     }`}
                 >
-                    <div className="max-w-3xl mx-auto px-3 py-4">
+                    <div className="max-w-3xl mx-auto px-3 py-2">
                         <div className="flex items-center gap-4">
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.8 }}
@@ -551,12 +576,9 @@ const handleSearch = async (queryToUse?: string) => {
                                     onFileTypeChange={handleFileTypeChange}
                                     selectedFileType={selectedFileType}
                                     fileTypes={fileTypes}
-                                    className={`transition-all duration-300 ${
-                                        isScrolled ? 'h-20' : 'h-12'
-                                    }`}
+                                    className="h-10"
                                     showSettings={isScrolled}
                                     onSettingsClick={() => {
-                                        // Programmatically trigger the popover
                                         if (settingsButtonRef) {
                                             settingsButtonRef.click();
                                         }

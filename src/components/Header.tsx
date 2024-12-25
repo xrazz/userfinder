@@ -130,24 +130,15 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
                                 </div>
                                 <div className="mt-5 pt-5 border-t space-y-3">
                                     <div className="sm:hidden space-y-3">
-                                        <Badge
-                                            variant={credits <= 1 ? "destructive" : "outline"}
-                                            className="flex items-center gap-1 w-full justify-center py-1"
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full text-xs bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 animate-gradient"
+                                            onClick={() => router.push('/subscription')}
                                         >
-                                            <Sparkles className="h-3 w-3" />
-                                            {credits} credit{credits !== 1 ? 's' : ''} remaining
-                                        </Badge>
-                                        {userId && subscriptionStatus === 'active' && subscriptionPlan !== 'Pro' && (
-                                            <Button
-                                                variant="premium"
-                                                size="sm"
-                                                className="w-full text-xs bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5"
-                                                onClick={() => router.push('/subscription')}
-                                            >
-                                                <Crown className="h-3.5 w-3.5 text-yellow-200" />
-                                                Get 100 credits daily
-                                            </Button>
-                                        )}
+                                            <Crown className="h-3.5 w-3.5 text-yellow-200" />
+                                            Get 50 credits daily
+                                        </Button>
                                     </div>
                                     <Button variant="ghost" className="w-full justify-start" onClick={onLogout}>
                                         <LogOut className="mr-2 h-4 w-4" />

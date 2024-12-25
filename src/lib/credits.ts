@@ -79,18 +79,25 @@ export class UserCreditManager implements CreditManager {
         lastResetDate.toDateString() !== now.toDateString();
 
       if (shouldReset) {
-        const membershipLevel = userData?.membershipLevel || 'Free';
+        const membershipLevel = userData?.membershipLevel || userData?.subscriptionPlan || 'Free';
         let creditsToSet = 10;
 
-        if (membershipLevel === 'Free') {
-          creditsToSet = 10;
-        } else if (membershipLevel === 'Pro' || membershipLevel === 'Basic') {
-          creditsToSet = 100;
+        // Normalize membership level to handle different cases
+        const normalizedLevel = membershipLevel.toLowerCase();
+        if (normalizedLevel === 'free') {
+          creditsToSet = 5;
+        } else if (normalizedLevel === 'pro' || normalizedLevel === 'basic') {
+          creditsToSet = 50;
+        }
+
+        // If user has an active subscription, ensure they get Pro credits
+        if (userData?.isSubscribed && userData?.subscriptionStatus === 'active') {
+          creditsToSet = 50;
         }
 
         await updateDoc(userDocRef, {
           credits: creditsToSet,
-          lastCreditReset: Timestamp.fromDate(now)  // Store as Firestore Timestamp
+          lastCreditReset: Timestamp.fromDate(now)
         });
       }
     } catch (error) {
@@ -111,41 +118,20 @@ export class UserCreditManager implements CreditManager {
 export class GuestCreditManager implements CreditManager {
   private defaultCredits: number;
   
-  constructor(defaultCredits: number = 3) {
+  constructor(defaultCredits: number = 0) {
     this.defaultCredits = defaultCredits;
   }
 
   async getCredits(): Promise<number> {
-    const credits = parseInt(Cookies.get('guestCredits') || '0');
-    if (!credits) {
-      await this.resetDailyCredits();
-      return this.defaultCredits;
-    }
-    return credits;
+    return 0;
   }
 
   async reduceCredits(): Promise<boolean> {
-    const currentCredits = await this.getCredits();
-    if (currentCredits <= 0) return false;
-    
-    Cookies.set('guestCredits', String(currentCredits - 1), {
-      expires: new Date(new Date().setHours(24, 0, 0, 0))
-    });
-    return true;
+    return false;
   }
 
   async resetDailyCredits(): Promise<void> {
-    const lastResetDate = Cookies.get('guestCreditsLastReset');
-    const today = new Date().toDateString();
-
-    if (!lastResetDate || lastResetDate !== today) {
-      Cookies.set('guestCredits', String(this.defaultCredits), {
-        expires: new Date(new Date().setHours(24, 0, 0, 0))
-      });
-      Cookies.set('guestCreditsLastReset', today, {
-        expires: new Date(new Date().setHours(24, 0, 0, 0))
-      });
-    }
+    // No credits for guests
   }
 }
 

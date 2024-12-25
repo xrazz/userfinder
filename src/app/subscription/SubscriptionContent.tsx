@@ -115,7 +115,7 @@ export default function SubscriptionContent() {
             <ul className="space-y-2">
               <li className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
-                <span>100 AI credits per day</span>
+                <span>50 AI credits per day</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
@@ -144,7 +144,7 @@ export default function SubscriptionContent() {
         </Card>
 
         <div className="text-center text-sm text-muted-foreground">
-          <p>Pro plan: 100 credits per day</p>
+          <p>Pro plan: 50 credits per day</p>
         </div>
       </div>
     </div>
