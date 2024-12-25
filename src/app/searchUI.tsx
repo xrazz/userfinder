@@ -12,7 +12,7 @@ import { LoggedInSettingsPopover, LoggedOutSettingsPopover } from '@/components/
 import TabDataSkeleton from '@/components/searchProgressUI'
 import QueryTutorialModal from './docs/QueryModal'
 import { Button } from "@/components/ui/button"
-import { Settings2, Search, ShieldCheck, ShieldOff } from 'lucide-react'
+import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon } from 'lucide-react'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
 import { motion, useScroll, useTransform } from 'framer-motion'
@@ -20,6 +20,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 
 const MEMBERSHIP_LEVELS = {
     FREE: 'Free',
@@ -146,6 +147,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [searchInProgress, setSearchInProgress] = useState(false)
     const initialSearchRef = useRef(false)
     const urlTriggeredRef = useRef(false)
+    const [showBetaDialog, setShowBetaDialog] = useState(false)
 
     const reloadPage = useCallback(() => {
         // Soft reload using router
@@ -540,6 +542,19 @@ const handleSearch = async (queryToUse?: string) => {
         }
     };
 
+    // Add beta dialog check
+    useEffect(() => {
+        const hasSeenBeta = localStorage.getItem('hasSeenBetaDialog')
+        if (!hasSeenBeta) {
+            setShowBetaDialog(true)
+        }
+    }, [])
+
+    const handleCloseBetaDialog = () => {
+        localStorage.setItem('hasSeenBetaDialog', 'true')
+        setShowBetaDialog(false)
+    }
+
     return (
         <main className="min-h-screen bg-background">
             <Toaster position="bottom-center" />
@@ -550,6 +565,37 @@ const handleSearch = async (queryToUse?: string) => {
                 imageUrl={imageUrl}
                 onLogout={handleLogout}
             />
+
+            {/* Beta Version Dialog */}
+            <Dialog open={showBetaDialog} onOpenChange={handleCloseBetaDialog}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <SparklesIcon className="w-5 h-5 text-purple-500" />
+                            Welcome to the Beta!
+                        </DialogTitle>
+                        <DialogDescription className="pt-2 space-y-2">
+                            <p>
+                                You're among the first to try our new search experience. As we're in beta:
+                            </p>
+                            <ul className="list-disc pl-4 space-y-1">
+                                <li>Some features may be experimental</li>
+                                <li>We're actively improving and adding new capabilities</li>
+                                <li>Your feedback is invaluable to us</li>
+                            </ul>
+                            <p className="pt-2 text-sm text-muted-foreground">
+                                Thank you for being an early user!
+                            </p>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button onClick={handleCloseBetaDialog} className="w-full">
+                            Got it, let's explore!
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {hasResults && (
                 <motion.div
                     className={`fixed top-0 left-0 right-0 z-50 bg-background/55 backdrop-blur-sm transition-all duration-300 ${
