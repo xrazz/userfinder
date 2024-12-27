@@ -12,27 +12,55 @@ const VIEWABLE_TYPES = [
 // Update the content cleaning section
 const cleanContent = ($) => {
   // Remove unnecessary elements
-  $('script, style, iframe, noscript, nav, footer, header, .nav, .menu, .sidebar, .advertisement').remove();
+  $('script, style, iframe, noscript, nav, footer, header, .nav, .menu, .sidebar, .advertisement, .ad, .ads, .social-share, .related-posts, .comments, form').remove();
   
   // Clean up the content structure
-  $('h1').addClass('text-3xl font-bold mb-6 mt-8');
-  $('h2').addClass('text-2xl font-bold mb-4 mt-6');
-  $('h3').addClass('text-xl font-bold mb-3 mt-5');
-  $('p').addClass('mb-4 leading-relaxed');
-  $('ul, ol').addClass('mb-4 pl-6 space-y-2');
-  $('li').addClass('leading-relaxed');
-  $('a').addClass('text-blue-600 hover:underline');
+  $('h1').addClass('text-3xl font-bold mb-6 mt-8 text-gray-900 dark:text-gray-100');
+  $('h2').addClass('text-2xl font-bold mb-4 mt-6 text-gray-900 dark:text-gray-100');
+  $('h3').addClass('text-xl font-bold mb-3 mt-5 text-gray-900 dark:text-gray-100');
+  $('h4').addClass('text-lg font-bold mb-2 mt-4 text-gray-900 dark:text-gray-100');
+  $('h5, h6').addClass('text-base font-bold mb-2 mt-3 text-gray-900 dark:text-gray-100');
   
-  // Add proper spacing
+  $('p').addClass('mb-4 leading-relaxed text-gray-700 dark:text-gray-300');
+  
+  // Lists
+  $('ul, ol').addClass('mb-6 pl-6 space-y-2');
+  $('li').addClass('leading-relaxed text-gray-700 dark:text-gray-300');
+  
+  // Links
+  $('a').addClass('text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline');
+  
+  // Images
+  $('img').addClass('max-w-full h-auto rounded-lg my-4');
+  
+  // Tables
+  $('table').addClass('w-full border-collapse mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden');
+  $('th').addClass('border border-gray-200 dark:border-gray-700 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-left text-gray-700 dark:text-gray-300');
+  $('td').addClass('border border-gray-200 dark:border-gray-700 px-4 py-2 text-gray-700 dark:text-gray-300');
+  
+  // Blockquotes
+  $('blockquote').addClass('border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic my-6 text-gray-700 dark:text-gray-300');
+  
+  // Code blocks
+  $('pre').addClass('bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4 overflow-x-auto');
+  $('code').addClass('font-mono text-sm text-gray-800 dark:text-gray-200');
+  
+  // Add proper spacing for sections
   $('section, article').addClass('mb-8');
   
-  // Format tables
-  $('table').addClass('w-full border-collapse mb-6');
-  $('th, td').addClass('border p-2');
-  
-  // Format blockquotes
-  $('blockquote').addClass('border-l-4 border-gray-300 pl-4 italic my-4');
-  
+  // Clean empty elements and unwanted attributes
+  $('*').each((_, el) => {
+    const $el = $(el);
+    // Remove empty elements except self-closing tags
+    if (!$el.text().trim() && !['img', 'br', 'hr'].includes(el.tagName) && !$el.find('img').length) {
+      $el.remove();
+    }
+    // Remove unwanted attributes
+    ['style', 'onclick', 'onload', 'align', 'bgcolor', 'border'].forEach(attr => {
+      $el.removeAttr(attr);
+    });
+  });
+
   return $;
 };
 

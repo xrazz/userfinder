@@ -1295,11 +1295,35 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                     <ScrollArea className="flex-1">
                         <div className="max-w-3xl mx-auto px-8 py-6">
                             <article className="prose prose-gray dark:prose-invert max-w-none">
+                                {/* Content with proper HTML rendering */}
                                 <div 
-                                    className="text-base text-gray-700 dark:text-gray-300 leading-relaxed"
-                                >
-                                    {formatMessage(content.mainContent)}
-                                </div>
+                                    className="text-base leading-relaxed"
+                                    dangerouslySetInnerHTML={{ 
+                                        __html: content.mainContent 
+                                    }} 
+                                />
+                                
+                                {/* Display images if available */}
+                                {content.images && content.images.length > 0 && (
+                                    <div className="mt-8 space-y-6">
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Related Images</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {content.images.map((img, index) => (
+                                                <div key={index} className="relative aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                                                    <img
+                                                        src={img}
+                                                        alt={`Content image ${index + 1}`}
+                                                        className="object-cover w-full h-full"
+                                                        onError={(e) => {
+                                                            // Hide failed images
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                        }}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </article>
                         </div>
                     </ScrollArea>
