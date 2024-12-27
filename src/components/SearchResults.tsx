@@ -18,6 +18,14 @@ interface Post {
     snippet: string
     searchQuery?: string
     selected?: boolean
+    media?: {
+        type: 'video' | 'image'
+        platform?: string
+        videoId?: string
+        embedUrl?: string
+        thumbnailUrl?: string
+        url?: string
+    }
 }
 
 interface SearchResultsProps {
@@ -180,6 +188,22 @@ const formatMessage = (content: string): React.ReactNode => {
                 className="prose dark:prose-invert max-w-none"
                 dangerouslySetInnerHTML={{ __html: cleanedContent }} 
             />
+        );
+    }
+
+    // Handle bold text with ** marks
+    if (content.includes('**')) {
+        const parts = content.split(/(\*\*.*?\*\*)/g);
+        return (
+            <div>
+                {parts.map((part, index) => {
+                    if (part.startsWith('**') && part.endsWith('**')) {
+                        // Remove the ** marks and wrap in strong tag
+                        return <strong key={index}>{part.slice(2, -2)}</strong>;
+                    }
+                    return <span key={index}>{part}</span>;
+                })}
+            </div>
         );
     }
 
@@ -437,16 +461,31 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
                                     key={message.id}
                                     className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
+                                    {message.sender === 'ai' && (
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src="/logo.svg" />
+                                            <AvatarFallback>AI</AvatarFallback>
+                                        </Avatar>
+                                    )}
                                     <div
                                         className={`rounded-lg px-6 py-4 ${message.sender === 'user'
-                                                ? 'bg-primary text-primary-foreground ml-4 max-w-[80%]'
-                                                : 'bg-muted mr-4 w-full'
-                                            }`}
+                                            ? 'bg-primary text-primary-foreground ml-4 max-w-[80%]'
+                                            : 'bg-muted mr-4 w-full'
+                                        }`}
                                     >
                                         <div className="text-sm whitespace-pre-wrap">
-                                            {formatMessageWithClickableQuestions(message.content)}
+                                            {message.sender === 'user' 
+                                                ? message.content 
+                                                : formatMessage(message.content)
+                                            }
                                         </div>
                                     </div>
+                                    {message.sender === 'user' && (
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src="/placeholder.svg" />
+                                            <AvatarFallback>U</AvatarFallback>
+                                        </Avatar>
+                                    )}
                                 </div>
                             ))
                         )}
@@ -571,10 +610,12 @@ const getMultimediaInfo = (url: string): MultimediaContent | null => {
     return null;
 };
 
-// Add this new component for rendering multimedia content
-const MultimediaPreview: React.FC<{ content: MultimediaContent }> = ({ content }) => {
+// Add this new component for multimedia preview
+const MultimediaPreview: React.FC<{ content: MultimediaContent | undefined }> = ({ content }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
+
+    if (!content) return null;
 
     if (content.type === 'video') {
         if (hasError) {
@@ -1256,10 +1297,9 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                             <article className="prose prose-gray dark:prose-invert max-w-none">
                                 <div 
                                     className="text-base text-gray-700 dark:text-gray-300 leading-relaxed"
-                                    dangerouslySetInnerHTML={{ 
-                                        __html: content.mainContent
-                                    }} 
-                                />
+                                >
+                                    {formatMessage(content.mainContent)}
+                                </div>
                             </article>
                         </div>
                     </ScrollArea>
@@ -1427,7 +1467,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                         summary.split('\n').map((paragraph, idx) => (
                                             paragraph.trim() && (
                                                 <p key={idx} className="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
-                                                    {parseHtmlContent(paragraph)}
+                                                    {formatMessage(paragraph)}
                                                 </p>
                                             )
                                         ))
@@ -1474,15 +1514,15 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                                     </Avatar>
                                                 )}
                                                 <div
-                                                    className={`px-4 py-2 rounded-lg max-w-[80%] ${message.sender === 'user'
-                                                        ? 'bg-purple-600 text-white'
-                                                        : 'bg-purple-100 dark:bg-purple-900 text-gray-800 dark:text-gray-200'
+                                                    className={`rounded-lg px-6 py-4 ${message.sender === 'user'
+                                                        ? 'bg-primary text-primary-foreground ml-4 max-w-[80%]'
+                                                        : 'bg-muted mr-4 w-full'
                                                         }`}
                                                 >
-                                                    <div className="text-sm whitespace-pre-wrap prose dark:prose-invert max-w-none prose-sm">
-                                                        {message.sender === 'user'
-                                                            ? message.content
-                                                            : parseHtmlContent(message.content)
+                                                    <div className="text-sm whitespace-pre-wrap">
+                                                        {message.sender === 'user' 
+                                                            ? message.content 
+                                                            : formatMessage(message.content)
                                                         }
                                                     </div>
                                                 </div>
@@ -1595,10 +1635,41 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                     </a>
                                 </h3>
 
-                                {/* Add Multimedia Preview */}
-                                {getMultimediaInfo(post.link) && (
-                                    <MultimediaPreview content={getMultimediaInfo(post.link)!} />
+                                {/* Media Content */}
+                                {post.media && (
+                                    <div className="mt-3 mb-4">
+                                        {post.media.type === 'video' && post.media.embedUrl ? (
+                                            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                                                <iframe
+                                                    src={post.media.embedUrl}
+                                                    className="absolute inset-0 w-full h-full"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                    allowFullScreen
+                                                />
+                                            </div>
+                                        ) : post.media.type === 'image' && post.media.url ? (
+                                            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                                                <img
+                                                    src={post.media.url}
+                                                    alt={post.title}
+                                                    className="object-cover w-full h-full"
+                                                    onError={(e) => {
+                                                        // Hide the image on error
+                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                    }}
+                                                />
+                                            </div>
+                                        ) : null}
+                                    </div>
                                 )}
+
+                                {/* Add Multimedia Preview */}
+                                {(() => {
+                                    const multimediaContent = getMultimediaInfo(post.link);
+                                    return multimediaContent && !post.media ? (
+                                        <MultimediaPreview content={multimediaContent} />
+                                    ) : null;
+                                })()}
 
                                 {/* Snippet Section - remains the same */}
                                 <p className="text-sm text-muted-foreground leading-relaxed">
@@ -1789,7 +1860,10 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                                 }`}
                                         >
                                             <div className="text-sm whitespace-pre-wrap">
-                                                {formatMessageWithClickableQuestions(message.content)}
+                                                {message.sender === 'user' 
+                                                    ? message.content 
+                                                    : formatMessage(message.content)
+                                                }
                                             </div>
                                         </div>
                                     </div>
@@ -1810,7 +1884,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     placeholder="Ask a question about the selected items..."
-                                    className="min-h-[60px] max-h-32 resize-none"
+                                    className="min-h-[44px] max-h-32 resize-none"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
                                             e.preventDefault()

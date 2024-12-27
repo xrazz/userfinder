@@ -1,5 +1,5 @@
 import axios from 'axios';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 
 // Add viewable document types constant
 const VIEWABLE_TYPES = [
@@ -133,6 +133,21 @@ const extractMainContent = ($, url) => {
     $content = $('body');
   }
 
+  // Extract images
+  const images = [];
+  $('img').each((_, el) => {
+    const src = $(el).attr('src');
+    const alt = $(el).attr('alt');
+    if (src && !src.includes('data:image') && !src.includes('base64')) {
+      // Convert relative URLs to absolute
+      const absoluteSrc = src.startsWith('http') ? src : new URL(src, url).href;
+      images.push({
+        src: absoluteSrc,
+        alt: alt || ''
+      });
+    }
+  });
+
   // Clean the content
   $ = cleanContent($);
   
@@ -140,7 +155,8 @@ const extractMainContent = ($, url) => {
     title: $('h1').first().text() || $('title').text(),
     content: $content.html(),
     description: $('meta[name="description"]').attr('content') || '',
-    lastModified: $('meta[name="last-modified"]').attr('content') || new Date().toISOString()
+    lastModified: $('meta[name="last-modified"]').attr('content') || new Date().toISOString(),
+    images: images
   };
 };
 
