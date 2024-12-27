@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
+// Set runtime configuration
+export const runtime = 'nodejs';
+export const maxDuration = 20; // 20 seconds timeout
+
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 })

@@ -6,6 +6,10 @@ import { MemoryVectorStore } from "langchain/vectorstores/memory"
 import { Document } from "@langchain/core/documents"
 import axios from 'axios'
 
+// Set runtime configuration
+export const runtime = 'nodejs';
+export const maxDuration = 20; // 20 seconds timeout
+
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 })

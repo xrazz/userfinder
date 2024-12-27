@@ -4,6 +4,10 @@ import { db } from '@/app/firebaseClient';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { cookies } from 'next/headers';
 
+// Set runtime configuration
+export const runtime = 'nodejs';
+export const maxDuration = 20; // 20 seconds timeout
+
 export async function POST(request: Request) {
   try {
     const { systemPrompt, userPrompt, email } = await request.json();

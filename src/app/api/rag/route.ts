@@ -4,6 +4,10 @@ import { OpenAIEmbeddings } from '@langchain/openai'
 import { MemoryVectorStore } from "langchain/vectorstores/memory"
 import { Document } from "@langchain/core/documents"
 
+// Set runtime configuration
+export const runtime = 'nodejs';
+export const maxDuration = 20; // 20 seconds timeout
+
 // Cache for vector stores
 const vectorStoreCache = new Map<string, MemoryVectorStore>()
 
