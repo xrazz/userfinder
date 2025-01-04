@@ -610,120 +610,67 @@ const getMultimediaInfo = (url: string): MultimediaContent | null => {
     return null;
 };
 
-// Add this new component for multimedia preview
+// Modify MultimediaPreview component to only handle videos
 const MultimediaPreview: React.FC<{ content: MultimediaContent | undefined }> = ({ content }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
 
-    if (!content) return null;
+    if (!content || content.type !== 'video') return null;
 
-    if (content.type === 'video') {
-        if (hasError) {
-            // Fallback view when embed fails
-            return (
-                <a
-                    href={content.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full p-4 mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-lg">
-                            {content.platform === 'youtube' ? (
-                                <svg className="w-6 h-6 text-red-600" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                                </svg>
-                            ) : (
-                                <svg className="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M23.977 6.416c-.105 2.338-1.739 5.543-4.894 9.609-3.268 4.247-6.026 6.37-8.29 6.37-1.409 0-2.578-1.294-3.553-3.881L5.322 11.4C4.603 8.816 3.834 7.522 3.01 7.522c-.179 0-.806.378-1.881 1.132L0 7.197c1.185-1.044 2.351-2.084 3.501-3.128C5.08 2.701 6.266 1.984 7.055 1.91c1.867-.18 3.016 1.1 3.447 3.838.465 2.953.789 4.789.971 5.507.539 2.45 1.131 3.674 1.776 3.674.502 0 1.256-.796 2.265-2.385 1.004-1.589 1.54-2.797 1.612-3.628.144-1.371-.395-2.061-1.614-2.061-.574 0-1.167.121-1.777.391 1.186-3.868 3.434-5.757 6.762-5.637 2.473.06 3.628 1.664 3.493 4.797l-.013.01z"/>
-                                </svg>
-                            )}
-                        </div>
-                        <div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                Watch on {content.platform === 'youtube' ? 'YouTube' : 'Vimeo'}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                                Click to open in a new tab
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            );
-        }
-
+    if (hasError) {
+        // Fallback view when embed fails
         return (
-            <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 mb-4">
-                {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                    </div>
-                )}
-                <iframe
-                    src={content.embedUrl}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    onLoad={() => setIsLoading(false)}
-                    onError={() => {
-                        setIsLoading(false);
-                        setHasError(true);
-                    }}
-                />
-            </div>
-        );
-    }
-
-    if (content.type === 'image') {
-        if (hasError) {
-            return (
-                <a
-                    href={content.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full p-4 mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-lg">
-                            <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <a
+                href={content.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full p-4 mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-lg">
+                        {content.platform === 'youtube' ? (
+                            <svg className="w-6 h-6 text-red-600" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                             </svg>
+                        ) : (
+                            <svg className="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M23.977 6.416c-.105 2.338-1.739 5.543-4.894 9.609-3.268 4.247-6.026 6.37-8.29 6.37-1.409 0-2.578-1.294-3.553-3.881L5.322 11.4C4.603 8.816 3.834 7.522 3.01 7.522c-.179 0-.806.378-1.881 1.132L0 7.197c1.185-1.044 2.351-2.084 3.501-3.128C5.08 2.701 6.266 1.984 7.055 1.91c1.867-.18 3.016 1.1 3.447 3.838.465 2.953.789 4.789.971 5.507.539 2.45 1.131 3.674 1.776 3.674.502 0 1.256-.796 2.265-2.385 1.004-1.589 1.54-2.797 1.612-3.628.144-1.371-.395-2.061-1.614-2.061-.574 0-1.167.121-1.777.391 1.186-3.868 3.434-5.757 6.762-5.637 2.473.06 3.628 1.664 3.493 4.797l-.013.01z"/>
+                            </svg>
+                        )}
+                    </div>
+                    <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            Watch on {content.platform === 'youtube' ? 'YouTube' : 'Vimeo'}
                         </div>
-                        <div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                View Image
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                                Click to open in a new tab
-                            </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                            Click to open in a new tab
                         </div>
                     </div>
-                </a>
-            );
-        }
-
-        return (
-            <div className="relative w-full max-h-[300px] rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 mb-4">
-                {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                    </div>
-                )}
-                <img
-                    src={content.url}
-                    alt="Content preview"
-                    className="w-full h-full object-contain"
-                    onLoad={() => setIsLoading(false)}
-                    onError={() => {
-                        setIsLoading(false);
-                        setHasError(true);
-                    }}
-                />
-            </div>
+                </div>
+            </a>
         );
     }
 
-    return null;
+    return (
+        <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 mb-4">
+            {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+            )}
+            <iframe
+                src={content.embedUrl}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                onLoad={() => setIsLoading(false)}
+                onError={() => {
+                    setIsLoading(false);
+                    setHasError(true);
+                }}
+            />
+        </div>
+    );
 };
 
 // Add this helper function at the top of the file
@@ -1659,38 +1606,24 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                     </a>
                                 </h3>
 
-                                {/* Media Content */}
-                                {post.media && (
+                                {/* Media Content - Modified to only show videos */}
+                                {post.media && post.media.type === 'video' && post.media.embedUrl && (
                                     <div className="mt-3 mb-4">
-                                        {post.media.type === 'video' && post.media.embedUrl ? (
-                                            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
-                                                <iframe
-                                                    src={post.media.embedUrl}
-                                                    className="absolute inset-0 w-full h-full"
-                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                    allowFullScreen
-                                                />
-                                            </div>
-                                        ) : post.media.type === 'image' && post.media.url ? (
-                                            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
-                                                <img
-                                                    src={post.media.url}
-                                                    alt={post.title}
-                                                    className="object-cover w-full h-full"
-                                                    onError={(e) => {
-                                                        // Hide the image on error
-                                                        (e.target as HTMLImageElement).style.display = 'none';
-                                                    }}
-                                                />
-                                            </div>
-                                        ) : null}
+                                        <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                                            <iframe
+                                                src={post.media.embedUrl}
+                                                className="absolute inset-0 w-full h-full"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                            />
+                                        </div>
                                     </div>
                                 )}
 
-                                {/* Add Multimedia Preview */}
+                                {/* Add Multimedia Preview - Modified to only show videos */}
                                 {(() => {
                                     const multimediaContent = getMultimediaInfo(post.link);
-                                    return multimediaContent && !post.media ? (
+                                    return multimediaContent && !post.media && multimediaContent.type === 'video' ? (
                                         <MultimediaPreview content={multimediaContent} />
                                     ) : null;
                                 })()}
