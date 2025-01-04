@@ -246,6 +246,10 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             // Log della query per debug
             console.log('Query being sent to API:', query);
             
+            // Create AbortController with 30 second timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds
+            
             const response = await fetch('/api/search', {
                 method: 'POST',
                 headers: {
@@ -256,7 +260,11 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     num: RESULTS_PER_PAGE,
                     start: (page - 1) * RESULTS_PER_PAGE,
                 }),
+                signal: controller.signal
             });
+
+            // Clear timeout
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
@@ -274,6 +282,10 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             }
         } catch (error: any) {
             console.error('Error fetching results:', error.message || error);
+            // Check if it's an abort error
+            if (error.name === 'AbortError') {
+                throw new Error('Request timed out after 30 seconds');
+            }
             return [];
         }
     };

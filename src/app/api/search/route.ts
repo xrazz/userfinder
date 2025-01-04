@@ -6,6 +6,7 @@ import * as cheerio from 'cheerio';
 // Initialize the ApifyClient with API token
 const client = new ApifyClient({
   token: process.env.MY_API_KEY,
+  timeoutSecs: 30 // Set timeout to 30 seconds
 });
 
 interface VideoContent {
