@@ -2,29 +2,28 @@ import React, { useRef, useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Globe, ShoppingBag, Users, Mail, Phone, MapPin, Share2 } from 'lucide-react'
+import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Globe, ShoppingBag, Share2, Mail, Phone, MapPin, MessageCircle, Hash, AtSign } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-export type SearchType = 'web' | 'products' | 'people';
+export type SearchType = 'web' | 'products' | 'social';
 
-interface SearchFilters {
+export interface SearchFilters {
     // Product filters
     minPrice?: number;
     maxPrice?: number;
     location?: string;
     
-    // People filters
-    includeEmail?: boolean;
-    includePhone?: boolean;
-    includeSocial?: boolean;
-    
-    // News filters
-    dateRange?: string;
-    source?: string;
+    // Social filters
+    platform?: 'all' | 'twitter' | 'linkedin' | 'facebook' | 'instagram' | 'tiktok' | 'reddit';
+    includeContacts?: boolean;
+    includeHashtags?: boolean;
+    includeMentions?: boolean;
+    includeComments?: boolean;
+    contentType?: 'all' | 'posts' | 'profiles' | 'discussions';
 }
 
 interface SearchBarProps {
@@ -41,14 +40,29 @@ interface SearchBarProps {
     onSearchTypeChange?: (type: SearchType) => void
 }
 
-const placeholderQueries = [
-    "Let's find your next inspiration...",
-    "Let's find groundbreaking discoveries...",
-    "Let's find innovative solutions...",
-    "Let's find expert insights...",
-    "Let's find cutting-edge research...",
-    "Let's find hidden knowledge..."
-]
+const placeholderQueries = {
+    web: [
+        "Let's find groundbreaking research...",
+        "Let's discover academic papers...",
+        "Let's explore scientific articles...",
+        "Let's search technical documents...",
+        "Let's find expert publications..."
+    ],
+    products: [
+        "Let's find the best deals...",
+        "Let's discover trending products...",
+        "Let's explore marketplace offers...",
+        "Let's find quality items...",
+        "Let's search exclusive products..."
+    ],
+    social: [
+        "Let's find trending discussions...",
+        "Let's discover influencer insights...",
+        "Let's explore social conversations...",
+        "Let's find viral content...",
+        "Let's search social mentions..."
+    ]
+}
 
 // Aggiungi un componente per l'icona del file type
 const FileTypeIcon = ({ type }: { type: string }) => {
@@ -92,7 +106,11 @@ const SearchTypeButton = ({ type, active, icon: Icon, onClick, children }: {
 }) => (
     <Button
         variant={active ? "default" : "ghost"}
-        className={`flex items-center gap-2 ${active ? '' : 'hover:bg-gray-100'}`}
+        className={`flex items-center gap-2 transition-colors ${
+            active 
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        }`}
         onClick={onClick}
     >
         <Icon className="w-4 h-4" />
@@ -141,41 +159,95 @@ const ProductFilters = ({ filters, onChange }: {
     );
 };
 
-const PeopleFilters = ({ filters, onChange }: { 
+const SocialFilters = ({ filters, onChange }: { 
     filters: SearchFilters, 
     onChange: (filters: SearchFilters) => void 
 }) => {
     return (
-        <div className="p-4 space-y-3 border-t">
-            <div className="flex items-center gap-2">
-                <Checkbox
-                    id="email"
-                    checked={filters.includeEmail}
-                    onCheckedChange={(checked) => onChange({ ...filters, includeEmail: !!checked })}
-                />
-                <Label htmlFor="email" className="flex items-center gap-2">
-                    <Mail className="w-4 h-4" /> Include email addresses
-                </Label>
+        <div className="p-4 space-y-4 border-t">
+            <div className="space-y-2">
+                <Label>Platform</Label>
+                <Select
+                    value={filters.platform || 'all'}
+                    onValueChange={(value) => onChange({ ...filters, platform: value as SearchFilters['platform'] })}
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Platforms</SelectItem>
+                        <SelectItem value="twitter">Twitter/X</SelectItem>
+                        <SelectItem value="linkedin">LinkedIn</SelectItem>
+                        <SelectItem value="facebook">Facebook</SelectItem>
+                        <SelectItem value="instagram">Instagram</SelectItem>
+                        <SelectItem value="tiktok">TikTok</SelectItem>
+                        <SelectItem value="reddit">Reddit</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
-            <div className="flex items-center gap-2">
-                <Checkbox
-                    id="phone"
-                    checked={filters.includePhone}
-                    onCheckedChange={(checked) => onChange({ ...filters, includePhone: !!checked })}
-                />
-                <Label htmlFor="phone" className="flex items-center gap-2">
-                    <Phone className="w-4 h-4" /> Include phone numbers
-                </Label>
+
+            <div className="space-y-2">
+                <Label>Content Type</Label>
+                <Select
+                    value={filters.contentType || 'all'}
+                    onValueChange={(value) => onChange({ ...filters, contentType: value as SearchFilters['contentType'] })}
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select content type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Content</SelectItem>
+                        <SelectItem value="posts">Posts</SelectItem>
+                        <SelectItem value="profiles">Profiles</SelectItem>
+                        <SelectItem value="discussions">Discussions</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
-            <div className="flex items-center gap-2">
-                <Checkbox
-                    id="social"
-                    checked={filters.includeSocial}
-                    onCheckedChange={(checked) => onChange({ ...filters, includeSocial: !!checked })}
-                />
-                <Label htmlFor="social" className="flex items-center gap-2">
-                    <Share2 className="w-4 h-4" /> Include social profiles
-                </Label>
+
+            <div className="space-y-3">
+                <Label>Include</Label>
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                        <Checkbox
+                            id="contacts"
+                            checked={filters.includeContacts}
+                            onCheckedChange={(checked) => onChange({ ...filters, includeContacts: !!checked })}
+                        />
+                        <Label htmlFor="contacts" className="flex items-center gap-2">
+                            <Mail className="w-4 h-4" /> Contact Info
+                        </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Checkbox
+                            id="hashtags"
+                            checked={filters.includeHashtags}
+                            onCheckedChange={(checked) => onChange({ ...filters, includeHashtags: !!checked })}
+                        />
+                        <Label htmlFor="hashtags" className="flex items-center gap-2">
+                            <Hash className="w-4 h-4" /> Hashtags
+                        </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Checkbox
+                            id="mentions"
+                            checked={filters.includeMentions}
+                            onCheckedChange={(checked) => onChange({ ...filters, includeMentions: !!checked })}
+                        />
+                        <Label htmlFor="mentions" className="flex items-center gap-2">
+                            <AtSign className="w-4 h-4" /> Mentions
+                        </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Checkbox
+                            id="comments"
+                            checked={filters.includeComments}
+                            onCheckedChange={(checked) => onChange({ ...filters, includeComments: !!checked })}
+                        />
+                        <Label htmlFor="comments" className="flex items-center gap-2">
+                            <MessageCircle className="w-4 h-4" /> Comments
+                        </Label>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -198,27 +270,19 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const [isSearchFocused, setIsSearchFocused] = useState(false)
     const [suggestions, setSuggestions] = useState<string[]>([])
     const [showSuggestions, setShowSuggestions] = useState(false)
-    const [placeholderIndex, setPlaceholderIndex] = useState(0)
+    const [currentPlaceholderIndex, setCurrentPlaceholderIndex] = useState(0)
     const [currentPlaceholder, setCurrentPlaceholder] = useState('')
     const [isTyping, setIsTyping] = useState(true)
     const [searchTerm, setSearchTerm] = useState(typingQuery)
     const [currentSearchType, setCurrentSearchType] = useState<SearchType>(searchType)
     const [searchFilters, setSearchFilters] = useState<SearchFilters>({})
 
+    // Placeholder animation with typing effect
     useEffect(() => {
-        setSearchTerm(typingQuery)
-    }, [typingQuery])
-
-    useEffect(() => {
-        setCurrentSearchType(searchType)
-    }, [searchType])
-
-    // Effetto per l'animazione del placeholder
-    useEffect(() => {
-        const text = placeholderQueries[placeholderIndex]
+        const text = placeholderQueries[currentSearchType][currentPlaceholderIndex]
         let index = 0
         let typingInterval: NodeJS.Timeout
-        
+
         if (isTyping) {
             typingInterval = setInterval(() => {
                 if (index <= text.length) {
@@ -230,7 +294,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         setIsTyping(false)
                         setTimeout(() => {
                             setIsTyping(true)
-                            setPlaceholderIndex((prev) => (prev + 1) % placeholderQueries.length)
+                            setCurrentPlaceholderIndex((prev) => 
+                                (prev + 1) % placeholderQueries[currentSearchType].length
+                            )
                         }, 2000)
                     }, 1000)
                 }
@@ -238,7 +304,22 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         }
 
         return () => clearInterval(typingInterval)
-    }, [placeholderIndex, isTyping])
+    }, [currentPlaceholderIndex, isTyping, currentSearchType])
+
+    // Reset placeholder and animation when search type changes
+    useEffect(() => {
+        setCurrentPlaceholderIndex(0)
+        setCurrentPlaceholder('')
+        setIsTyping(true)
+    }, [currentSearchType])
+
+    useEffect(() => {
+        setSearchTerm(typingQuery)
+    }, [typingQuery])
+
+    useEffect(() => {
+        setCurrentSearchType(searchType)
+    }, [searchType])
 
     // Gestione delle suggestions
     const generateSuggestions = async (query: string) => {
@@ -263,6 +344,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     )
 
     // Handlers
+    const handleSearchTypeClick = (type: SearchType) => {
+        setCurrentSearchType(type)
+        onSearchTypeChange(type)
+        // Rimuovo la ricerca automatica qui
+        setSearchFilters({})
+    }
+
     const handleSearch = () => {
         if (!searchTerm.trim()) return
         setTypingQuery(searchTerm)
@@ -283,6 +371,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && searchTerm.trim()) {
+            e.preventDefault()
             handleSearch()
         }
     }
@@ -291,19 +380,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         setSearchTerm(suggestion)
         setTypingQuery(suggestion)
         setShowSuggestions(false)
+        // Uso setTimeout per assicurarmi che lo stato sia aggiornato
         setTimeout(() => {
             onSearch(suggestion, currentSearchType, searchFilters)
         }, 0)
-    }
-
-    const handleSearchTypeClick = (type: SearchType) => {
-        setCurrentSearchType(type)
-        onSearchTypeChange(type)
-        // Reset filters when changing search type
-        setSearchFilters({})
-        if (searchTerm.trim()) {
-            onSearch(searchTerm, type, searchFilters)
-        }
     }
 
     return (
@@ -326,12 +406,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     Products
                 </SearchTypeButton>
                 <SearchTypeButton
-                    type="people"
-                    active={currentSearchType === 'people'}
-                    icon={Users}
-                    onClick={() => handleSearchTypeClick('people')}
+                    type="social"
+                    active={currentSearchType === 'social'}
+                    icon={Share2}
+                    onClick={() => handleSearchTypeClick('social')}
                 >
-                    People
+                    Social
                 </SearchTypeButton>
             </div>
             
@@ -364,7 +444,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         </div>
                         
                         {/* Type-specific filters */}
-                        {(currentSearchType === 'products' || currentSearchType === 'people') && (
+                        {(currentSearchType === 'products' || currentSearchType === 'social') && (
                             <div className="px-2 border-l border-gray-200 dark:border-gray-800">
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -379,8 +459,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                                 onChange={setSearchFilters}
                                             />
                                         )}
-                                        {currentSearchType === 'people' && (
-                                            <PeopleFilters
+                                        {currentSearchType === 'social' && (
+                                            <SocialFilters
                                                 filters={searchFilters}
                                                 onChange={setSearchFilters}
                                             />
@@ -391,31 +471,34 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         )}
 
                         <div className="flex items-stretch h-full divide-x divide-gray-200 dark:divide-gray-800">
-                            <div className={`flex items-center ${showSettings ? 'px-1.5' : 'px-2'}`}>
-                                <Select value={selectedFileType} onValueChange={handleFileTypeChange}>
-                                    <SelectTrigger className={`w-full border-0 bg-transparent focus:ring-0 shadow-none hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors ${
-                                        showSettings ? 'h-7' : 'h-9'
-                                    }`}>
-                                        <div className="flex items-center gap-2">
-                                            <FileTypeIcon type={selectedFileType} />
-                                        </div>
-                                    </SelectTrigger>
-                                    <SelectContent className="w-48">
-                                        {fileTypes.map((fileType) => (
-                                            <SelectItem 
-                                                key={fileType.value} 
-                                                value={fileType.value}
-                                                className="flex items-center gap-2 cursor-pointer"
-                                            >
-                                                <div className="flex items-center gap-2 w-full">
-                                                    <FileTypeIcon type={fileType.value} />
-                                                    <span className="flex-1">{fileType.label}</span>
-                                                </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            {/* File type selector - mostrato solo per ricerca web */}
+                            {currentSearchType === 'web' && (
+                                <div className={`flex items-center ${showSettings ? 'px-1.5' : 'px-2'}`}>
+                                    <Select value={selectedFileType} onValueChange={handleFileTypeChange}>
+                                        <SelectTrigger className={`w-full border-0 bg-transparent focus:ring-0 shadow-none hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors ${
+                                            showSettings ? 'h-7' : 'h-9'
+                                        }`}>
+                                            <div className="flex items-center gap-2">
+                                                <FileTypeIcon type={selectedFileType} />
+                                            </div>
+                                        </SelectTrigger>
+                                        <SelectContent className="w-48">
+                                            {fileTypes.map((fileType) => (
+                                                <SelectItem 
+                                                    key={fileType.value} 
+                                                    value={fileType.value}
+                                                    className="flex items-center gap-2 cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-2 w-full">
+                                                        <FileTypeIcon type={fileType.value} />
+                                                        <span className="flex-1">{fileType.label}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
                             <button
                                 onClick={handleSearch}
                                 className={`hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center ${

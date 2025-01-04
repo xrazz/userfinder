@@ -21,6 +21,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { SearchType, SearchFilters } from '@/components/SearchBar'
 
 const MEMBERSHIP_LEVELS = {
     FREE: 'Free',
@@ -80,41 +81,12 @@ const mapFilterToDate = (filter: string): DateFilter => {
     }
 }
 
-interface SearchTabProps {
+interface SearchUIProps {
     Membership?: string
     name?: string
     email?: string
     userId?: string
     imageUrl?: string
-}
-
-type SearchType = 'web' | 'products' | 'people';
-
-interface SearchFilters {
-    // Product filters
-    minPrice?: number;
-    maxPrice?: number;
-    location?: string;
-    
-    // People filters
-    includeEmail?: boolean;
-    includePhone?: boolean;
-    includeSocial?: boolean;
-    
-    // News filters
-    dateRange?: string;
-    source?: string;
-}
-
-const getSearchTypeQuery = (type: SearchType, baseQuery: string): string => {
-    switch (type) {
-        case 'products':
-            return `${baseQuery} (site:amazon.com OR site:ebay.com OR site:etsy.com OR inurl:product OR inurl:shop) -inurl:blog -inurl:news`;
-        case 'people':
-            return `${baseQuery} (site:linkedin.com OR site:twitter.com OR site:facebook.com OR intitle:"profile" OR inurl:about) -inurl:company`;
-        default:
-            return baseQuery;
-    }
 }
 
 interface SearchQuery {
@@ -148,7 +120,7 @@ const fileTypes = [
     { value: "zip", label: "Archives", dork: "(filetype:zip OR filetype:rar)" }
 ]
 
-export default function SearchTab({ Membership = '', name = '', email = '', userId = '', imageUrl = '' }: SearchTabProps) {
+export default function SearchTab({ Membership = '', name = '', email = '', userId = '', imageUrl = '' }: SearchUIProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [searchQuery, setSearchQuery] = useState('');
@@ -162,6 +134,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [showSettings, setShowSettings] = useState(false);
     const [selectedFileType, setSelectedFileType] = useState('all');
     const [searchType, setSearchType] = useState<SearchType>('web');
+    const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
     const [privacyMode, setPrivacyMode] = useState(() => {
         // Check localStorage for saved preference
         const saved = localStorage.getItem('privacyMode')
@@ -364,32 +337,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
     // Aggiungi questa funzione helper per costruire la query in modo consistente
     const buildSearchQuery = (baseQuery: string, siteToSearch: string, dateFilter: string, type: SearchType, filters?: SearchFilters): string => {
-        let query = getSearchTypeQuery(type, baseQuery);
-        
-        // Aggiungi i filtri specifici per tipo
-        if (filters) {
-            if (type === 'products') {
-                if (filters.minPrice) {
-                    query += ` price:>${filters.minPrice}`;
-                }
-                if (filters.maxPrice) {
-                    query += ` price:<${filters.maxPrice}`;
-                }
-                if (filters.location) {
-                    query += ` location:"${filters.location}"`;
-                }
-            } else if (type === 'people') {
-                if (filters.includeEmail) {
-                    query += ` (intext:email OR intext:mail OR intext:@)`;
-                }
-                if (filters.includePhone) {
-                    query += ` (intext:phone OR intext:tel OR intext:mobile)`;
-                }
-                if (filters.includeSocial) {
-                    query += ` (site:linkedin.com OR site:twitter.com OR site:facebook.com OR site:instagram.com)`;
-                }
-            }
-        }
+        let query = getSearchTypeQuery(type, baseQuery, filters);
         
         if (siteToSearch && siteToSearch !== 'Universal search') {
             query += ` site:${siteToSearch.toLowerCase()}`;
@@ -426,9 +374,12 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             setCurrentPage(1)
             setHasMore(true)
 
-            // Update search type if provided
+            // Update search type and filters if provided
             if (newSearchType) {
                 setSearchType(newSearchType)
+            }
+            if (filters) {
+                setSearchFilters(filters)
             }
 
             // Only update search query state if a new query is provided
@@ -445,7 +396,13 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
             const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
             
-            const finalQuery = buildSearchQuery(queryToSearch, siteToSearch, dateFilterString, newSearchType || searchType, filters)
+            const finalQuery = buildSearchQuery(
+                queryToSearch, 
+                siteToSearch, 
+                dateFilterString, 
+                newSearchType || searchType,
+                filters || searchFilters
+            )
             console.log('Final query:', finalQuery)
             
             const Results = await fetchResults(finalQuery, 1)
@@ -557,17 +514,12 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    // Solo per nuovi risultati di ricerca
     useEffect(() => {
-        if (loading) {
+        if (hasResults && currentPage === 1) {
             scrollToTop();
         }
-    }, [loading]);
-
-    useEffect(() => {
-        if (hasResults) {
-            scrollToTop();
-        }
-    }, [hasResults]);
+    }, [hasResults, currentPage]);
 
     useEffect(() => {
         const unsubscribe = scrollY.onChange(value => {
@@ -586,18 +538,20 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     }
 
     // Modify useEffect for URL-based search
+    const isInitialMount = useRef(true)
+
     useEffect(() => {
         const query = searchParams?.get('q')
         
-        // Only proceed if we have a query and haven't done the initial search
-        if (query && !initialSearchRef.current && !searchInProgress) {
-            initialSearchRef.current = true
+        // Only proceed if we have a query and it's the initial mount
+        if (query && isInitialMount.current) {
+            isInitialMount.current = false
             urlTriggeredRef.current = true
             setSearchQuery(query)
             setTypingQuery(query)
             handleSearch(query)
         }
-    }, [searchParams, searchInProgress])
+    }, [searchParams])
 
     const handleCreditUpdate = async () => {
         if (!email) return;
@@ -623,6 +577,74 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const handleCloseBetaDialog = () => {
         localStorage.setItem('hasSeenBetaDialog', 'true')
         setShowBetaDialog(false)
+    }
+
+    const getSearchTypeQuery = (type: SearchType, baseQuery: string, filters?: SearchFilters): string => {
+        switch (type) {
+            case 'products':
+                return `${baseQuery} (site:amazon.com OR site:ebay.com OR site:etsy.com OR inurl:product OR inurl:shop)`;
+            case 'social':
+                let query = baseQuery;
+                
+                // Add platform-specific filters
+                if (filters?.platform && filters.platform !== 'all') {
+                    switch (filters.platform) {
+                        case 'twitter':
+                            query += ' (site:twitter.com OR site:x.com)';
+                            break;
+                        case 'linkedin':
+                            query += ' site:linkedin.com';
+                            break;
+                        case 'facebook':
+                            query += ' site:facebook.com';
+                            break;
+                        case 'instagram':
+                            query += ' site:instagram.com';
+                            break;
+                        case 'tiktok':
+                            query += ' site:tiktok.com';
+                            break;
+                        case 'reddit':
+                            query += ' site:reddit.com';
+                            break;
+                    }
+                } else {
+                    query += ' (site:twitter.com OR site:x.com OR site:linkedin.com OR site:facebook.com OR site:instagram.com OR site:tiktok.com OR site:reddit.com)';
+                }
+
+                // Add content type filters
+                if (filters?.contentType && filters.contentType !== 'all') {
+                    switch (filters.contentType) {
+                        case 'posts':
+                            query += ' (inurl:post OR inurl:status OR inurl:p OR intext:"posted" OR intext:"shared")';
+                            break;
+                        case 'profiles':
+                            query += ' (inurl:profile OR inurl:user OR inurl:u OR intext:"profile" OR intext:"bio")';
+                            break;
+                        case 'discussions':
+                            query += ' (inurl:comments OR inurl:discussion OR intext:"commented" OR intext:"replied")';
+                            break;
+                    }
+                }
+
+                // Add additional filters
+                if (filters?.includeContacts) {
+                    query += ' (intext:email OR intext:mail OR intext:@ OR intext:phone OR intext:tel OR intext:contact)';
+                }
+                if (filters?.includeHashtags) {
+                    query += ' (intext:hashtag OR intext:#)';
+                }
+                if (filters?.includeMentions) {
+                    query += ' (intext:@)';
+                }
+                if (filters?.includeComments) {
+                    query += ' (intext:comment OR intext:reply OR intext:responded)';
+                }
+
+                return query;
+            default:
+                return baseQuery;
+        }
     }
 
     return (

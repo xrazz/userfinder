@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { Card } from "@/components/ui/card"
 import { SparklesIcon, MessageSquareIcon, XIcon, Bookmark, Link2, MessageSquare, SendHorizontal, ArrowLeft, Loader2, ChevronUpIcon, ChevronDownIcon, ArrowUpRight, ThumbsUp, ThumbsDown, MessageCircle, Search, Plus } from 'lucide-react'
 import { Textarea } from "@/components/ui/textarea"
@@ -10,7 +10,6 @@ import axios from 'axios'
 import { useInView } from 'react-intersection-observer'
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { useRef } from 'react'
 
 interface Post {
     title: string
@@ -724,16 +723,66 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     const [showContentDialog, setShowContentDialog] = useState(false);
     const [scrapedContent, setScrapedContent] = useState<ScrapedContent>({ mainContent: '' });
     const [isLoadingContent, setIsLoadingContent] = useState(false);
+    const scrollPositionRef = useRef(0);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
+    const [loadMoreElementPosition, setLoadMoreElementPosition] = useState<number>(0);
+    const loadingRef = useRef<HTMLDivElement>(null);
 
-    const scrollToBottom = () => {
-        if (scrollAreaRef.current) {
-            scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    // Configurazione dell'observer per lo scroll infinito
+    const { ref, inView } = useInView({
+        threshold: 0,
+        rootMargin: '100px',
+    })
+
+    // Trigger del caricamento quando l'elemento è in vista
+    useEffect(() => {
+        if (inView && hasMore && !isLoadingMore && !pendingSearch) {
+            // Salva la posizione di scroll corrente
+            scrollPositionRef.current = window.scrollY;
+            onLoadMore();
         }
+    }, [inView, hasMore, isLoadingMore, pendingSearch]);
+
+    // Ripristina la posizione di scroll dopo il caricamento
+    useEffect(() => {
+        if (scrollPositionRef.current > 0) {
+            requestAnimationFrame(() => {
+                window.scrollTo(0, scrollPositionRef.current);
+            });
+        }
+    }, [posts.length]);
+
+    // Reset states when searchQuery changes
+    React.useEffect(() => {
+        setSummary('');
+        setMessages([]);
+        setIsChatMode(false);
+        setIsDialogOpen(false);
+        setSelectedPost(null);
+    }, [searchQuery]);
+
+    // Handle search when platform changes
+    React.useEffect(() => {
+        if (pendingSearch) {
+            handleSearch();
+            setPendingSearch(false);
+        }
+    }, [platform, pendingSearch, handleSearch]);
+
+    // Explore button click handler
+    const handleExplore = (domain: string) => {
+        setCustomUrl(domain);
+        setSelectedSite('custom');
+        setPendingSearch(true);
     };
 
-    React.useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+    // Back to Universal Search button click handler
+    const handleBackToUniversal = () => {
+        setCustomUrl('');
+        setSelectedSite('Universal search');
+        setPendingSearch(true);
+    };
 
     const handleSendMessage = async () => {
         if (!newMessage.trim() || !email) return;
@@ -928,51 +977,6 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
         } finally {
             setIsGenerating(false);
         }
-    };
-
-    // Configurazione dell'observer per lo scroll infinito
-    const { ref, inView } = useInView({
-        threshold: 0,
-        rootMargin: '100px',
-    })
-
-    // Trigger del caricamento quando l'elemento è in vista
-    React.useEffect(() => {
-        if (inView && hasMore && !isLoadingMore) {
-            onLoadMore()
-        }
-    }, [inView, hasMore, isLoadingMore, onLoadMore])
-
-    // Aggiungi questo useEffect per resettare gli stati quando searchQuery cambia
-    React.useEffect(() => {
-        // Reset all AI-related states when search query changes
-        setSummary('');
-        setMessages([]);
-        setIsChatMode(false);
-        setIsDialogOpen(false);
-        setSelectedPost(null);
-    }, [searchQuery]);  // Dipendenza da searchQuery
-
-    // Add this useEffect to handle search when platform changes
-    React.useEffect(() => {
-        if (pendingSearch) {
-            handleSearch();
-            setPendingSearch(false);
-        }
-    }, [platform, pendingSearch, handleSearch]);
-
-    // Modify the Explore button click handler
-    const handleExplore = (domain: string) => {
-        setCustomUrl(domain);
-        setSelectedSite('custom');
-        setPendingSearch(true);
-    };
-
-    // Modify the Back to Universal Search button click handler
-    const handleBackToUniversal = () => {
-        setCustomUrl('');
-        setSelectedSite('Universal search');
-        setPendingSearch(true);
     };
 
     const handleAIClick = (post: Post) => {
@@ -1537,10 +1541,10 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                         />
                                         <Button
                                             onClick={handleSendMessage}
-                                            disabled={isGenerating || !newMessage.trim()}
+                                            disabled={isAnalyzing || !newMessage.trim()}
                                             className="px-3 bg-purple-600 hover:bg-purple-700 text-white"
                                         >
-                                            {isGenerating ? (
+                                            {isAnalyzing ? (
                                                 <Loader2 className="w-4 h-4 animate-spin" />
                                             ) : (
                                                 <SendHorizontal className="w-4 h-4" />
@@ -1571,7 +1575,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                 <div className="divide-y divide-gray-100 dark:divide-gray-800">
                     {posts.map((post, index) => (
                         <div
-                            key={index}
+                            key={`${post.link}-${index}`}
                             className="group bg-white dark:bg-gray-900 first:rounded-t-xl last:rounded-b-xl p-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors duration-200"
                         >
                             <div className="space-y-4">
@@ -1701,19 +1705,20 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                     ))}
                 </div>
 
-                {/* Infinite Scroll Trigger & Loading State */}
-                <div ref={ref} className="py-8 text-center">
-                    {isLoadingMore && (
-                        <div className="inline-flex items-center gap-2 text-sm text-muted-foreground bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse" />
-                            <span>Loading more results</span>
-                        </div>
-                    )}
-                    {!hasMore && posts.length > 0 && (
-                        <div className="text-sm text-muted-foreground">
-                            No more results to load
-                        </div>
-                    )}
+                {/* Loading Anchor */}
+                <div 
+                    ref={loadingRef}
+                    className="h-10 flex items-center justify-center"
+                    style={{ visibility: hasMore ? 'visible' : 'hidden' }}
+                >
+                    <div ref={ref}>
+                        {isLoadingMore && (
+                            <div className="flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span className="text-sm text-muted-foreground">Loading more results...</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -1852,13 +1857,12 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                 <Button
                                     onClick={handleSendMessage}
                                     disabled={isAnalyzing || !newMessage.trim()}
-                                    size="icon"
-                                    className="self-end h-[60px] w-[60px]"
+                                    className="px-3 bg-purple-600 hover:bg-purple-700 text-white"
                                 >
                                     {isAnalyzing ? (
-                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        <Loader2 className="w-4 h-4 animate-spin" />
                                     ) : (
-                                        <SendHorizontal className="h-5 w-5" />
+                                        <SendHorizontal className="w-4 h-4" />
                                     )}
                                 </Button>
                             </div>
