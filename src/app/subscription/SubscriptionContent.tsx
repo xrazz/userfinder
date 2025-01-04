@@ -12,7 +12,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import Cookies from 'js-cookie';
 
 // Make sure we're using the correct environment variable name
-const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePublishableKey = 'pk_live_51PtCfLBf9CZHTEFpXX6FtJ5XiXdbebZdKPEE7HQkodedmRBoJthtSg8QJ5v9mLKLBE7fJd30TKAs9UYmnDI04SyO00pxtGsKFV';
 
 if (!stripePublishableKey) {
   console.error('Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
