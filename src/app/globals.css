@@ -101,7 +101,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-color: #a81d1d;
   }
 }
 
