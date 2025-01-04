@@ -6,7 +6,7 @@ import * as cheerio from 'cheerio';
 // Initialize the ApifyClient with API token
 const client = new ApifyClient({
   token: process.env.MY_API_KEY,
-  timeoutSecs: 30 // Set timeout to 30 seconds
+  timeoutSecs: 120 // Increased timeout to 120 seconds
 });
 
 interface VideoContent {
@@ -166,7 +166,6 @@ async function extractThumbnail(url: string): Promise<MediaContent | undefined> 
  * @returns A promise that resolves to the items fetched from the actor's dataset.
  */
 async function runApifyActor(query: string, numSearches: number): Promise<any[]> {
-  // Prepare Actor input
   console.log('Running actor with query:', query, 'and num:', numSearches);
   const input = { query, numSearches};
 
@@ -174,17 +173,28 @@ async function runApifyActor(query: string, numSearches: number): Promise<any[]>
     // Run the Actor and wait for it to finish
     const run = await client.actor("cgA5zIbA9F9JT5Jkk").call(input);
 
-    // Fetch and return Actor results from the run's dataset
+    // Fetch Actor results from the run's dataset
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     
-    // Add media content to results
-    const itemsWithMedia = await Promise.all(items.map(async (item: any) => {
-      const media = await extractThumbnail(item.link as string);
-      return {
-        ...item,
-        media
-      };
-    }));
+    // Process media content in parallel with a timeout
+    const itemsWithMedia = await Promise.all(
+      items.map(async (item: any) => {
+        try {
+          // Wrap media extraction in a timeout
+          const mediaPromise = extractThumbnail(item.link as string);
+          const media = await Promise.race([
+            mediaPromise,
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Media extraction timeout')), 10000)
+            )
+          ]);
+          return { ...item, media };
+        } catch (error) {
+          console.warn(`Failed to extract media for ${item.link}:`, error);
+          return { ...item, media: undefined };
+        }
+      })
+    );
 
     return itemsWithMedia;
   } catch (error) {
@@ -201,16 +211,38 @@ async function runApifyActor(query: string, numSearches: number): Promise<any[]>
  */
 export async function POST(req: Request) {
   try {
-    const { query, num } = await req.json(); // Extract query and num from the request body
+    const { query, num } = await req.json();
     
-    // Run the Apify actor with the provided query and num
-    const result = await runApifyActor(query, num);
+    if (!query) {
+      return NextResponse.json(
+        { success: false, error: 'Query is required' },
+        { status: 400 }
+      );
+    }
 
-    // Return the fetched items as JSON
+    // Set a timeout for the entire operation
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Operation timeout')), 110000)
+    );
+    
+    const resultPromise = runApifyActor(query, num);
+    
+    const result = await Promise.race([resultPromise, timeoutPromise]);
+    
     return NextResponse.json({ success: true, data: result });
   } catch (error: any) {
-    // Handle any errors and return an error response
     console.error('Search API error:', error);
-    return NextResponse.json({ success: false, error: error.message });
+    
+    // Return appropriate status codes based on error type
+    const status = error.message === 'Operation timeout' ? 504 : 500;
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
+      { status }
+    );
   }
 }
