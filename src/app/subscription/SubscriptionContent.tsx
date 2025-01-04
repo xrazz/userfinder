@@ -11,11 +11,11 @@ import { auth } from '@/app/firebaseClient';
 import { onAuthStateChanged } from 'firebase/auth';
 import Cookies from 'js-cookie';
 
-if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-  console.error('Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
+if (!process.env.STRIPE_PUBLISHABLE_KEY) {
+  console.error('Missing STRIPE_PUBLISHABLE_KEY environment variable');
 }
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const stripePromise = loadStripe(process.env.STRIPE_PUBLISHABLE_KEY!);
 
 export default function SubscriptionContent() {
   const router = useRouter();
