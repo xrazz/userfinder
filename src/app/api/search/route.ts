@@ -102,12 +102,33 @@ async function extractThumbnail(url: string): Promise<MediaContent | undefined> 
     return videoInfo;
   }
 
+  // List of domains known to block scraping or require authentication
+  const restrictedDomains = [
+    'jstor.org',
+    'academia.edu',
+    'researchgate.net',
+    'sciencedirect.com',
+    'springer.com',
+    'wiley.com',
+    'tandfonline.com',
+    'ieee.org'
+  ];
+
+  // Check if URL is from a restricted domain
+  const urlObj = new URL(url);
+  if (restrictedDomains.some(domain => urlObj.hostname.includes(domain))) {
+    console.log(`Skipping media extraction for restricted domain: ${urlObj.hostname}`);
+    return undefined;
+  }
+
   try {
     const { data } = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
+      },
+      timeout: 5000 // 5 second timeout
     });
+    
     const $ = cheerio.load(data);
     
     // First try meta tags
@@ -153,7 +174,9 @@ async function extractThumbnail(url: string): Promise<MediaContent | undefined> 
     
     return undefined;
   } catch (error) {
-    console.log(`Failed to extract media for ${url}:`, error);
+    // Log error without full stack trace for cleaner logs
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.log(`Skipping media extraction for ${url}: ${errorMessage}`);
     return undefined;
   }
 }
