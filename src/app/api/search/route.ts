@@ -1,13 +1,6 @@
 import { NextResponse } from 'next/server';
-import { ApifyClient } from 'apify';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-
-// Initialize the ApifyClient with API token
-const client = new ApifyClient({
-  token: process.env.MY_API_KEY,
-  timeoutSecs: 120 // Increased timeout to 120 seconds
-});
 
 interface VideoContent {
   type: 'video';
@@ -181,60 +174,64 @@ async function extractThumbnail(url: string): Promise<MediaContent | undefined> 
   }
 }
 
-/**
- * Run an Apify actor with the provided query and num.
- * @param site - The search query to be used in the actor.
- * @param query - The search query to be used in the actor.
- * @param num - The number of items to fetch.
- * @returns A promise that resolves to the items fetched from the actor's dataset.
- */
-async function runApifyActor(query: string, numSearches: number): Promise<any[]> {
-  console.log('Running actor with query:', query, 'and num:', numSearches);
-  const input = { query, numSearches};
-
+async function googleSearch(query: string, start: number = 0): Promise<any[]> {
   try {
-    // Run the Actor and wait for it to finish
-    const run = await client.actor("cgA5zIbA9F9JT5Jkk").call(input);
-
-    // Fetch Actor results from the run's dataset
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    // Construct the Google search URL
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&start=${start}`;
     
-    // Process media content in parallel with a timeout
-    const itemsWithMedia = await Promise.all(
-      items.map(async (item: any) => {
+    // Make the request with a browser-like User-Agent
+    const response = await axios.get(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    const $ = cheerio.load(response.data);
+    const results: any[] = [];
+
+    // Parse search results
+    $('.g').each((_, element) => {
+      const titleElement = $(element).find('h3').first();
+      const linkElement = $(element).find('a').first();
+      const snippetElement = $(element).find('.VwiC3b').first();
+
+      const title = titleElement.text();
+      const link = linkElement.attr('href');
+      const snippet = snippetElement.text();
+
+      // Only add results with all required fields
+      if (title && link && snippet) {
+        results.push({
+          title,
+          link: link.startsWith('/url?q=') ? decodeURIComponent(link.substring(7).split('&')[0]) : link,
+          snippet
+        });
+      }
+    });
+
+    // Process media content in parallel
+    const resultsWithMedia = await Promise.all(
+      results.map(async (result) => {
         try {
-          // Wrap media extraction in a timeout
-          const mediaPromise = extractThumbnail(item.link as string);
-          const media = await Promise.race([
-            mediaPromise,
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Media extraction timeout')), 10000)
-            )
-          ]);
-          return { ...item, media };
+          const media = await extractThumbnail(result.link);
+          return { ...result, media };
         } catch (error) {
-          console.warn(`Failed to extract media for ${item.link}:`, error);
-          return { ...item, media: undefined };
+          console.warn(`Failed to extract media for ${result.link}:`, error);
+          return { ...result, media: undefined };
         }
       })
     );
 
-    return itemsWithMedia;
+    return resultsWithMedia;
   } catch (error) {
-    console.error('Error running the actor:', error);
+    console.error('Error in Google search:', error);
     throw error;
   }
 }
 
-/**
- * POST API route handler for running the Apify actor.
- * Accepts a search query and a number as input, returning the fetched items.
- * 
- * @param req - Incoming request object.
- */
 export async function POST(req: Request) {
   try {
-    const { query, num } = await req.json();
+    const { query, start = 0 } = await req.json();
     
     if (!query) {
       return NextResponse.json(
@@ -245,10 +242,10 @@ export async function POST(req: Request) {
 
     // Set a timeout for the entire operation
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Operation timeout')), 110000)
+      setTimeout(() => reject(new Error('Operation timeout')), 30000)
     );
     
-    const resultPromise = runApifyActor(query, num);
+    const resultPromise = googleSearch(query, start);
     
     const result = await Promise.race([resultPromise, timeoutPromise]);
     
