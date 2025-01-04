@@ -12,6 +12,7 @@ import { toast } from "sonner"
 import Cookies from 'js-cookie'
 import Link from 'next/link'
 import { getCreditManager } from '@/lib/credits'
+import { ThemeToggle } from './ThemeToggle'
 
 interface HeaderProps {
     userId?: string
@@ -77,31 +78,32 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
                 </Link>
             </div>
             <div className="flex items-center gap-2 md:gap-4">
-            <div className="flex items-center gap-4">
-      {email && (
-        <Badge 
-          variant={credits <= 1 ? "destructive" : "secondary"}
-          className={`px-2 py-1 text-xs font-medium ${
-            credits <= 1 ? 'bg-red-200 text-red-700 hover:bg-red-300' : ''
-          }`}
-        >
-          <Sparkles className="mr-1 h-3 w-3" />
-          {credits} credit{credits !== 1 ? 's' : ''} remaining
-        </Badge>
-      )}
-      {userId && subscriptionStatus === 'active' && subscriptionPlan !== 'Pro' && (
-        <Button 
-          variant="outline"
-          size="sm"
-          className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white hover:from-violet-600 hover:to-fuchsia-600 transition-all duration-300 shadow-md hover:shadow-lg"
-          onClick={() => router.push('/subscription')}
-        >
-          <Crown className="mr-1.5 h-3.5 w-3.5 text-yellow-200" />
-          <span className="hidden sm:inline">Upgrade to Pro</span>
-          <span className="sm:hidden">Pro</span>
-        </Button>
-      )}
-    </div>
+                <div className="flex items-center gap-4">
+                    <ThemeToggle />
+                    {email && (
+                        <Badge 
+                            variant={credits <= 1 ? "destructive" : "secondary"}
+                            className={`px-2 py-1 text-xs font-medium ${
+                                credits <= 1 ? 'bg-red-200 text-red-700 hover:bg-red-300' : ''
+                            }`}
+                        >
+                            <Sparkles className="mr-1 h-3 w-3" />
+                            {credits} credit{credits !== 1 ? 's' : ''} remaining
+                        </Badge>
+                    )}
+                    {userId && subscriptionStatus === 'active' && subscriptionPlan !== 'Pro' && (
+                        <Button 
+                            variant="outline"
+                            size="sm"
+                            className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white hover:from-violet-600 hover:to-fuchsia-600 transition-all duration-300 shadow-md hover:shadow-lg"
+                            onClick={() => router.push('/subscription')}
+                        >
+                            <Crown className="mr-1.5 h-3.5 w-3.5 text-yellow-200" />
+                            <span className="hidden sm:inline">Upgrade to Pro</span>
+                            <span className="sm:hidden">Pro</span>
+                        </Button>
+                    )}
+                </div>
                 {userId ? (
                     <>
                         <Button onClick={() => router.push('/bookmarks')} variant="ghost" size="icon" className="rounded-full">

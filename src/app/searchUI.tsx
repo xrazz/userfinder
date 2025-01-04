@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { toast, Toaster } from "sonner"
 import { doc, onSnapshot, updateDoc, setDoc, collection, addDoc, Timestamp } from 'firebase/firestore'
 import { auth, db, firebaseAnalytics } from '@/app/firebaseClient'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Cookies from "js-cookie"
 import { Header } from '@/components/Header'
 import { SearchBar } from '@/components/SearchBar'
@@ -19,7 +20,6 @@ import { motion, useScroll, useTransform } from 'framer-motion'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { useRouter, useSearchParams } from 'next/navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 
 const MEMBERSHIP_LEVELS = {
@@ -88,6 +88,35 @@ interface SearchTabProps {
     imageUrl?: string
 }
 
+type SearchType = 'web' | 'products' | 'people';
+
+interface SearchFilters {
+    // Product filters
+    minPrice?: number;
+    maxPrice?: number;
+    location?: string;
+    
+    // People filters
+    includeEmail?: boolean;
+    includePhone?: boolean;
+    includeSocial?: boolean;
+    
+    // News filters
+    dateRange?: string;
+    source?: string;
+}
+
+const getSearchTypeQuery = (type: SearchType, baseQuery: string): string => {
+    switch (type) {
+        case 'products':
+            return `${baseQuery} (site:amazon.com OR site:ebay.com OR site:etsy.com OR inurl:product OR inurl:shop) -inurl:blog -inurl:news`;
+        case 'people':
+            return `${baseQuery} (site:linkedin.com OR site:twitter.com OR site:facebook.com OR intitle:"profile" OR inurl:about) -inurl:company`;
+        default:
+            return baseQuery;
+    }
+}
+
 interface SearchQuery {
     query: string
     timestamp: number
@@ -120,30 +149,31 @@ const fileTypes = [
 ]
 
 export default function SearchTab({ Membership = '', name = '', email = '', userId = '', imageUrl = '' }: SearchTabProps) {
-    const [searchQuery, setSearchQuery] = useState('')
-    const [currentFilter, setCurrentFilter] = useState('')
-    const [loading, setLoading] = useState(false)
-    const [searchData, setSearchData] = useState<Post[]>([])
-    const [selectedSite, setSelectedSite] = useState('Universal search')
-    const [customUrl, setCustomUrl] = useState('')
-    const [credits, setCredits] = useState(0)
-    const [typingQuery, setTypingQuery] = useState('')
-    const [pageNumber, setPageNumber] = useState(1)
-    const [hasMore, setHasMore] = useState(true)
-    const [isLoadingMore, setIsLoadingMore] = useState(false)
-    const RESULTS_PER_PAGE = 10 // Costante per il numero di risultati per pagina
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<Post[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [selectedSite, setSelectedSite] = useState('Universal search');
+    const [customUrl, setCustomUrl] = useState('');
+    const [currentFilter, setCurrentFilter] = useState('all');
+    const [showSettings, setShowSettings] = useState(false);
+    const [selectedFileType, setSelectedFileType] = useState('all');
+    const [searchType, setSearchType] = useState<SearchType>('web');
     const [privacyMode, setPrivacyMode] = useState(() => {
         // Check localStorage for saved preference
         const saved = localStorage.getItem('privacyMode')
         return saved ? JSON.parse(saved) : false
-    })
+    });
+    const RESULTS_PER_PAGE = 10; // Constant for number of results per page
+    const [credits, setCredits] = useState(0)
+    const [typingQuery, setTypingQuery] = useState('')
     const [hasResults, setHasResults] = useState(false)
     const { scrollY } = useScroll()
     const [isScrolled, setIsScrolled] = useState(false)
     const [settingsButtonRef, setSettingsButtonRef] = useState<HTMLButtonElement | null>(null);
-    const [selectedFileType, setSelectedFileType] = useState("all")
-    const router = useRouter()
-    const searchParams = useSearchParams()
     const [searchInProgress, setSearchInProgress] = useState(false)
     const initialSearchRef = useRef(false)
     const urlTriggeredRef = useRef(false)
@@ -235,10 +265,10 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     }, [email]);
 
     useEffect(() => {
-        if (searchData.length > 0) {
+        if (searchResults.length > 0) {
             setLoading(false)
         }
-    }, [searchData])
+    }, [searchResults])
 
     // new crawler for text
     const fetchResults = async (query: string, page: number): Promise<Post[]> => {
@@ -333,20 +363,44 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     }
 
     // Aggiungi questa funzione helper per costruire la query in modo consistente
-    const buildSearchQuery = (baseQuery: string, siteToSearch: string, dateFilter: string): string => {
-        // Se la query contiene già un filetype manuale, usa quella
-        if (baseQuery.toLowerCase().includes('filetype:')) {
-            const sitePrefix = siteToSearch ? `site:${siteToSearch} ` : '';
-            return `${sitePrefix}${baseQuery} ${dateFilter}`.trim();
+    const buildSearchQuery = (baseQuery: string, siteToSearch: string, dateFilter: string, type: SearchType, filters?: SearchFilters): string => {
+        let query = getSearchTypeQuery(type, baseQuery);
+        
+        // Aggiungi i filtri specifici per tipo
+        if (filters) {
+            if (type === 'products') {
+                if (filters.minPrice) {
+                    query += ` price:>${filters.minPrice}`;
+                }
+                if (filters.maxPrice) {
+                    query += ` price:<${filters.maxPrice}`;
+                }
+                if (filters.location) {
+                    query += ` location:"${filters.location}"`;
+                }
+            } else if (type === 'people') {
+                if (filters.includeEmail) {
+                    query += ` (intext:email OR intext:mail OR intext:@)`;
+                }
+                if (filters.includePhone) {
+                    query += ` (intext:phone OR intext:tel OR intext:mobile)`;
+                }
+                if (filters.includeSocial) {
+                    query += ` (site:linkedin.com OR site:twitter.com OR site:facebook.com OR site:instagram.com)`;
+                }
+            }
         }
         
-        // Altrimenti, usa il filetype dal select se presente
-        const selectedType = fileTypes.find(t => t.value === selectedFileType);
-        const filetype = selectedType?.dork || '';
+        if (siteToSearch && siteToSearch !== 'Universal search') {
+            query += ` site:${siteToSearch.toLowerCase()}`;
+        }
         
-        // Costruisci la query completa
-        const sitePrefix = siteToSearch ? `site:${siteToSearch} ` : '';
-        return `${sitePrefix}${baseQuery} ${filetype} ${dateFilter}`.trim();
+        if (dateFilter && dateFilter !== 'all') {
+            const dateString = getDateFilterString(mapFilterToDate(dateFilter));
+            query += ` ${dateString}`;
+        }
+        
+        return query;
     }
 
     const handleSearchInputChange = (value: string) => {
@@ -354,87 +408,91 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         setSearchQuery(value)
     }
 
-   // ... existing code ...
-const handleSearch = async (queryToUse?: string) => {
-    // Prevent multiple simultaneous searches
-    if (searchInProgress) {
-        console.log('Search already in progress, skipping...')
-        return
+    const handleSearch = async (queryToUse?: string, newSearchType?: SearchType, filters?: SearchFilters) => {
+        // Prevent multiple simultaneous searches
+        if (searchInProgress) {
+            console.log('Search already in progress, skipping...')
+            return
+        }
+
+        // Use provided query or current search query
+        const queryToSearch = (queryToUse || searchQuery).trim()
+        if (!queryToSearch) return
+
+        try {
+            setSearchInProgress(true)
+            setSearchResults([])
+            setLoading(true)
+            setCurrentPage(1)
+            setHasMore(true)
+
+            // Update search type if provided
+            if (newSearchType) {
+                setSearchType(newSearchType)
+            }
+
+            // Only update search query state if a new query is provided
+            if (queryToUse) {
+                setSearchQuery(queryToUse)
+                setTypingQuery(queryToUse)
+            }
+
+            // Only track search if it's not URL-triggered
+            if (!urlTriggeredRef.current) {
+                await trackSearchQuery(queryToSearch)
+            }
+            
+            const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
+            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
+            
+            const finalQuery = buildSearchQuery(queryToSearch, siteToSearch, dateFilterString, newSearchType || searchType, filters)
+            console.log('Final query:', finalQuery)
+            
+            const Results = await fetchResults(finalQuery, 1)
+            setSearchResults(Results)
+            setHasResults(Results.length > 0)
+        } catch (error) {
+            console.error("Error fetching data:", error)
+            setHasResults(false)
+            
+            if (error instanceof Error && error.message.includes('network')) {
+                toast.error("Network error. Retrying in 5 seconds...")
+                autoReload(5000)
+            }
+        } finally {
+            setLoading(false)
+            setSearchInProgress(false)
+            // Reset URL trigger flag after search is complete
+            urlTriggeredRef.current = false
+        }
     }
-
-    // Use provided query or current search query
-    const queryToSearch = (queryToUse || searchQuery).trim()
-    if (!queryToSearch) return
-
-    try {
-        setSearchInProgress(true)
-        setSearchData([])
-        setLoading(true)
-        setPageNumber(1)
-        setHasMore(true)
-
-        // Only update search query state if a new query is provided
-        if (queryToUse) {
-            setSearchQuery(queryToUse)
-            setTypingQuery(queryToUse)
-        }
-
-        // Only track search if it's not URL-triggered
-        if (!urlTriggeredRef.current) {
-            await trackSearchQuery(queryToSearch)
-        }
-        
-        const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
-        const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
-        
-        const finalQuery = buildSearchQuery(queryToSearch, siteToSearch, dateFilterString)
-        console.log('Final query:', finalQuery)
-        
-        const Results = await fetchResults(finalQuery, 1)
-        setSearchData(Results)
-        setHasResults(Results.length > 0)
-    } catch (error) {
-        console.error("Error fetching data:", error)
-        setHasResults(false)
-        
-        if (error instanceof Error && error.message.includes('network')) {
-            toast.error("Network error. Retrying in 5 seconds...")
-            autoReload(5000)
-        }
-    } finally {
-        setLoading(false)
-        setSearchInProgress(false)
-        // Reset URL trigger flag after search is complete
-        urlTriggeredRef.current = false
-    }
-}
 
     const handleLoadMore = async () => {
-        if (!isLoadingMore && hasMore) {
-            setIsLoadingMore(true)
-            try {
-                const nextPage = pageNumber + 1
-                const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
-                const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
-                
-                // Usa la stessa logica di costruzione query di handleSearch
-                const finalQuery = buildSearchQuery(searchQuery, siteToSearch, dateFilterString)
-                const newResults = await fetchResults(finalQuery, nextPage)
-
-                if (newResults.length === 0) {
-                    setHasMore(false)
-                } else {
-                    setSearchData(prev => [...prev, ...newResults])
-                    setPageNumber(nextPage)
-                }
-            } catch (error) {
-                console.error("Error loading more results:", error)
-                setHasMore(false)
-            } finally {
-                setIsLoadingMore(false)
+        if (loading || !hasMore) return;
+        
+        try {
+            setLoading(true);
+            const nextPage = currentPage + 1;
+            
+            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite;
+            const dateFilterString = currentFilter !== 'all' ? getDateFilterString(mapFilterToDate(currentFilter)) : '';
+            
+            const finalQuery = buildSearchQuery(searchQuery, siteToSearch, dateFilterString, searchType);
+            const newResults = await fetchResults(finalQuery, nextPage);
+            
+            if (newResults.length === 0) {
+                setHasMore(false);
+            } else {
+                setSearchResults((prev: Post[]) => [...prev, ...newResults]);
+                setCurrentPage(nextPage);
             }
+        } catch (error) {
+            console.error('Error loading more results:', error);
+            toast.error('An error occurred while loading more results');
+        } finally {
+            setLoading(false);
         }
-    }
+    };
 
     const handleFilterChange = (value: string) => {
         setCurrentFilter(value)
@@ -634,12 +692,10 @@ const handleSearch = async (queryToUse?: string) => {
                                     onFileTypeChange={handleFileTypeChange}
                                     selectedFileType={selectedFileType}
                                     fileTypes={fileTypes}
-                                    className="h-10"
-                                    showSettings={isScrolled}
-                                    onSettingsClick={() => {
-                                        if (settingsButtonRef) {
-                                            settingsButtonRef.click();
-                                        }
+                                    searchType={searchType}
+                                    onSearchTypeChange={(type) => {
+                                        setSearchType(type);
+                                        // Non eseguiamo qui la ricerca perché verrà gestita dal componente SearchBar
                                     }}
                                 />
                             </div>
@@ -741,6 +797,11 @@ const handleSearch = async (queryToUse?: string) => {
                         onFileTypeChange={handleFileTypeChange}
                         selectedFileType={selectedFileType}
                         fileTypes={fileTypes}
+                        searchType={searchType}
+                        onSearchTypeChange={(type) => {
+                            setSearchType(type);
+                            // Non eseguiamo qui la ricerca perché verrà gestita dal componente SearchBar
+                        }}
                     />
 
                     <motion.div 
@@ -802,7 +863,7 @@ const handleSearch = async (queryToUse?: string) => {
                 {hasResults && (
                     <SearchResults
                         platform={selectedSite === 'custom' ? customUrl : selectedSite}
-                        posts={searchData}
+                        posts={searchResults}
                         logo={selectedSite === 'custom' ? '/custom.png' : sites.find(site => site.name === selectedSite)?.icon || '/custom.png'}
                         searchQuery={searchQuery}
                         currentFilter={currentFilter}
@@ -812,7 +873,7 @@ const handleSearch = async (queryToUse?: string) => {
                         email={email}
                         onLoadMore={handleLoadMore}
                         hasMore={hasMore}
-                        isLoadingMore={isLoadingMore}
+                        isLoadingMore={loading}
                         setCustomUrl={setCustomUrl}
                         setSelectedSite={setSelectedSite}
                         handleSearch={handleSearch}
