@@ -11,16 +11,21 @@ import { auth } from '@/app/firebaseClient';
 import { onAuthStateChanged } from 'firebase/auth';
 import Cookies from 'js-cookie';
 
-if (!process.env.STRIPE_PUBLISHABLE_KEY) {
-  console.error('Missing STRIPE_PUBLISHABLE_KEY environment variable');
+// Make sure we're using the correct environment variable name
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
+if (!stripePublishableKey) {
+  console.error('Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
 }
 
-const stripePromise = loadStripe(process.env.STRIPE_PUBLISHABLE_KEY!);
+// Initialize Stripe only if we have a publishable key
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 export default function SubscriptionContent() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [stripeError, setStripeError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -33,7 +38,12 @@ export default function SubscriptionContent() {
 
   const handleSubscribe = async () => {
     console.log('Subscribe button clicked');
-    console.log('User:', user);
+    
+    if (!stripePromise) {
+      toast.error('Stripe configuration error. Please try again later.');
+      console.error('Stripe not initialized:', { stripePublishableKey });
+      return;
+    }
 
     if (!user) {
       toast.error('Please sign in to subscribe');
@@ -77,6 +87,7 @@ export default function SubscriptionContent() {
       
       if (error) {
         console.error('Stripe redirect error:', error);
+        setStripeError(error.message || 'Failed to process subscription');
         toast.error('Failed to process subscription');
       }
     } catch (error) {
