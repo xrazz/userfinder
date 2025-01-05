@@ -330,6 +330,14 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const buildSearchQuery = (baseQuery: string, siteToSearch: string, dateFilter: string, type: SearchType, filters?: SearchFilters): string => {
         let query = getSearchTypeQuery(type, baseQuery, filters);
         
+        // Add file type filter if selected and in web search mode
+        if (type === 'web' && selectedFileType !== 'all') {
+            const fileTypeDork = fileTypes.find(ft => ft.value === selectedFileType)?.dork || '';
+            if (fileTypeDork) {
+                query += ` ${fileTypeDork}`;
+            }
+        }
+        
         if (siteToSearch && siteToSearch !== 'Universal search') {
             query += ` site:${siteToSearch.toLowerCase()}`;
         }
