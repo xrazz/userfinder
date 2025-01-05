@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
-import { Bookmark, LogOut, Sparkles, Crown } from 'lucide-react'
+import { Bookmark, LogOut, Sparkles, Crown, HelpCircle } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { doc, onSnapshot } from 'firebase/firestore'
@@ -144,9 +144,20 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
                                             Get 50 credits daily
                                         </Button>
                                     </div>
-                                    <Button variant="ghost" className="w-full justify-start" onClick={onLogout}>
+                                    <a
+                                        href="mailto:info@lexy.uno"
+                                        className="flex items-center w-full px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm"
+                                    >
+                                        <HelpCircle className="mr-2 h-4 w-4" />
+                                        info@lexy.uno
+                                    </a>
+                                    <Button 
+                                        variant="ghost" 
+                                        className="w-full px-3 py-2 h-auto font-normal text-sm justify-start hover:bg-muted" 
+                                        onClick={onLogout}
+                                    >
                                         <LogOut className="mr-2 h-4 w-4" />
-                                        <span>Log out</span>
+                                        Log out
                                     </Button>
                                 </div>
                             </PopoverContent>
