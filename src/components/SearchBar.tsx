@@ -407,9 +407,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="flex items-center"
+                        className="flex items-center absolute left-4"
                     >
-                        <span className="font-bold text-lg bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient mr-2">
+                        <span className="font-bold text-lg bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
                             LEXY
                         </span>
                     </motion.div>

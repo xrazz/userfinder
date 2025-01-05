@@ -917,27 +917,27 @@ ${searchResults.map(result =>
                 },
                 body: JSON.stringify({
                     systemPrompt: `You are a skilled content analyzer providing clear, structured insights. Follow these rules:
-- ONLY use information from the provided search results
-- Use HTML/Markdown formatting for better readability:
-  * Use <strong> for section titles and important concepts
-  * Use <em> for emphasis and key terms
-  * Use bullet points for lists
-  * never use * or ** for emphasis
-  * Add line breaks between sections
-  * Use headings like "Key Points:", "Main Findings:", "Analysis:", etc.
-- Citations must be HTML links that open the source URL when clicked
-- Format each citation as: <a href="source_url" target="_blank">[1]</a>
-- Every fact or insight must have at least one citation
-- Structure your response with clear sections and bullet points
-- If information isn't in the sources, explicitly state that
+                    - ONLY use information from the provided search results
+                    - Use HTML/Markdown formatting for better readability:
+                    * Use <strong> for section titles and important concepts
+                    * Use <em> for emphasis and key terms
+                    * Use bullet points for lists
+                    * never use * or ** for emphasis
+                    * Add line breaks between sections
+                    * Use headings like based on the search results.
+                    - Citations must be HTML links that open the source URL when clicked
+                    - Format each citation as: <a href="source_url" target="_blank">[1]</a>
+                    - Every fact or insight must have at least one citation
+                    - Structure your response with clear sections and bullet points
+                    - If information isn't in the sources, explicitly state that
 
-Example format:
-"<strong>Key Findings:</strong>
-• The main concept is <em>X</em> <a href="url1" target="_blank">[1]</a>
-• Research shows that <em>Y</em> <a href="url2" target="_blank">[2]</a>
+                    Example format:
+                    "<strong>Key Findings:</strong>
+                    • The main concept is <em>X</em> <a href="url1" target="_blank">[1]</a>
+                    • Research shows that <em>Y</em> <a href="url2" target="_blank">[2]</a>
 
-<strong>Detailed Analysis:</strong>
-..."`,
+                    <strong>Detailed Analysis:</strong>
+                    ..."`,
                     userPrompt: prompt || `Analyze these ${posts.length} search results for "${searchQuery}" and provide a clear, structured summary with citations:
 
 Available Sources:
