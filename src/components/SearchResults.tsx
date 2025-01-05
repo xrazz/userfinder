@@ -729,29 +729,24 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     const [loadMoreElementPosition, setLoadMoreElementPosition] = useState<number>(0);
     const loadingRef = useRef<HTMLDivElement>(null);
 
-    // Configurazione dell'observer per lo scroll infinito
+    // Update the infinite scroll configuration
     const { ref, inView } = useInView({
         threshold: 0,
-        rootMargin: '100px',
-    })
-
-    // Trigger del caricamento quando l'elemento è in vista
-    useEffect(() => {
-        if (inView && hasMore && !isLoadingMore && !pendingSearch) {
-            // Salva la posizione di scroll corrente
-            scrollPositionRef.current = window.scrollY;
-            onLoadMore();
+        rootMargin: '400px',
+        onChange: (inView) => {
+            if (inView && hasMore && !isLoadingMore) {
+                onLoadMore();
+            }
         }
-    }, [inView, hasMore, isLoadingMore, pendingSearch]);
+    });
 
-    // Ripristina la posizione di scroll dopo il caricamento
+    // Remove the scroll position restoration effect
     useEffect(() => {
-        if (scrollPositionRef.current > 0) {
-            requestAnimationFrame(() => {
-                window.scrollTo(0, scrollPositionRef.current);
-            });
+        // Only handle new searches, not "load more" updates
+        if (searchQuery) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-    }, [posts.length]);
+    }, [searchQuery]);
 
     // Reset states when searchQuery changes
     React.useEffect(() => {
@@ -1707,18 +1702,16 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
 
                 {/* Loading Anchor */}
                 <div 
-                    ref={loadingRef}
-                    className="h-10 flex items-center justify-center"
+                    ref={ref}
+                    className="h-20 flex items-center justify-center"
                     style={{ visibility: hasMore ? 'visible' : 'hidden' }}
                 >
-                    <div ref={ref}>
-                        {isLoadingMore && (
-                            <div className="flex items-center gap-2">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span className="text-sm text-muted-foreground">Loading more results...</span>
-                            </div>
-                        )}
-                    </div>
+                    {isLoadingMore && (
+                        <div className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-sm text-muted-foreground">Loading more results...</span>
+                        </div>
+                    )}
                 </div>
             </div>
 

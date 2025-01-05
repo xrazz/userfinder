@@ -360,9 +360,14 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     const handleSearch = () => {
         if (!searchTerm.trim()) return
-        setTypingQuery(searchTerm)
-        onSearch(searchTerm, currentSearchType, searchFilters)
-        setShowSuggestions(false)
+        // First scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        // Then trigger the search after a small delay to ensure smooth scroll
+        setTimeout(() => {
+            setTypingQuery(searchTerm)
+            onSearch(searchTerm, currentSearchType, searchFilters)
+            setShowSuggestions(false)
+        }, 100)
     }
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -387,10 +392,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         setSearchTerm(suggestion)
         setTypingQuery(suggestion)
         setShowSuggestions(false)
-        // Uso setTimeout per assicurarmi che lo stato sia aggiornato
+        // First scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        // Then trigger the search after a small delay to ensure smooth scroll
         setTimeout(() => {
             onSearch(suggestion, currentSearchType, searchFilters)
-        }, 0)
+        }, 100)
     }
 
     return (

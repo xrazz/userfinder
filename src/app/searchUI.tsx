@@ -246,15 +246,11 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         }
     }, [searchResults])
 
-    // new crawler for text
+    // Update the fetchResults function to handle Google pagination
     const fetchResults = async (query: string, page: number): Promise<Post[]> => {
         try {
-            // Log della query per debug
-            console.log('Query being sent to API:', query);
-            
-            // Create AbortController with 30 second timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds
+            // Calculate the start index for Google pagination (0-based)
+            const start = (page - 1) * RESULTS_PER_PAGE;
             
             const response = await fetch('/api/search', {
                 method: 'POST',
@@ -262,15 +258,10 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    query: query,  // La query include già il filetype dalla SearchBar
-                    num: RESULTS_PER_PAGE,
-                    start: (page - 1) * RESULTS_PER_PAGE,
+                    query: query,
+                    start: start
                 }),
-                signal: controller.signal
             });
-
-            // Clear timeout
-            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
@@ -278,20 +269,17 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
             const data = await response.json();
             
-            // Log dei risultati per debug
-            console.log('API Response:', data);
-
             if (data.success) {
+                // If no results are returned, mark as no more results
+                if (data.data.length === 0) {
+                    setHasMore(false);
+                }
                 return data.data;
             } else {
                 throw new Error(data.error || 'Unknown API error occurred');
             }
         } catch (error: any) {
             console.error('Error fetching results:', error.message || error);
-            // Check if it's an abort error
-            if (error.name === 'AbortError') {
-                throw new Error('Request timed out after 30 seconds');
-            }
             return [];
         }
     };
@@ -443,12 +431,12 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             if (newResults.length === 0) {
                 setHasMore(false);
             } else {
-                setSearchResults((prev: Post[]) => [...prev, ...newResults]);
+                setSearchResults(prev => [...prev, ...newResults]);
                 setCurrentPage(nextPage);
             }
         } catch (error) {
             console.error('Error loading more results:', error);
-            toast.error('An error occurred while loading more results');
+            toast.error('Failed to load more results. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -903,7 +891,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {searchHistory.map((item, index) => (
+                                {searchHistory
+                                    .sort((a, b) => b.timestamp - a.timestamp) // Sort by timestamp in descending order
+                                    .map((item, index) => (
                                     <div
                                         key={index}
                                         className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group"

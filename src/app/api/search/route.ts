@@ -17,6 +17,21 @@ interface ImageContent {
 
 type MediaContent = VideoContent | ImageContent;
 
+// Add interface for Google Search result
+interface GoogleSearchResult {
+  title: string;
+  link: string;
+  snippet: string;
+}
+
+// Add interface for our formatted result
+interface FormattedSearchResult {
+  title: string;
+  link: string;
+  snippet: string;
+  media?: MediaContent;
+}
+
 // Helper function to extract video information
 function extractVideoInfo(url: string): VideoContent | null {
   try {
@@ -174,12 +189,11 @@ async function extractThumbnail(url: string): Promise<MediaContent | undefined> 
   }
 }
 
-async function googleSearch(query: string, start: number = 0): Promise<any[]> {
+// New Google Search function
+async function googleSearch(query: string, start: number = 0): Promise<FormattedSearchResult[]> {
   try {
-    // Construct the Google search URL
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&start=${start}`;
     
-    // Make the request with a browser-like User-Agent
     const response = await axios.get(searchUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -187,9 +201,9 @@ async function googleSearch(query: string, start: number = 0): Promise<any[]> {
     });
 
     const $ = cheerio.load(response.data);
-    const results: any[] = [];
+    const results: FormattedSearchResult[] = [];
 
-    // Parse search results
+    // Extract search results
     $('.g').each((_, element) => {
       const titleElement = $(element).find('h3').first();
       const linkElement = $(element).find('a').first();
@@ -199,12 +213,11 @@ async function googleSearch(query: string, start: number = 0): Promise<any[]> {
       const link = linkElement.attr('href');
       const snippet = snippetElement.text();
 
-      // Only add results with all required fields
-      if (title && link && snippet) {
+      if (title && link && link.startsWith('http')) {
         results.push({
           title,
-          link: link.startsWith('/url?q=') ? decodeURIComponent(link.substring(7).split('&')[0]) : link,
-          snippet
+          link,
+          snippet: snippet || ''
         });
       }
     });
