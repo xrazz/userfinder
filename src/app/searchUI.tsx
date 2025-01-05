@@ -355,16 +355,11 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         setSearchQuery(value)
     }
 
-    const handleSearch = async (queryToUse?: string, newSearchType?: SearchType, filters?: SearchFilters, updateSearchBar: boolean = true) => {
-        // Prevent multiple simultaneous searches
+    const handleSearch = async (queryToUse?: string, newSearchType?: SearchType, filters?: SearchFilters) => {
         if (searchInProgress) {
             console.log('Search already in progress, skipping...')
             return
         }
-
-        // Use provided query or current search query
-        const queryToSearch = (queryToUse || searchQuery).trim()
-        if (!queryToSearch) return
 
         try {
             setSearchInProgress(true)
@@ -373,7 +368,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             setCurrentPage(1)
             setHasMore(true)
 
-            // Update search type and filters if provided
             if (newSearchType) {
                 setSearchType(newSearchType)
             }
@@ -381,13 +375,52 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 setSearchFilters(filters)
             }
 
-            // Only update search query state if a new query is provided and updateSearchBar is true
-            if (queryToUse && updateSearchBar) {
-                setSearchQuery(queryToUse)
-                setTypingQuery(queryToUse)
+            // Handle image search
+            if (filters?.isImageSearch && filters.image) {
+                try {
+                    const response = await fetch('/api/image-search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            image: filters.image
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to process image search');
+                    }
+
+                    const data = await response.json();
+                    if (data.similarImages) {
+                        // Convert the image search results to the Post format
+                        const results = data.similarImages.map((img: any) => ({
+                            title: 'Similar Image',
+                            link: img.url,
+                            snippet: `Similarity score: ${Math.round((img.score || 0) * 100)}%`,
+                            media: {
+                                type: 'image',
+                                url: img.url
+                            }
+                        }));
+                        setSearchResults(results);
+                        setHasResults(results.length > 0);
+                    } else {
+                        throw new Error('No results found');
+                    }
+                    return;
+                } catch (error) {
+                    console.error('Error in image search:', error);
+                    toast.error('Failed to process image search');
+                    return;
+                }
             }
 
-            // Only track search if it's not URL-triggered
+            // Regular search logic continues here...
+            const queryToSearch = (queryToUse || searchQuery).trim()
+            if (!queryToSearch) return
+
             if (!urlTriggeredRef.current) {
                 await trackSearchQuery(queryToSearch)
             }
@@ -402,11 +435,11 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 newSearchType || searchType,
                 filters || searchFilters
             )
-            console.log('Final query:', finalQuery)
             
             const Results = await fetchResults(finalQuery, 1)
             setSearchResults(Results)
             setHasResults(Results.length > 0)
+
         } catch (error) {
             console.error("Error fetching data:", error)
             setHasResults(false)
@@ -418,7 +451,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         } finally {
             setLoading(false)
             setSearchInProgress(false)
-            // Reset URL trigger flag after search is complete
             urlTriggeredRef.current = false
         }
     }
@@ -580,8 +612,8 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
     const getSearchTypeQuery = (type: SearchType, baseQuery: string, filters?: SearchFilters): string => {
         switch (type) {
-            case 'marketplace':
-                return `${baseQuery} (site:amazon.com OR site:ebay.com OR site:etsy.com OR inurl:product OR inurl:shop)`;
+            case 'media':
+                return `${baseQuery} (site:youtube.com OR site:vimeo.com OR site:dailymotion.com OR site:flickr.com OR site:imgur.com OR site:instagram.com OR filetype:jpg OR filetype:jpeg OR filetype:png OR filetype:gif OR filetype:mp4 OR filetype:webm OR filetype:mov)`;
             case 'social':
                 let query = baseQuery;
                 
@@ -875,6 +907,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                         handleSearch={handleSearch}
                         credits={credits}
                         onCreditUpdate={handleCreditUpdate}
+                        searchType={searchType}
                     />
                 )}
             </motion.div>
@@ -908,9 +941,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                     >
                                         <div className="flex-1">
                                             <p className="font-medium">{item.query}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {new Date(item.timestamp).toLocaleString()}
-                                            </p>
                                         </div>
                                         <Button
                                             variant="ghost"

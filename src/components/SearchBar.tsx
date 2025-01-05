@@ -2,14 +2,14 @@ import React, { useRef, useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Globe, Store, Share2, Mail, Phone, MapPin, MessageCircle, Hash, AtSign, History } from 'lucide-react'
+import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Globe, Play, Share2, Mail, Phone, MapPin, MessageCircle, Hash, AtSign, History, XIcon, ImagePlus, Upload } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-export type SearchType = 'web' | 'marketplace' | 'social';
+export type SearchType = 'web' | 'media' | 'social';
 
 export interface SearchFilters {
     // Product filters
@@ -24,6 +24,10 @@ export interface SearchFilters {
     includeMentions?: boolean;
     includeComments?: boolean;
     contentType?: 'all' | 'posts' | 'profiles' | 'discussions';
+    imageUrl?: string;
+    image?: string;
+    imageFile?: string;
+    isImageSearch?: boolean;
 }
 
 interface SearchBarProps {
@@ -50,12 +54,12 @@ const placeholderQueries = {
         "Let's search technical documents...",
         "Let's find expert publications..."
     ],
-    marketplace: [
-        "Let's find the best deals...",
-        "Let's discover trending products...",
-        "Let's explore marketplace offers...",
-        "Let's find quality items...",
-        "Let's search exclusive products..."
+    media: [
+        "Let's find amazing videos...",
+        "Let's discover stunning images...",
+        "Let's explore visual content...",
+        "Let's find viral videos...",
+        "Let's search for media..."
     ],
     social: [
         "Let's find trending discussions...",
@@ -258,6 +262,93 @@ const SocialFilters = ({ filters, onChange }: {
     );
 };
 
+const MediaFilters = ({ filters, onChange }: { 
+    filters: SearchFilters, 
+    onChange: (filters: SearchFilters) => void 
+}) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [previewUrl, setPreviewUrl] = useState<string>('');
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                setPreviewUrl(base64String);
+                onChange({ ...filters, imageFile: base64String });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    return (
+        <div className="p-4 space-y-4 border-t">
+            <div className="space-y-2">
+                <Label>Content Type</Label>
+                <Select
+                    value={filters.contentType || 'all'}
+                    onValueChange={(value) => onChange({ ...filters, contentType: value as SearchFilters['contentType'] })}
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select content type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Content</SelectItem>
+                        <SelectItem value="videos">Videos</SelectItem>
+                        <SelectItem value="images">Images</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <div className="space-y-2">
+                <Label>Search by Image</Label>
+                <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                />
+                <div className="flex flex-col gap-2">
+                    {previewUrl ? (
+                        <div className="relative rounded-lg overflow-hidden border border-border">
+                            <img 
+                                src={previewUrl} 
+                                alt="Preview" 
+                                className="w-full h-32 object-cover"
+                            />
+                            <Button
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-2 right-2"
+                                onClick={() => {
+                                    setPreviewUrl('');
+                                    onChange({ ...filters, imageFile: undefined });
+                                }}
+                            >
+                                <XIcon className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ) : (
+                        <Button
+                            variant="outline"
+                            className="w-full h-32 flex flex-col gap-2"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            <ImagePlus className="h-6 w-6" />
+                            <span>Upload an image</span>
+                            <span className="text-xs text-muted-foreground">
+                                Click to browse or drag and drop
+                            </span>
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const SearchBar: React.FC<SearchBarProps> = ({ 
     onSearch, 
     typingQuery, 
@@ -274,6 +365,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     onHistoryClick = () => {}
 }) => {
     const searchInputRef = useRef<HTMLInputElement>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
     const [isSearchFocused, setIsSearchFocused] = useState(false)
     const [suggestions, setSuggestions] = useState<string[]>([])
     const [showSuggestions, setShowSuggestions] = useState(false)
@@ -400,6 +492,25 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         }, 100)
     }
 
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                // Switch to media type
+                setCurrentSearchType('media');
+                onSearchTypeChange('media');
+                // Pass only the image data without a text query
+                onSearch('', 'media', { 
+                    image: base64String,
+                    isImageSearch: true
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
         <div className="w-full space-y-2">
             <div className={`flex items-center gap-2 justify-center ${showSettings ? 'mb-2' : 'mb-4'}`}>
@@ -424,15 +535,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     Web
                 </SearchTypeButton>
                 <SearchTypeButton
-                    type="marketplace"
-                    active={currentSearchType === 'marketplace'}
-                    icon={Store}
-                    onClick={() => handleSearchTypeClick('marketplace')}
-                    compact={showSettings}
-                >
-                    Marketplace
-                </SearchTypeButton>
-                <SearchTypeButton
                     type="social"
                     active={currentSearchType === 'social'}
                     icon={Share2}
@@ -440,6 +542,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     compact={showSettings}
                 >
                     Social
+                </SearchTypeButton>
+                <SearchTypeButton
+                    type="media"
+                    active={currentSearchType === 'media'}
+                    icon={Play}
+                    onClick={() => handleSearchTypeClick('media')}
+                    compact={showSettings}
+                >
+                    Media
                 </SearchTypeButton>
             </div>
             
@@ -472,6 +583,27 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         </div>
                         
                         <div className="flex items-stretch h-full divide-x divide-gray-200 dark:divide-gray-800">
+                            {/* Image upload button - only show for media search */}
+                            {currentSearchType === 'media' && (
+                                <div className={`flex items-center ${showSettings ? 'px-1.5' : 'px-2'}`}>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        ref={fileInputRef}
+                                        onChange={handleFileChange}
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={`w-8 h-8 ${showSettings ? 'h-7 w-7' : ''}`}
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <ImagePlus className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            )}
+
                             {/* File type selector - shown only for web search */}
                             {currentSearchType === 'web' && (
                                 <div className={`flex items-center ${showSettings ? 'px-1.5' : 'px-2'}`}>
@@ -516,7 +648,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                             )}
 
                             {/* Show filters for marketplace and social */}
-                            {(currentSearchType === 'marketplace' || currentSearchType === 'social') && (
+                            {(currentSearchType === 'media' || currentSearchType === 'social') && (
                                 <div className="px-2 border-l border-gray-200 dark:border-gray-800">
                                     <Popover>
                                         <PopoverTrigger asChild>
@@ -525,8 +657,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-80 p-0">
-                                            {currentSearchType === 'marketplace' && (
-                                                <ProductFilters
+                                            {currentSearchType === 'media' && (
+                                                <MediaFilters
                                                     filters={searchFilters}
                                                     onChange={setSearchFilters}
                                                 />

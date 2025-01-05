@@ -45,6 +45,7 @@ interface SearchResultsProps {
     handleSearch: (query?: string) => void
     credits: number
     onCreditUpdate?: () => void
+    searchType?: 'web' | 'media' | 'social'
 }
 
 interface Message {
@@ -689,6 +690,52 @@ const getFaviconUrl = (url: string) => {
     }
 };
 
+// Add this helper function to handle media preview logic
+const MediaPreview: React.FC<{ post: Post, searchType?: 'web' | 'media' | 'social' }> = ({ post, searchType }) => {
+    // For image search results (when post.media exists)
+    if (post.media) {
+        if (post.media.type === 'video' && post.media.embedUrl) {
+            return (
+                <div className="mt-3 mb-4">
+                    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                        <iframe
+                            src={post.media.embedUrl}
+                            className="absolute inset-0 w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    </div>
+                </div>
+            );
+        }
+        
+        if (post.media.type === 'image' && post.media.url && (searchType === 'media' || searchType === 'social')) {
+            return (
+                <div className="mt-3 mb-4">
+                    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                        <img
+                            src={post.media.url}
+                            alt={post.title}
+                            className="object-contain w-full h-full"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                        />
+                    </div>
+                </div>
+            );
+        }
+    }
+
+    // For regular web/social results with video links
+    const multimediaContent = getMultimediaInfo(post.link);
+    if (multimediaContent && multimediaContent.type === 'video' && multimediaContent.embedUrl) {
+        return <MultimediaPreview content={multimediaContent} />;
+    }
+
+    return null;
+};
+
 export const SearchResults: React.FC<SearchResultsProps> = ({
     platform,
     posts,
@@ -706,7 +753,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     setSelectedSite,
     handleSearch,
     credits,
-    onCreditUpdate
+    onCreditUpdate,
+    searchType = 'web'
 }) => {
     const [isGenerating, setIsGenerating] = React.useState(false);
     const [summary, setSummary] = React.useState('');
@@ -1605,27 +1653,8 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                     </a>
                                 </h3>
 
-                                {/* Media Content - Modified to only show videos */}
-                                {post.media && post.media.type === 'video' && post.media.embedUrl && (
-                                    <div className="mt-3 mb-4">
-                                        <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
-                                            <iframe
-                                                src={post.media.embedUrl}
-                                                className="absolute inset-0 w-full h-full"
-                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                allowFullScreen
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Add Multimedia Preview - Modified to only show videos */}
-                                {(() => {
-                                    const multimediaContent = getMultimediaInfo(post.link);
-                                    return multimediaContent && !post.media && multimediaContent.type === 'video' ? (
-                                        <MultimediaPreview content={multimediaContent} />
-                                    ) : null;
-                                })()}
+                                {/* Media Preview */}
+                                <MediaPreview post={post} searchType={searchType} />
 
                                 {/* Snippet Section - remains the same */}
                                 <p className="text-sm text-muted-foreground leading-relaxed">
