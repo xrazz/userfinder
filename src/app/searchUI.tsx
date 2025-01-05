@@ -355,7 +355,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         setSearchQuery(value)
     }
 
-    const handleSearch = async (queryToUse?: string, newSearchType?: SearchType, filters?: SearchFilters) => {
+    const handleSearch = async (queryToUse?: string, newSearchType?: SearchType, filters?: SearchFilters, updateSearchBar: boolean = true) => {
         // Prevent multiple simultaneous searches
         if (searchInProgress) {
             console.log('Search already in progress, skipping...')
@@ -381,8 +381,8 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 setSearchFilters(filters)
             }
 
-            // Only update search query state if a new query is provided
-            if (queryToUse) {
+            // Only update search query state if a new query is provided and updateSearchBar is true
+            if (queryToUse && updateSearchBar) {
                 setSearchQuery(queryToUse)
                 setTypingQuery(queryToUse)
             }

@@ -42,7 +42,7 @@ interface SearchResultsProps {
     isLoadingMore: boolean
     setCustomUrl: (url: string) => void
     setSelectedSite: (site: string) => void
-    handleSearch: () => void
+    handleSearch: (query?: string) => void
     credits: number
     onCreditUpdate?: () => void
 }
@@ -1656,21 +1656,20 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                             <span>{selectedPosts.some(p => p.link === post.link) ? 'Remove' : 'Sources'}</span>
                                         </button>
                                         <button
-                                            onClick={() => handleViewContent(post)}
-                                            disabled={getMultimediaInfo(post.link)?.type === 'video'}
-                                            className={`flex-1 sm:flex-none text-sm px-4 py-2 rounded-full 
-                                                ${getMultimediaInfo(post.link)?.type === 'video' 
-                                                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed' 
-                                                    : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                                                } 
-                                                flex items-center justify-center gap-2 transition-colors order-2 sm:order-2`}
+                                            onClick={() => {
+                                                const domain = extractDomain(post.link);
+                                                const titleWords = post.title
+                                                    .toLowerCase()
+                                                    .split(' ')
+                                                    .filter(word => word.length > 3)
+                                                    .slice(0, 3)
+                                                    .join(' ');
+                                                handleSearch(titleWords);
+                                            }}
+                                            className="flex-1 sm:flex-none text-sm px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-2 transition-colors order-2 sm:order-2"
                                         >
-                                            {isLoadingContent ? (
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                            ) : (
-                                                <ChevronDownIcon className="w-4 h-4" />
-                                            )}
-                                            <span>Expand</span>
+                                            <Search className="w-4 h-4" />
+                                            <span>Similar</span>
                                         </button>
                                         <button
                                             onClick={() => onBookmark(post)}
@@ -1687,7 +1686,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                                         handleExplore(domain);
                                                     }
                                                 }}
-                                                className="flex-1 sm:flex-none text-sm px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center gap-2 transition-colors font-medium order-4 sm:order-1"
+                                                className="flex-1 sm:flex-none text-sm px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center gap-2 transition-colors font-medium order-5 sm:order-1"
                                             >
                                                 <Search className="w-4 h-4" />
                                                 <span>Explore</span>
