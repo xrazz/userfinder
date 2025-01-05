@@ -1670,7 +1670,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                             disabled={getMultimediaInfo(post.link)?.type === 'video' && !selectedPosts.some(p => p.link === post.link)}
                                             className={`flex-1 sm:flex-none text-sm px-4 py-2 rounded-full 
                                                 ${selectedPosts.some(p => p.link === post.link)
-                                                    ? 'bg-primary text-white'
+                                                    ? 'bg-primary text-primary-foreground dark:text-gray-900'
                                                     : getMultimediaInfo(post.link)?.type === 'video'
                                                         ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
                                                         : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
@@ -1715,7 +1715,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                                         handleExplore(domain);
                                                     }
                                                 }}
-                                                className="flex-1 sm:flex-none text-sm px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center gap-2 transition-colors font-medium order-5 sm:order-1"
+                                                className="flex-1 sm:flex-none text-sm px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary dark:text-white flex items-center justify-center gap-2 transition-colors font-medium order-5 sm:order-1"
                                             >
                                                 <Search className="w-4 h-4" />
                                                 <span>Explore</span>
@@ -1767,7 +1767,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                         </div>
                         <button
                             onClick={handleBackToUniversal}
-                            className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary hover:bg-primary/90 text-white flex items-center gap-1.5 sm:gap-2 transition-colors"
+                            className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground dark:text-gray-900 flex items-center gap-1.5 sm:gap-2 transition-colors"
                         >
                             <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             <span>Back to Universal</span>
@@ -1783,7 +1783,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                         <Button
                             onClick={handleBatchAnalysis}
                             disabled={isAnalyzing}
-                            className="rounded-full px-6 py-6 bg-primary text-white hover:bg-primary/90 shadow-lg flex items-center gap-3"
+                            className="rounded-full px-6 py-6 bg-primary text-primary-foreground dark:text-gray-900 hover:bg-primary/90 shadow-lg flex items-center gap-3"
                         >
                             {isAnalyzing ? (
                                 <>
@@ -1797,7 +1797,7 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                 </>
                             )}
                         </Button>
-                        <div className="absolute -top-2 -right-2 bg-primary text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                        <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground dark:text-gray-900 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                             {selectedPosts.length}
                         </div>
                     </div>
