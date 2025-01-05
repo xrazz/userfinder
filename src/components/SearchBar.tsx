@@ -2,14 +2,14 @@ import React, { useRef, useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Globe, ShoppingBag, Share2, Mail, Phone, MapPin, MessageCircle, Hash, AtSign } from 'lucide-react'
+import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Globe, Store, Share2, Mail, Phone, MapPin, MessageCircle, Hash, AtSign, History } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-export type SearchType = 'web' | 'products' | 'social';
+export type SearchType = 'web' | 'marketplace' | 'social';
 
 export interface SearchFilters {
     // Product filters
@@ -38,6 +38,8 @@ interface SearchBarProps {
     fileTypes: Array<{ value: string, label: string, dork: string }>
     searchType?: SearchType
     onSearchTypeChange?: (type: SearchType) => void
+    showHistory?: boolean
+    onHistoryClick?: () => void
 }
 
 const placeholderQueries = {
@@ -48,7 +50,7 @@ const placeholderQueries = {
         "Let's search technical documents...",
         "Let's find expert publications..."
     ],
-    products: [
+    marketplace: [
         "Let's find the best deals...",
         "Let's discover trending products...",
         "Let's explore marketplace offers...",
@@ -97,12 +99,13 @@ const getFileTypeLabel = (type: string, fileTypes: Array<{ value: string, label:
     return fileTypes.find(t => t.value === type)?.label.toLowerCase() || 'files';
 }
 
-const SearchTypeButton = ({ type, active, icon: Icon, onClick, children }: { 
+const SearchTypeButton = ({ type, active, icon: Icon, onClick, children, compact = false }: { 
     type: SearchType, 
     active: boolean, 
     icon: React.ElementType,
     onClick: () => void,
-    children: React.ReactNode 
+    children: React.ReactNode,
+    compact?: boolean
 }) => (
     <Button
         variant={active ? "default" : "ghost"}
@@ -110,10 +113,12 @@ const SearchTypeButton = ({ type, active, icon: Icon, onClick, children }: {
             active 
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        } ${
+            compact ? 'h-7 px-2 text-xs' : ''
         }`}
         onClick={onClick}
     >
-        <Icon className="w-4 h-4" />
+        <Icon className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
         {children}
     </Button>
 )
@@ -264,7 +269,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     selectedFileType, 
     fileTypes,
     searchType = 'web',
-    onSearchTypeChange = () => {}
+    onSearchTypeChange = () => {},
+    showHistory = false,
+    onHistoryClick = () => {}
 }) => {
     const searchInputRef = useRef<HTMLInputElement>(null)
     const [isSearchFocused, setIsSearchFocused] = useState(false)
@@ -388,28 +395,42 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     return (
         <div className="w-full space-y-2">
-            <div className="flex items-center gap-2 justify-center mb-4">
+            <div className={`flex items-center gap-2 justify-center ${showSettings ? 'mb-2' : 'mb-4'}`}>
+                {showSettings && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex items-center"
+                    >
+                        <span className="font-bold text-lg bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient mr-2">
+                            LEXY
+                        </span>
+                    </motion.div>
+                )}
                 <SearchTypeButton
                     type="web"
                     active={currentSearchType === 'web'}
                     icon={Globe}
                     onClick={() => handleSearchTypeClick('web')}
+                    compact={showSettings}
                 >
                     Web
                 </SearchTypeButton>
                 <SearchTypeButton
-                    type="products"
-                    active={currentSearchType === 'products'}
-                    icon={ShoppingBag}
-                    onClick={() => handleSearchTypeClick('products')}
+                    type="marketplace"
+                    active={currentSearchType === 'marketplace'}
+                    icon={Store}
+                    onClick={() => handleSearchTypeClick('marketplace')}
+                    compact={showSettings}
                 >
-                    Products
+                    Marketplace
                 </SearchTypeButton>
                 <SearchTypeButton
                     type="social"
                     active={currentSearchType === 'social'}
                     icon={Share2}
                     onClick={() => handleSearchTypeClick('social')}
+                    compact={showSettings}
                 >
                     Social
                 </SearchTypeButton>
@@ -443,35 +464,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                             />
                         </div>
                         
-                        {/* Type-specific filters */}
-                        {(currentSearchType === 'products' || currentSearchType === 'social') && (
-                            <div className="px-2 border-l border-gray-200 dark:border-gray-800">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="ghost" size="sm" className="h-8 px-2">
-                                            <Settings2 className="w-4 h-4" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-80 p-0">
-                                        {currentSearchType === 'products' && (
-                                            <ProductFilters
-                                                filters={searchFilters}
-                                                onChange={setSearchFilters}
-                                            />
-                                        )}
-                                        {currentSearchType === 'social' && (
-                                            <SocialFilters
-                                                filters={searchFilters}
-                                                onChange={setSearchFilters}
-                                            />
-                                        )}
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                        )}
-
                         <div className="flex items-stretch h-full divide-x divide-gray-200 dark:divide-gray-800">
-                            {/* File type selector - mostrato solo per ricerca web */}
+                            {/* File type selector - shown only for web search */}
                             {currentSearchType === 'web' && (
                                 <div className={`flex items-center ${showSettings ? 'px-1.5' : 'px-2'}`}>
                                     <Select value={selectedFileType} onValueChange={handleFileTypeChange}>
@@ -499,6 +493,48 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                     </Select>
                                 </div>
                             )}
+
+                            {/* History button - always visible */}
+                            {showHistory && (
+                                <div className={`flex items-center ${showSettings ? 'px-1.5' : 'px-2'} border-l border-gray-200 dark:border-gray-800`}>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={`w-8 h-8 ${showSettings ? 'h-7 w-7' : ''}`}
+                                        onClick={onHistoryClick}
+                                    >
+                                        <History className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            )}
+
+                            {/* Show filters for marketplace and social */}
+                            {(currentSearchType === 'marketplace' || currentSearchType === 'social') && (
+                                <div className="px-2 border-l border-gray-200 dark:border-gray-800">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="sm" className={`h-8 px-2 ${showSettings ? 'h-7' : ''}`}>
+                                                <Settings2 className="w-4 h-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-80 p-0">
+                                            {currentSearchType === 'marketplace' && (
+                                                <ProductFilters
+                                                    filters={searchFilters}
+                                                    onChange={setSearchFilters}
+                                                />
+                                            )}
+                                            {currentSearchType === 'social' && (
+                                                <SocialFilters
+                                                    filters={searchFilters}
+                                                    onChange={setSearchFilters}
+                                                />
+                                            )}
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            )}
+
                             <button
                                 onClick={handleSearch}
                                 className={`hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center ${
@@ -509,7 +545,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                     showSettings ? 'w-4 h-4' : 'w-5 h-5'
                                 }`} />
                             </button>
-                            {showSettings && (
+                            {!showSettings && onSettingsClick && (
                                 <button
                                     onClick={onSettingsClick}
                                     className="px-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center"

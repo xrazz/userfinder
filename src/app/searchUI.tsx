@@ -13,7 +13,7 @@ import { LoggedInSettingsPopover, LoggedOutSettingsPopover } from '@/components/
 import TabDataSkeleton from '@/components/searchProgressUI'
 import QueryTutorialModal from './docs/QueryModal'
 import { Button } from "@/components/ui/button"
-import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon } from 'lucide-react'
+import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History } from 'lucide-react'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
 import { motion, useScroll, useTransform } from 'framer-motion'
@@ -151,6 +151,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const initialSearchRef = useRef(false)
     const urlTriggeredRef = useRef(false)
     const [showBetaDialog, setShowBetaDialog] = useState(false)
+    const [showHistoryModal, setShowHistoryModal] = useState(false)
+    const [searchHistory, setSearchHistory] = useState<SearchQuery[]>([])
+    const [isHistoryLoading, setIsHistoryLoading] = useState(false)
 
     const reloadPage = useCallback(() => {
         // Soft reload using router
@@ -581,7 +584,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
     const getSearchTypeQuery = (type: SearchType, baseQuery: string, filters?: SearchFilters): string => {
         switch (type) {
-            case 'products':
+            case 'marketplace':
                 return `${baseQuery} (site:amazon.com OR site:ebay.com OR site:etsy.com OR inurl:product OR inurl:shop)`;
             case 'social':
                 let query = baseQuery;
@@ -647,6 +650,33 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         }
     }
 
+    const fetchSearchHistory = async () => {
+        setIsHistoryLoading(true)
+        if (!email) {
+            const localHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]')
+            setSearchHistory(localHistory)
+            setIsHistoryLoading(false)
+            return
+        }
+
+        try {
+            const response = await fetch('/api/search-history', {
+                headers: {
+                    'email': email
+                }
+            })
+            const data = await response.json()
+            if (data.success) {
+                setSearchHistory(data.data)
+            }
+        } catch (error) {
+            console.error('Error fetching search history:', error)
+            toast.error("Failed to load search history")
+        } finally {
+            setIsHistoryLoading(false)
+        }
+    }
+
     return (
         <main className="min-h-screen bg-background">
             <Toaster position="bottom-center" />
@@ -695,81 +725,25 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     }`}
                 >
                     <div className="max-w-3xl mx-auto px-3 py-2">
-                        <div className="flex items-center gap-4">
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: isScrolled ? 1 : 0, scale: isScrolled ? 1 : 0.8 }}
-                                className="flex items-center gap-2"
-                            >
-                                <span className="font-bold text-xl bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
-                                    LEXY
-                                </span>
-                            </motion.div>
-
-                            <div className="flex-1">
-                                <SearchBar
-                                    onSearch={handleSearch}
-                                    typingQuery={typingQuery}
-                                    setTypingQuery={handleSearchInputChange}
-                                    onFileTypeChange={handleFileTypeChange}
-                                    selectedFileType={selectedFileType}
-                                    fileTypes={fileTypes}
-                                    searchType={searchType}
-                                    onSearchTypeChange={(type) => {
-                                        setSearchType(type);
-                                        // Non eseguiamo qui la ricerca perché verrà gestita dal componente SearchBar
-                                    }}
-                                />
-                            </div>
-
-                            <div className="hidden">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            ref={setSettingsButtonRef}
-                                            variant="secondary"
-                                            size="icon"
-                                            className="w-8 h-8"
-                                        >
-                                            <Settings2 className="w-4 h-4" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <LoggedInSettingsPopover
-                                        selectedSite={selectedSite}
-                                        setSelectedSite={setSelectedSite}
-                                        currentFilter={currentFilter}
-                                        handleFilterChange={handleFilterChange}
-                                        customUrl={customUrl}
-                                        setCustomUrl={setCustomUrl}
-                                        membership={Membership}
-                                    />
-                                </Popover>
-                            </div>
-
-                            {!isScrolled && (
-                                <div className="flex items-center gap-2">
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="secondary"
-                                                size="icon"
-                                                className="w-8 h-8"
-                                            >
-                                                <Settings2 className="w-4 h-4" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <LoggedInSettingsPopover
-                                            selectedSite={selectedSite}
-                                            setSelectedSite={setSelectedSite}
-                                            currentFilter={currentFilter}
-                                            handleFilterChange={handleFilterChange}
-                                            customUrl={customUrl}
-                                            setCustomUrl={setCustomUrl}
-                                            membership={Membership}
-                                        />
-                                    </Popover>
-                                </div>
-                            )}
+                        <div className="flex-1">
+                            <SearchBar
+                                onSearch={handleSearch}
+                                typingQuery={typingQuery}
+                                setTypingQuery={handleSearchInputChange}
+                                onFileTypeChange={handleFileTypeChange}
+                                selectedFileType={selectedFileType}
+                                fileTypes={fileTypes}
+                                searchType={searchType}
+                                onSearchTypeChange={(type) => {
+                                    setSearchType(type);
+                                }}
+                                showHistory={true}
+                                onHistoryClick={() => {
+                                    fetchSearchHistory()
+                                    setShowHistoryModal(true)
+                                }}
+                                showSettings={true}
+                            />
                         </div>
                     </div>
                 </motion.div>
@@ -822,7 +796,11 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                         searchType={searchType}
                         onSearchTypeChange={(type) => {
                             setSearchType(type);
-                            // Non eseguiamo qui la ricerca perché verrà gestita dal componente SearchBar
+                        }}
+                        showHistory={true}
+                        onHistoryClick={() => {
+                            fetchSearchHistory()
+                            setShowHistoryModal(true)
                         }}
                     />
 
@@ -904,6 +882,56 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     />
                 )}
             </motion.div>
+
+            {/* Add the History Modal */}
+            <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <History className="w-5 h-5" />
+                            Search History
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="max-h-[60vh] overflow-y-auto">
+                        {isHistoryLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                            </div>
+                        ) : searchHistory.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                No search history found
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {searchHistory.map((item, index) => (
+                                    <div
+                                        key={index}
+                                        className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                                    >
+                                        <div className="flex-1">
+                                            <p className="font-medium">{item.query}</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {new Date(item.timestamp).toLocaleString()}
+                                            </p>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => {
+                                                setShowHistoryModal(false)
+                                                handleSearch(item.query)
+                                            }}
+                                        >
+                                            Search Again
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </main>
     )
 }
