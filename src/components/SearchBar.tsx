@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Globe, Play, Share2, Mail, Phone, MapPin, MessageCircle, Hash, AtSign, History, XIcon, ImagePlus, Upload } from 'lucide-react'
+import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Globe, Play, Share2, Mail, Phone, MapPin, MessageCircle, Hash, AtSign, History, XIcon, ImagePlus, Upload, SparklesIcon } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -175,6 +175,13 @@ const SocialFilters = ({ filters, onChange }: {
 }) => {
     return (
         <div className="p-4 space-y-4 border-t">
+            <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-4">
+                <div className="flex items-center gap-2 text-sm text-yellow-800 dark:text-yellow-200">
+                    <SparklesIcon className="w-4 h-4" />
+                    <span>Social search uses 1 credit per search</span>
+                </div>
+            </div>
+
             <div className="space-y-2">
                 <Label>Platform</Label>
                 <Select
@@ -285,6 +292,13 @@ const MediaFilters = ({ filters, onChange }: {
 
     return (
         <div className="p-4 space-y-4 border-t">
+            <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-4">
+                <div className="flex items-center gap-2 text-sm text-yellow-800 dark:text-yellow-200">
+                    <SparklesIcon className="w-4 h-4" />
+                    <span>Vision search uses 1 credit per image search</span>
+                </div>
+            </div>
+
             <div className="space-y-2">
                 <Label>Content Type</Label>
                 <Select
@@ -530,33 +544,59 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         </span>
                     </motion.div>
                 )}
-                <SearchTypeButton
-                    type="web"
-                    active={currentSearchType === 'web'}
-                    icon={Globe}
-                    onClick={() => handleSearchTypeClick('web')}
-                    compact={showSettings}
-                >
-                    Web
-                </SearchTypeButton>
-                <SearchTypeButton
-                    type="social"
-                    active={currentSearchType === 'social'}
-                    icon={Share2}
-                    onClick={() => handleSearchTypeClick('social')}
-                    compact={showSettings}
-                >
-                    Social
-                </SearchTypeButton>
-                <SearchTypeButton
-                    type="media"
-                    active={currentSearchType === 'media'}
-                    icon={Play}
-                    onClick={() => handleSearchTypeClick('media')}
-                    compact={showSettings}
-                >
-                    Media
-                </SearchTypeButton>
+                <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-2">
+                        <SearchTypeButton
+                            type="web"
+                            active={currentSearchType === 'web'}
+                            icon={Globe}
+                            onClick={() => handleSearchTypeClick('web')}
+                            compact={showSettings}
+                        >
+                            Web
+                        </SearchTypeButton>
+                        <SearchTypeButton
+                            type="social"
+                            active={currentSearchType === 'social'}
+                            icon={Share2}
+                            onClick={() => handleSearchTypeClick('social')}
+                            compact={showSettings}
+                        >
+                            Social
+                        </SearchTypeButton>
+                        <SearchTypeButton
+                            type="media"
+                            active={currentSearchType === 'media'}
+                            icon={Play}
+                            onClick={() => handleSearchTypeClick('media')}
+                            compact={showSettings}
+                        >
+                            Media
+                        </SearchTypeButton>
+                    </div>
+                    {currentSearchType === 'social' && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="flex items-center gap-1.5 text-xs text-yellow-600 dark:text-yellow-400"
+                        >
+                            <SparklesIcon className="w-3 h-3" />
+                            <span>Uses 1 credit per search</span>
+                        </motion.div>
+                    )}
+                    {currentSearchType === 'media' && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="flex items-center gap-1.5 text-xs text-yellow-600 dark:text-yellow-400"
+                        >
+                            <SparklesIcon className="w-3 h-3" />
+                            <span>Vision search uses 1 credit per image</span>
+                        </motion.div>
+                    )}
+                </div>
             </div>
             
             <div className="relative w-full">
