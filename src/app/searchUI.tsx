@@ -152,6 +152,8 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [credits, setCredits] = useState(0)
     const [typingQuery, setTypingQuery] = useState('')
     const [hasResults, setHasResults] = useState(false)
+    const [subscriptionStatus, setSubscriptionStatus] = useState<string>()
+    const [subscriptionPlan, setSubscriptionPlan] = useState<string>()
     const { scrollY } = useScroll()
     const [isScrolled, setIsScrolled] = useState(false)
     const [settingsButtonRef, setSettingsButtonRef] = useState<HTMLButtonElement | null>(null);
@@ -196,6 +198,10 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 const userData = docSnapshot.data();
                 const lastReset = userData.lastCreditReset;
                 let lastResetDate: Date | null = null;
+
+                // Update subscription data
+                setSubscriptionStatus(userData.subscriptionStatus)
+                setSubscriptionPlan(userData.subscriptionPlan)
 
                 // Handle different timestamp formats
                 if (lastReset) {
@@ -821,6 +827,8 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 email={email}
                 imageUrl={imageUrl}
                 onLogout={handleLogout}
+                subscriptionStatus={subscriptionStatus}
+                subscriptionPlan={subscriptionPlan}
             />
 
             {/* Beta Version Dialog */}

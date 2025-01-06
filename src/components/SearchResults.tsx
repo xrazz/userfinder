@@ -692,6 +692,8 @@ const getFaviconUrl = (url: string) => {
 
 // Add this helper function to handle media preview logic
 const MediaPreview: React.FC<{ post: Post, searchType?: 'web' | 'media' | 'social' }> = ({ post, searchType }) => {
+    const [isImageBlocked, setIsImageBlocked] = useState(false);
+
     // For image search results (when post.media exists)
     if (post.media) {
         if (post.media.type === 'video' && post.media.embedUrl) {
@@ -710,6 +712,8 @@ const MediaPreview: React.FC<{ post: Post, searchType?: 'web' | 'media' | 'socia
         }
         
         if (post.media.type === 'image' && post.media.url && (searchType === 'media' || searchType === 'social')) {
+            if (isImageBlocked) return null;
+
             return (
                 <div className="mt-3 mb-4">
                     <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
@@ -718,6 +722,8 @@ const MediaPreview: React.FC<{ post: Post, searchType?: 'web' | 'media' | 'socia
                             alt={post.title}
                             className="object-contain w-full h-full"
                             onError={(e) => {
+                                // If the image is blocked or fails to load, set the state and hide the container
+                                setIsImageBlocked(true);
                                 (e.target as HTMLImageElement).style.display = 'none';
                             }}
                         />

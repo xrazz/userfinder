@@ -574,7 +574,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                             Media
                         </SearchTypeButton>
                     </div>
-                    {currentSearchType === 'social' && (
+                    {currentSearchType === 'social' && !isScrolled && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -585,7 +585,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                             <span>Uses 1 credit per search</span>
                         </motion.div>
                     )}
-                    {currentSearchType === 'media' && (
+                    {currentSearchType === 'media' && !isScrolled && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}

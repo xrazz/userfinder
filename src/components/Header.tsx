@@ -88,10 +88,10 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
                             }`}
                         >
                             <Sparkles className="mr-1 h-3 w-3" />
-                            {credits} credit{credits !== 1 ? 's' : ''} remaining
+                            {credits} credit{credits !== 1 ? 's' : ''}
                         </Badge>
                     )}
-                    {userId && subscriptionStatus === 'active' && subscriptionPlan !== 'Pro' && (
+                    {email && subscriptionPlan !== 'Pro' && (
                         <Button 
                             variant="outline"
                             size="sm"
@@ -134,15 +134,17 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
                                 </div>
                                 <div className="mt-5 pt-5 border-t space-y-3">
                                     <div className="sm:hidden space-y-3">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="w-full text-xs bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 animate-gradient"
-                                            onClick={() => router.push('/subscription')}
-                                        >
-                                            <Crown className="h-3.5 w-3.5 text-yellow-200" />
-                                            Get 50 credits daily
-                                        </Button>
+                                        {email && subscriptionPlan !== 'Pro' && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="w-full text-xs bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 animate-gradient"
+                                                onClick={() => router.push('/subscription')}
+                                            >
+                                                <Crown className="h-3.5 w-3.5 text-yellow-200" />
+                                                Get 50 credits daily
+                                            </Button>
+                                        )}
                                     </div>
                                     <a
                                         href="mailto:info@lexy.uno"
