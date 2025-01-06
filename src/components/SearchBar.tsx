@@ -23,7 +23,7 @@ export interface SearchFilters {
     includeHashtags?: boolean;
     includeMentions?: boolean;
     includeComments?: boolean;
-    contentType?: 'all' | 'posts' | 'profiles' | 'discussions';
+    contentType?: 'all' | 'posts' | 'profiles' | 'discussions' | 'videos' | 'images';
     imageUrl?: string;
     image?: string;
     imageFile?: string;
@@ -36,6 +36,7 @@ interface SearchBarProps {
     setTypingQuery: (query: string) => void
     className?: string
     showSettings?: boolean
+    isScrolled?: boolean
     onSettingsClick?: () => void
     onFileTypeChange: (value: string) => void
     selectedFileType: string
@@ -355,6 +356,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     setTypingQuery, 
     className = '', 
     showSettings = false,
+    isScrolled = false,
     onSettingsClick, 
     onFileTypeChange, 
     selectedFileType, 
@@ -446,8 +448,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const handleSearchTypeClick = (type: SearchType) => {
         setCurrentSearchType(type)
         onSearchTypeChange(type)
-        // Rimuovo la ricerca automatica qui
-        setSearchFilters({})
+        
+        // Se c'è una query attiva, esegui la ricerca
+        if (typingQuery.trim()) {
+            onSearch(typingQuery, type)
+        }
     }
 
     const handleSearch = () => {
@@ -514,11 +519,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     return (
         <div className="w-full space-y-2">
             <div className={`flex items-center gap-2 justify-center ${showSettings ? 'mb-2' : 'mb-4'}`}>
-                {showSettings && (
+                {showSettings && isScrolled && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="flex items-center absolute left-4"
+                        className="flex items-center absolute left-4 md:left-[calc(50%-280px)]"
                     >
                         <span className="font-bold text-lg bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
                             LEXY

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { toast, Toaster } from "sonner"
-import { doc, onSnapshot, updateDoc, setDoc, collection, addDoc, Timestamp } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc, setDoc, collection, addDoc, Timestamp, getDoc } from 'firebase/firestore'
 import { auth, db, firebaseAnalytics } from '@/app/firebaseClient'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Cookies from "js-cookie"
@@ -43,6 +43,14 @@ interface Post {
     title: string
     link: string
     snippet: string
+    media?: {
+        type: 'video' | 'image'
+        url?: string
+        platform?: string
+        videoId?: string
+        embedUrl?: string
+        thumbnailUrl?: string
+    }
 }
 
 const sites = [
@@ -355,6 +363,20 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         setSearchQuery(value)
     }
 
+    const handleCreditUpdate = useCallback(async () => {
+        if (!email) return;
+        
+        try {
+            const userDocRef = doc(db, 'users', email);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                setCredits(userDoc.data().credits || 0);
+            }
+        } catch (error) {
+            console.error('Error updating credits:', error);
+        }
+    }, [email]);
+
     const handleSearch = async (queryToUse?: string, newSearchType?: SearchType, filters?: SearchFilters) => {
         if (searchInProgress) {
             console.log('Search already in progress, skipping...')
@@ -384,12 +406,30 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            image: filters.image
+                            image: filters.image,
+                            email: email
                         })
                     });
 
                     if (!response.ok) {
-                        throw new Error('Failed to process image search');
+                        if (response.status === 403) {
+                            toast.error("You're out of credits!", {
+                                description: (
+                                    <div className="flex items-center gap-1">
+                                        <span>Upgrade to </span>
+                                        <button
+                                            onClick={() => window.location.href = '/subscription'}
+                                            className="font-medium text-purple-500 hover:text-purple-600 underline underline-offset-2"
+                                        >
+                                            get 50 daily credits
+                                        </button>
+                                    </div>
+                                ),
+                            });
+                        } else {
+                            throw new Error('Failed to process image search');
+                        }
+                        return;
                     }
 
                     const data = await response.json();
@@ -404,8 +444,27 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                 url: img.url
                             }
                         }));
-                        setSearchResults(results);
-                        setHasResults(results.length > 0);
+
+                        // Filter out problematic domains
+                        const filteredResults = results.filter((result: Post) => {
+                            const url = result.media?.url?.toLowerCase() || '';
+                            const problematicDomains = [
+                                'media.licdn.com',
+                                'dims.apnews.com',
+                                'lookaside.instagram.com',
+                                'imageio.forbes.com',
+                                'm.media-amazon.com',
+                                'hips.hearstapps.com'
+                            ];
+                            
+                            // Check if URL contains any problematic domain
+                            return !problematicDomains.some(domain => url.includes(domain));
+                        });
+
+                        setSearchResults(filteredResults);
+                        setHasResults(filteredResults.length > 0);
+                        // Update credits after successful search
+                        handleCreditUpdate();
                     } else {
                         throw new Error('No results found');
                     }
@@ -584,19 +643,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         }
     }, [searchParams])
 
-    const handleCreditUpdate = async () => {
-        if (!email) return;
-        
-        try {
-            const userDocRef = doc(db, 'users', email);
-            await updateDoc(userDocRef, {
-                credits: credits - 1
-            });
-        } catch (error) {
-            console.error('Error updating credits:', error);
-        }
-    };
-
     // Add beta dialog check
     useEffect(() => {
         const hasSeenBeta = localStorage.getItem('hasSeenBetaDialog')
@@ -613,7 +659,34 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const getSearchTypeQuery = (type: SearchType, baseQuery: string, filters?: SearchFilters): string => {
         switch (type) {
             case 'media':
-                return `${baseQuery} (site:youtube.com OR site:vimeo.com OR site:dailymotion.com OR site:flickr.com OR site:imgur.com OR site:instagram.com OR filetype:jpg OR filetype:jpeg OR filetype:png OR filetype:gif OR filetype:mp4 OR filetype:webm OR filetype:mov)`;
+                let mediaQuery = baseQuery;
+                
+                // Aggiungi filtri per tipo di contenuto se specificato
+                if (filters?.contentType && filters.contentType !== 'all') {
+                    if (filters.contentType === 'videos') {
+                        mediaQuery += ` (site:youtube.com OR site:vimeo.com OR site:dailymotion.com OR site:twitch.tv OR filetype:mp4 OR filetype:webm OR filetype:mov OR intext:"video" OR intext:"watch")`;
+                    } else if (filters.contentType === 'images') {
+                        mediaQuery += ` (site:flickr.com OR site:imgur.com OR site:500px.com OR site:deviantart.com OR site:behance.net OR site:unsplash.com OR filetype:jpg OR filetype:jpeg OR filetype:png OR filetype:gif OR intext:"photo" OR intext:"image")`;
+                    }
+                } else {
+                    // Query bilanciata per tutti i tipi di contenuti
+                    mediaQuery += ` (
+                        site:flickr.com OR site:imgur.com OR site:500px.com OR 
+                        site:unsplash.com OR site:pexels.com OR site:pixabay.com OR
+                        site:youtube.com OR site:vimeo.com OR site:dailymotion.com OR
+                        site:twitch.tv OR site:behance.net OR site:artstation.com OR
+                        site:giphy.com OR site:tenor.com OR
+                        filetype:jpg OR filetype:jpeg OR filetype:png OR filetype:gif OR 
+                        filetype:mp4 OR filetype:webm OR filetype:mov OR
+                        intext:"photo" OR intext:"image" OR intext:"video" OR intext:"watch" OR
+                        intext:"gallery" OR intext:"portfolio"
+                    )`;
+                    
+                    // Aggiungi filtri per escludere risultati eccessivi da YouTube
+                    mediaQuery += ` -site:youtube.com/channel -site:youtube.com/user -site:youtube.com/playlist`;
+                }
+                
+                return mediaQuery;
             case 'social':
                 let query = baseQuery;
                 
@@ -764,6 +837,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                 searchType={searchType}
                                 onSearchTypeChange={(type) => {
                                     setSearchType(type);
+                                    setSearchFilters({});
                                 }}
                                 showHistory={true}
                                 onHistoryClick={() => {
@@ -771,6 +845,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                                     setShowHistoryModal(true)
                                 }}
                                 showSettings={true}
+                                isScrolled={isScrolled}
                             />
                         </div>
                     </div>
@@ -824,12 +899,15 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                         searchType={searchType}
                         onSearchTypeChange={(type) => {
                             setSearchType(type);
+                            setSearchFilters({});
                         }}
                         showHistory={true}
                         onHistoryClick={() => {
                             fetchSearchHistory()
                             setShowHistoryModal(true)
                         }}
+                        showSettings={true}
+                        isScrolled={isScrolled}
                     />
 
                     <motion.div 
