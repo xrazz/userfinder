@@ -782,6 +782,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
     const [loadMoreElementPosition, setLoadMoreElementPosition] = useState<number>(0);
     const loadingRef = useRef<HTMLDivElement>(null);
+    const [isSourcesExpanded, setIsSourcesExpanded] = useState(false);
 
     // Update the infinite scroll configuration
     const { ref, inView } = useInView({
@@ -1673,13 +1674,15 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                         {/* Mobile-first order */}
                                         <button
                                             onClick={() => handleAddToAI(post)}
-                                            disabled={getMultimediaInfo(post.link)?.type === 'video' && !selectedPosts.some(p => p.link === post.link)}
+                                            disabled={searchType !== 'web' || (getMultimediaInfo(post.link)?.type === 'video' && !selectedPosts.some(p => p.link === post.link))}
                                             className={`flex-1 sm:flex-none text-sm px-4 py-2 rounded-full 
                                                 ${selectedPosts.some(p => p.link === post.link)
                                                     ? 'bg-primary text-primary-foreground dark:text-gray-900'
-                                                    : getMultimediaInfo(post.link)?.type === 'video'
+                                                    : searchType !== 'web'
                                                         ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                                                        : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                                                        : getMultimediaInfo(post.link)?.type === 'video'
+                                                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                                                            : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                                                 } 
                                                 flex items-center justify-center gap-2 transition-colors order-1 sm:order-1`}
                                         >
@@ -1831,6 +1834,70 @@ Provide a comprehensive analysis with clickable citation numbers that open sourc
                                         Analyzing {selectedPosts.length} selected items
                                     </p>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Selected Sources Section */}
+                        <div className="border-b bg-muted/50">
+                            <div className="max-w-3xl mx-auto">
+                                <button
+                                    onClick={() => setIsSourcesExpanded(!isSourcesExpanded)}
+                                    className="w-full p-4 flex items-center justify-between hover:bg-muted/80 transition-colors"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <SparklesIcon className="w-4 h-4 text-primary" />
+                                        <h3 className="text-sm font-medium">Selected Sources</h3>
+                                        <span className="text-xs text-muted-foreground">({selectedPosts.length})</span>
+                                    </div>
+                                    <ChevronUpIcon 
+                                        className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                                            isSourcesExpanded ? '' : 'rotate-180'
+                                        }`}
+                                    />
+                                </button>
+                                <AnimatePresence>
+                                    {isSourcesExpanded && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="px-4 pb-4 space-y-2">
+                                                {selectedPosts.map((post) => (
+                                                    <div 
+                                                        key={post.link}
+                                                        className="flex items-center justify-between gap-4 p-2 rounded-lg bg-background"
+                                                    >
+                                                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                            <img
+                                                                src={getFaviconUrl(post.link)}
+                                                                alt=""
+                                                                className="w-4 h-4 flex-shrink-0"
+                                                            />
+                                                            <span className="text-sm truncate">{post.title}</span>
+                                                        </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="flex-shrink-0 h-8 w-8 text-muted-foreground hover:text-foreground"
+                                                            onClick={() => {
+                                                                const newSelectedPosts = selectedPosts.filter(p => p.link !== post.link);
+                                                                setSelectedPosts(newSelectedPosts);
+                                                                if (newSelectedPosts.length === 0) {
+                                                                    setBatchAnalysisDialog(false);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <XIcon className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
 

@@ -181,7 +181,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
     useEffect(() => {
         firebaseAnalytics.logPageView('/')
-        console.log("Firebase Analytics: Page view logged for '/'")
     }, [])
 
     useEffect(() => {
