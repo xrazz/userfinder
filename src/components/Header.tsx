@@ -168,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({ userId, name, email, imageUrl, o
                 ) : (
                     <>
                         <Button variant="outline" className='shadow-none text-sm' onClick={() => router.push('/login')}>Log in</Button>
-                        <Button variant="default" className='shadow-none text-sm' onClick={() => router.push('/login')}>Sign up</Button>
+                        {/* <Button variant="default" className='shadow-none text-sm' onClick={() => router.push('/login')}>Sign up</Button> */}
                     </>
                 )}
             </div>
