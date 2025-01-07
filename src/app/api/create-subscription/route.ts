@@ -33,10 +33,10 @@ export async function POST(req: Request) {
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: 'eur',
             product_data: {
               name: 'Pro Subscription',
-              description: '100 AI credits per day',
+              description: '50 AI credits per day',
             },
             unit_amount: 999, // $9.99 in cents
             recurring: {
