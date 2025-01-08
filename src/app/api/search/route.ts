@@ -119,13 +119,16 @@ async function extractThumbnail(url: string): Promise<MediaContent | undefined> 
     'springer.com',
     'wiley.com',
     'tandfonline.com',
-    'ieee.org'
+    'ieee.org',
+    'facebook.com',
+    'twitter.com',
+    'instagram.com',
+    'linkedin.com'
   ];
 
   // Check if URL is from a restricted domain
   const urlObj = new URL(url);
   if (restrictedDomains.some(domain => urlObj.hostname.includes(domain))) {
-    console.log(`Skipping media extraction for restricted domain: ${urlObj.hostname}`);
     return undefined;
   }
 
@@ -134,15 +137,16 @@ async function extractThumbnail(url: string): Promise<MediaContent | undefined> 
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       },
-      timeout: 5000 // 5 second timeout
+      timeout: 3000, // Reduced timeout to 3 seconds
+      maxContentLength: 500000 // Limit response size to 500KB
     });
     
     const $ = cheerio.load(data);
     
-    // First try meta tags
+    // First try meta tags only - faster than parsing whole DOM
     const metaImage = $('meta[property="og:image"]').attr('content') ||
                      $('meta[name="twitter:image"]').attr('content') ||
-                     $('meta[property="og:image:url"]').attr('content') || '';
+                     $('meta[property="og:image:url"]').attr('content');
     
     if (metaImage && typeof metaImage === 'string') {
       const imageUrl = metaImage.startsWith('http') ? metaImage : new URL(metaImage, url).href;
@@ -152,39 +156,8 @@ async function extractThumbnail(url: string): Promise<MediaContent | undefined> 
       };
     }
     
-    // Then try finding the first meaningful image
-    let firstImage: string | undefined;
-    $('img').each((_, el) => {
-      const src = $(el).attr('src');
-      const width = parseInt($(el).attr('width') || '0');
-      const height = parseInt($(el).attr('height') || '0');
-      
-      // Skip tiny images, icons, and data URLs
-      if (src && typeof src === 'string' && 
-          !src.includes('logo') &&
-          !src.includes('icon') &&
-          !src.includes('data:image') &&
-          !src.includes('base64') &&
-          (width === 0 || width > 100) &&
-          (height === 0 || height > 100)) {
-        firstImage = src;
-        return false; // break the loop
-      }
-    });
-    
-    if (firstImage) {
-      const imageUrl = firstImage.startsWith('http') ? firstImage : new URL(firstImage, url).href;
-      return {
-        type: 'image',
-        url: imageUrl
-      };
-    }
-    
-    return undefined;
+    return undefined; // Skip full image search for better performance
   } catch (error) {
-    // Log error without full stack trace for cleaner logs
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.log(`Skipping media extraction for ${url}: ${errorMessage}`);
     return undefined;
   }
 }
@@ -197,7 +170,8 @@ async function googleSearch(query: string, start: number = 0): Promise<Formatted
     const response = await axios.get(searchUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
+      },
+      timeout: 5000 // Add timeout for Google search
     });
 
     const $ = cheerio.load(response.data);
@@ -222,16 +196,19 @@ async function googleSearch(query: string, start: number = 0): Promise<Formatted
       }
     });
 
-    // Process media content in parallel
+    // Process media content in parallel with a limited concurrency of 3
     const resultsWithMedia = await Promise.all(
-      results.map(async (result) => {
-        try {
-          const media = await extractThumbnail(result.link);
-          return { ...result, media };
-        } catch (error) {
-          console.warn(`Failed to extract media for ${result.link}:`, error);
-          return { ...result, media: undefined };
+      results.map(async (result, index) => {
+        // Only process first 5 results for media content
+        if (index < 5) {
+          try {
+            const media = await extractThumbnail(result.link);
+            return { ...result, media };
+          } catch (error) {
+            return { ...result, media: undefined };
+          }
         }
+        return { ...result, media: undefined };
       })
     );
 
@@ -253,9 +230,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Set a timeout for the entire operation
+    // Set a shorter timeout for the entire operation
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Operation timeout')), 30000)
+      setTimeout(() => reject(new Error('Operation timeout')), 15000)
     );
     
     const resultPromise = googleSearch(query, start);
@@ -266,14 +243,12 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error('Search API error:', error);
     
-    // Return appropriate status codes based on error type
     const status = error.message === 'Operation timeout' ? 504 : 500;
     
     return NextResponse.json(
       { 
         success: false, 
-        error: error.message,
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        error: error.message
       },
       { status }
     );
