@@ -54,8 +54,8 @@ interface SearchBarProps {
     messages?: Array<any>
     onClearChat?: () => void
     userInfo?: {
-        name?: string;
-        email?: string;
+        name?: string
+        email?: string
     }
 }
 
@@ -382,7 +382,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     isAiMode = false,
     onAiModeChange = () => {},
     messages = [],
-    onClearChat = () => {}
+    onClearChat = () => {},
+    userInfo
 }): JSX.Element => {
     const searchInputRef = useRef<HTMLInputElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -632,7 +633,26 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         <div className="flex items-center gap-3 p-1.5 rounded-lg bg-muted/50">
                             <Switch
                                 checked={isAiMode}
-                                onCheckedChange={onAiModeChange}
+                                onCheckedChange={(checked) => {
+                                    if (!userInfo?.email && checked) {
+                                        toast.error("AI-powered search requires login", {
+                                            description: (
+                                                <div className="flex flex-col gap-1">
+                                                    <span>Please sign in to use AI features.</span>
+                                                    <a 
+                                                        href="/login" 
+                                                        className="text-xs text-purple-500 hover:text-purple-600 underline underline-offset-2"
+                                                    >
+                                                        Sign in now →
+                                                    </a>
+                                                </div>
+                                            ),
+                                            duration: 5000,
+                                        });
+                                        return;
+                                    }
+                                    onAiModeChange(checked);
+                                }}
                                 className="data-[state=checked]:bg-purple-600"
                             />
                             <Label className="text-sm font-medium">AI-powered search</Label>

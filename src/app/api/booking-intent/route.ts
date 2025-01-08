@@ -26,20 +26,28 @@ Analyze the user's query to determine if it falls into one of these categories:
    - Hotel room
    - Salon appointment
 
-2. DOCUMENT SEARCH - When the user is specifically looking for documents/files like:
-   - PDF documents
-   - Research papers
-   - Documentation
-   - Spreadsheets
-   - Presentations
-   - Technical documents
+2. DOCUMENT SEARCH - ONLY when the user explicitly mentions file types or document formats like:
+   - "pdf", "document", "doc", "docx"
+   - "spreadsheet", "xlsx", "xls", "csv"
+   - "presentation", "ppt", "pptx"
+   - "txt", "text file"
+   - "json", "xml"
+   Examples:
+   - "find python documentation in pdf"
+   - "download csv of stock prices"
+   - "search for research papers pdf"
+   Note: Do NOT classify as document search unless these file type keywords are present!
 
-3. NORMAL SEARCH - Any other type of search that is:
-   - General information queries
+3. NORMAL SEARCH - Any other type of search:
+   - General information queries (even about documents if no file type mentioned)
    - News searches
    - Product searches
    - Learning/tutorial requests
-   - Any search not falling into the above categories
+   - Research or academic queries without specific file type mention
+   Examples of NORMAL (not document) searches:
+   - "find python documentation" (no file type mentioned)
+   - "search for research papers about AI" (no file type mentioned)
+   - "find technical documentation" (no file type mentioned)
 
 Return your response in this exact JSON format:
 {
@@ -98,11 +106,10 @@ Examples:
 
 "Looking for research papers about AI"
 {
-    "type": "document",
+    "type": "normal",
     "confidence": 0.85,
     "details": {
-        "fileType": "pdf",
-        "topic": "AI research papers"
+        "searchIntent": "Finding AI research papers"
     }
 }
 
