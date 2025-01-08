@@ -323,11 +323,15 @@ const DiscussionDialog = ({ post, isOpen, onClose, email, onEngage }: {
         setIsApiLoading(true)
 
         try {
+            // Prepara il contesto della conversazione
+            const conversationContext = messages.map(m => `${m.sender}: ${m.content}`).join('\n');
+
             const response = await axios.post('/api/rag', {
                 content: contentRef.current,
                 query: newMessage,
                 url: post.link,
-                email: email
+                email: email,
+                context: conversationContext // Aggiungo il contesto della conversazione
             })
 
             const aiMessage: Message = {

@@ -13,7 +13,7 @@ import { LoggedInSettingsPopover, LoggedOutSettingsPopover } from '@/components/
 import TabDataSkeleton from '@/components/searchProgressUI'
 import QueryTutorialModal from './docs/QueryModal'
 import { Button } from "@/components/ui/button"
-import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History } from 'lucide-react'
+import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History, ExternalLink } from 'lucide-react'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
 import { motion, useScroll, useTransform } from 'framer-motion'
@@ -22,6 +22,9 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { SearchType, SearchFilters } from '@/components/SearchBar'
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Loader2 } from 'lucide-react'
 
 const MEMBERSHIP_LEVELS = {
     FREE: 'Free',
@@ -128,6 +131,109 @@ const fileTypes = [
     { value: "zip", label: "Archives", dork: "(filetype:zip OR filetype:rar)" }
 ]
 
+interface Message {
+    id: number
+    content: string
+    sender: 'user' | 'ai'
+    timestamp: string
+    type?: 'search' | 'refinement' | 'summary'
+    relatedResults?: Post[]
+}
+
+const formatMessage = (content: string, relatedResults?: Post[]): React.ReactNode => {
+    if (!content) return null;
+
+    // Funzione per ottenere i risultati citati
+    const getCitedResults = (citation: string): Post[] => {
+        if (!relatedResults) return [];
+        const numbers = citation.match(/\[(\d+)\]/g)?.map(n => parseInt(n.replace(/[\[\]]/g, '')) - 1) || [];
+        return numbers.map(n => relatedResults[n]).filter(Boolean);
+    };
+
+    // Rimuove la punteggiatura dopo le citazioni
+    const cleanContent = content.replace(/\[(\d+(?:,\s*\d+)*)\][.,]/g, '[$1]');
+
+    // Processa il testo per il grassetto
+    const processText = (text: string) => {
+        return text.split(/(\*\*.*?\*\*)/).map((part, i) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+                // Rimuove gli asterischi e applica il grassetto
+                return <strong key={i}>{part.slice(2, -2)}</strong>;
+            }
+            return part;
+        });
+    };
+
+    // Divide il contenuto in sezioni basate sulle citazioni
+    const parts = cleanContent.split(/(\[[0-9,\s]+\])/).map((part, index) => {
+        // Se è una citazione
+        if (part.match(/^\[[0-9,\s]+\]$/)) {
+            const citedResults = getCitedResults(part);
+            return (
+                <div key={index} className="my-4">
+                    <div className="grid gap-2">
+                        {citedResults.map((result, idx) => (
+                            <div 
+                                key={idx}
+                                className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                            >
+                                <div className="flex-none mt-0.5">
+                                    <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
+                                        {relatedResults?.indexOf(result)! + 1}
+                                    </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <a 
+                                            href={result.link} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="font-medium hover:underline truncate"
+                                        >
+                                            {result.title}
+                                        </a>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-5 w-5"
+                                            onClick={() => window.open(result.link, '_blank')}
+                                        >
+                                            <ExternalLink className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground line-clamp-2">
+                                        {result.snippet}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        
+        // Se è testo normale, processa per il grassetto
+        return (
+            <div key={index} className="prose dark:prose-invert max-w-none text-base leading-relaxed">
+                {processText(part)}
+            </div>
+        );
+    });
+
+    return (
+        <div className="space-y-1">
+            {parts}
+        </div>
+    );
+};
+
+interface LoadingState {
+    search: boolean
+    aiQuery: boolean
+    aiResponse: boolean
+    loadMore: boolean
+}
+
 export default function SearchTab({ Membership = '', name = '', email = '', userId = '', imageUrl = '' }: SearchUIProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -144,6 +250,18 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [searchType, setSearchType] = useState<SearchType>('web');
     const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
     const [privacyMode, setPrivacyMode] = useState(false);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [isAiMode, setIsAiMode] = useState(true);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const [searchContext, setSearchContext] = useState<{
+        currentTopic?: string
+        relatedQueries: string[]
+        searchChain: Message[]
+    }>({
+        relatedQueries: [],
+        searchChain: []
+    });
     
     useEffect(() => {
         // Only access localStorage on the client side
@@ -169,6 +287,19 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [showHistoryModal, setShowHistoryModal] = useState(false)
     const [searchHistory, setSearchHistory] = useState<SearchQuery[]>([])
     const [isHistoryLoading, setIsHistoryLoading] = useState(false)
+    const [loadingState, setLoadingState] = useState<LoadingState>({
+        search: false,
+        aiQuery: false,
+        aiResponse: false,
+        loadMore: false
+    });
+
+    // Aggiungo ref per lo scroll
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
 
     const reloadPage = useCallback(() => {
         // Soft reload using router
@@ -388,147 +519,189 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     }, [email]);
 
     const handleSearch = async (queryToUse?: string, newSearchType?: SearchType, filters?: SearchFilters) => {
-        if (searchInProgress) {
-            console.log('Search already in progress, skipping...')
-            return
-        }
+        if (searchInProgress) return;
 
         try {
             setSearchInProgress(true)
             setSearchResults([])
-            setLoading(true)
+            setLoadingState(prev => ({ ...prev, search: true }))
             setCurrentPage(1)
             setHasMore(true)
 
-            if (newSearchType) {
-                setSearchType(newSearchType)
-            }
-            if (filters) {
-                setSearchFilters(filters)
-            }
-
-            // Handle image search
-            if (filters?.isImageSearch && filters.image) {
-                try {
-                    const response = await fetch('/api/image-search', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            image: filters.image,
-                            email: email
-                        })
-                    });
-
-                    if (!response.ok) {
-                        if (response.status === 403) {
-                            toast.error("You're out of credits!", {
-                                description: (
-                                    <div className="flex items-center gap-1">
-                                        <span>Upgrade to </span>
-                                        <button
-                                            onClick={() => window.location.href = '/subscription'}
-                                            className="font-medium text-purple-500 hover:text-purple-600 underline underline-offset-2"
-                                        >
-                                            get 50 daily credits
-                                        </button>
-                                    </div>
-                                ),
-                            });
-                        } else {
-                            throw new Error('Failed to process image search');
-                        }
-                        return;
-                    }
-
-                    const data = await response.json();
-                    if (data.similarImages) {
-                        // Convert the image search results to the Post format
-                        const results = data.similarImages.map((img: any) => ({
-                            title: 'Similar Image',
-                            link: img.url,
-                            snippet: `Similarity score: ${Math.round((img.score || 0) * 100)}%`,
-                            media: {
-                                type: 'image',
-                                url: img.url
-                            }
-                        }));
-
-                        // Filter out problematic domains
-                        const filteredResults = results.filter((result: Post) => {
-                            const url = result.media?.url?.toLowerCase() || '';
-                            const problematicDomains = [
-                                'media.licdn.com',
-                                'dims.apnews.com',
-                                'lookaside.instagram.com',
-                                'imageio.forbes.com',
-                                'm.media-amazon.com',
-                                'hips.hearstapps.com'
-                            ];
-                            
-                            // Check if URL contains any problematic domain
-                            return !problematicDomains.some(domain => url.includes(domain));
-                        });
-
-                        setSearchResults(filteredResults);
-                        setHasResults(filteredResults.length > 0);
-                        // Update credits after successful search
-                        handleCreditUpdate();
-                    } else {
-                        throw new Error('No results found');
-                    }
-                    return;
-                } catch (error) {
-                    console.error('Error in image search:', error);
-                    toast.error('Failed to process image search');
-                    return;
-                }
-            }
-
-            // Regular search logic continues here...
             const queryToSearch = (queryToUse || searchQuery).trim()
             if (!queryToSearch) return
 
-            if (!urlTriggeredRef.current) {
-                await trackSearchQuery(queryToSearch)
+            // Add user message
+            const userMessage: Message = {
+                id: Date.now(),
+                content: queryToSearch,
+                sender: 'user',
+                timestamp: new Date().toISOString(),
+                type: 'search'
             }
-            
-            const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
-            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
-            
-            const finalQuery = buildSearchQuery(
-                queryToSearch, 
-                siteToSearch, 
-                dateFilterString, 
-                newSearchType || searchType,
-                filters || searchFilters
-            )
-            
-            const Results = await fetchResults(finalQuery, 1)
-            setSearchResults(Results)
-            setHasResults(Results.length > 0)
+            setMessages(prev => [...prev, userMessage]);
+            setTimeout(() => scrollToMessage(userMessage.id), 100);
 
+            if (isAiMode) {
+                try {
+                    // Set AI query loading state
+                    setLoadingState(prev => ({ ...prev, aiQuery: true }))
+
+                    const queryResponse = await fetch('/api/prompt', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${email}`
+                        },
+                        body: JSON.stringify({
+                            systemPrompt: `You are a multilingual search expert specializing in finding specific content types.
+
+Your task is to create precise search queries that find relevant results based on the content type requested.
+
+Use these search techniques:
+1. Use appropriate filetype operators when specific formats are requested
+2. Add exclusion terms to filter out:
+   - Irrelevant content (-preview -excerpt)
+   - Shopping sites (-shop -buy -price)
+   - Low quality results (-review -summary)
+3. Include relevant search operators:
+   - For academic content: site:academia.edu OR site:scholar.google.com
+   - For documentation: site:docs.* OR site:documentation.*
+   - For educational content: site:.edu OR site:.ac.*
+4. Focus on legitimate sources and repositories
+
+Examples:
+Query: "machine learning research papers"
+Output: "machine learning research filetype:pdf site:arxiv.org OR site:scholar.google.com"
+
+Query: "cerca documentazione python"
+Output: "python documentation filetype:pdf site:python.org OR site:docs.python.org"
+
+Reply ONLY with the optimized query.`,
+                            userPrompt: queryToSearch,
+                            email: email
+                        }),
+                    });
+
+                    setLoadingState(prev => ({ ...prev, aiQuery: false }))
+
+                    if (queryResponse.ok) {
+                        const { output: optimizedQuery } = await queryResponse.json();
+                        
+                        // Execute search with optimized query
+                        const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
+                        const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
+                        
+                        const finalQuery = buildSearchQuery(
+                            optimizedQuery, 
+                            siteToSearch, 
+                            dateFilterString, 
+                            newSearchType || searchType,
+                            filters || searchFilters
+                        )
+                        
+                        const Results = await fetchResults(finalQuery, 1)
+                        setSearchResults(Results)
+                        setHasResults(Results.length > 0)
+
+                        if (Results.length > 0) {
+                            // Set AI response loading state
+                            setLoadingState(prev => ({ ...prev, aiResponse: true }))
+
+                            const contextStr = Results.map((result, index) => 
+                                `[${index + 1}] "${result.title}": ${result.snippet}`
+                            ).join('\n\n');
+
+                            const response = await fetch('/api/prompt', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${email}`
+                                },
+                                body: JSON.stringify({
+                                    systemPrompt: `You are a multilingual assistant that provides information about content availability from legitimate sources.
+
+Rules:
+1. Focus ONLY on legitimate sources and official repositories
+2. Ignore unofficial or questionable sources
+3. Cite sources using [1], [2] immediately after mentioning each resource
+4. If no legitimate sources are found, suggest alternative search approaches
+5. Never encourage or suggest downloading from unofficial sources
+
+Examples:
+
+Good response:
+"The research paper is available on arXiv [1] and Google Scholar [2]. The official documentation can be found on Python.org [3]."
+
+Bad response:
+"I found several download links and file sharing sites where you can get this content [1, 2]."
+
+Keep responses focused on legitimate sources and official channels.`,
+                                    userPrompt: `Original query: ${queryToSearch}\nOptimized query: ${optimizedQuery}\n\nSearch results:\n${contextStr}`,
+                                    email: email
+                                }),
+                            });
+
+                            setLoadingState(prev => ({ ...prev, aiResponse: false }))
+
+                            if (response.ok) {
+                                const data = await response.json();
+                                const aiMessage: Message = {
+                                    id: Date.now(),
+                                    content: data.output,
+                                    sender: 'ai',
+                                    timestamp: new Date().toISOString(),
+                                    type: 'summary',
+                                    relatedResults: Results
+                                }
+                                setMessages(prev => [...prev, aiMessage]);
+                                setTimeout(() => scrollToMessage(aiMessage.id), 100);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error in AI processing:', error)
+                    toast.error("AI processing failed. Falling back to normal search.")
+                    performNormalSearch(queryToSearch, newSearchType, filters)
+                } finally {
+                    setLoadingState(prev => ({ ...prev, aiQuery: false, aiResponse: false }))
+                }
+            } else {
+                await performNormalSearch(queryToSearch, newSearchType, filters)
+            }
         } catch (error) {
             console.error("Error fetching data:", error)
             setHasResults(false)
-            
-            if (error instanceof Error && error.message.includes('network')) {
-                toast.error("Network error. Retrying in 5 seconds...")
-                autoReload(5000)
-            }
+            toast.error("Search failed. Please try again.")
         } finally {
-            setLoading(false)
+            setLoadingState(prev => ({ ...prev, search: false }))
             setSearchInProgress(false)
-            urlTriggeredRef.current = false
         }
     }
 
+    // Funzione helper per la ricerca normale
+    const performNormalSearch = async (query: string, newSearchType?: SearchType, filters?: SearchFilters) => {
+        const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
+        const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
+        
+        const finalQuery = buildSearchQuery(
+            query, 
+            siteToSearch, 
+            dateFilterString, 
+            newSearchType || searchType,
+            filters || searchFilters
+        )
+        
+        const Results = await fetchResults(finalQuery, 1)
+        setSearchResults(Results)
+        setHasResults(Results.length > 0)
+    }
+
     const handleLoadMore = async () => {
-        if (loading || !hasMore) return;
+        if (loadingState.loadMore || !hasMore) return;
         
         try {
-            setLoading(true);
+            setLoadingState(prev => ({ ...prev, loadMore: true }));
             const nextPage = currentPage + 1;
             
             const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite;
@@ -547,7 +720,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             console.error('Error loading more results:', error);
             toast.error('Failed to load more results. Please try again.');
         } finally {
-            setLoading(false);
+            setLoadingState(prev => ({ ...prev, loadMore: false }));
         }
     };
 
@@ -778,9 +951,25 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         }
     }
 
+    // Aggiungo useEffect per scrollare quando cambiano i messaggi
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    // Modifico la gestione dello scroll
+    const messageRefs = useRef<{[key: number]: HTMLDivElement | null}>({});
+
+    const scrollToMessage = (messageId: number) => {
+        if (messageRefs.current[messageId]) {
+            messageRefs.current[messageId]?.scrollIntoView({ 
+                behavior: "smooth",
+                block: "start"  // Scroll all'inizio del messaggio invece che alla fine
+            });
+        }
+    };
+
     return (
         <main className="min-h-screen bg-background">
-            <Toaster position="bottom-center" />
             <Header
                 userId={userId}
                 name={name}
@@ -791,110 +980,22 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 subscriptionPlan={subscriptionPlan}
             />
 
-            {/* Beta Version Dialog */}
-            <Dialog open={showBetaDialog} onOpenChange={handleCloseBetaDialog}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <SparklesIcon className="w-5 h-5 text-purple-500" />
-                            Welcome to the Beta!
-                        </DialogTitle>
-                        <DialogDescription className="pt-2 space-y-2">
-                            <p>
-                                You're among the first to try our new search experience. As we're in beta:
-                            </p>
-                            <ul className="list-disc pl-4 space-y-1">
-                                <li>Some features may be experimental</li>
-                                <li>We're actively improving and adding new capabilities</li>
-                                <li>Your feedback is invaluable to us</li>
-                            </ul>
-                            <p className="pt-2 text-sm text-muted-foreground">
-                                Thank you for being an early user!
-                            </p>
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button onClick={handleCloseBetaDialog} className="w-full">
-                            Got it, let's explore!
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {hasResults && (
-                <motion.div
-                    className={`fixed top-0 left-0 right-0 z-50 bg-background/55 backdrop-blur-sm transition-all duration-300 ${
-                        isScrolled ? 'translate-y-0 border-b shadow-sm dark:bg-gray-950/95 bg-gray-100/45' : '-translate-y-full'
-                    }`}
-                >
-                    <div className="max-w-3xl mx-auto px-3 py-2">
-                        <div className="flex-1">
-                            <SearchBar
-                                onSearch={handleSearch}
-                                typingQuery={typingQuery}
-                                setTypingQuery={handleSearchInputChange}
-                                onFileTypeChange={handleFileTypeChange}
-                                selectedFileType={selectedFileType}
-                                fileTypes={fileTypes}
-                                searchType={searchType}
-                                onSearchTypeChange={(type) => {
-                                    setSearchType(type);
-                                    setSearchFilters({});
-                                }}
-                                showHistory={true}
-                                onHistoryClick={() => {
-                                    fetchSearchHistory()
-                                    setShowHistoryModal(true)
-                                }}
-                                showSettings={true}
-                                isScrolled={isScrolled}
-                            />
+            <div className="max-w-4xl mx-auto px-4">
+                {/* Search Input */}
+                <div className="sticky top-0 pt-6 pb-4 bg-background/95 backdrop-blur-lg z-50 border-b">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                            {/* Remove loading indicator section */}
                         </div>
                     </div>
-                </motion.div>
-            )}
-
-            <motion.div 
-                className={`w-full max-w-3xl mx-auto px-3 transition-all duration-500 ${
-                    !hasResults && !loading 
-                        ? 'h-[calc(100vh-80px)] flex flex-col justify-center -mt-[15vh]' 
-                        : 'py-8'
-                }`}
-                transition={{ duration: 0.3 }}
-            >
-                <motion.div
-                    animate={{ 
-                        scale: isScrolled && hasResults ? 0.95 : 1,
-                        opacity: isScrolled && hasResults ? 0 : 1,
-                    }}
-                    transition={{ duration: 0.3 }}
-                >
-                    <motion.h1
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="text-2xl md:text-3xl font-medium tracking-tight text-center mb-6"
-                    >
-                        {selectedSite === 'custom' ? (
-                            <div className="flex items-center justify-center gap-2">
-                                <img
-                                    src={`https://www.google.com/s2/favicons?sz=32&domain_url=${customUrl}`}
-                                    alt=""
-                                    className="w-8 h-8"
-                                />
-                                <span>
-                                    Searching <span className="text-purple-600 dark:text-purple-400">{formatDomain(customUrl)}</span>
-                                </span>
-                            </div>
-                        ) : (
-                            "What can I help you find?"
-                        )}
-                    </motion.h1>
-
                     <SearchBar
                         onSearch={handleSearch}
-                        typingQuery={typingQuery}
-                        setTypingQuery={handleSearchInputChange}
+                        typingQuery={searchQuery}
+                        setTypingQuery={(query) => {
+                            setSearchQuery(query)
+                            // Reset messages when user types a new query
+                            setMessages([])
+                        }}
                         onFileTypeChange={handleFileTypeChange}
                         selectedFileType={selectedFileType}
                         fileTypes={fileTypes}
@@ -910,136 +1011,137 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                         }}
                         showSettings={true}
                         isScrolled={isScrolled}
+                        isAiMode={isAiMode}
+                        onAiModeChange={setIsAiMode}
+                        messages={messages}
+                        onClearChat={() => setMessages([])}
+                        userInfo={email ? {
+                            name,
+                            email,
+                        } : undefined}
                     />
+                </div>
 
-                    <motion.div 
-                        className="flex items-center justify-between gap-2 mt-2"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                    >
-                        <div className="flex flex-wrap items-center gap-1">
-                            <Badge size="1" color="crimson">
-                                {selectedSite === 'custom' ? (customUrl || 'Custom Site') : selectedSite}
-                            </Badge>
-                            {currentFilter && mapFilterToDisplayText(currentFilter) && (
-                                <Badge size="1" color="orange">
-                                    {mapFilterToDisplayText(currentFilter)}
-                                </Badge>
-                            )}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Switch
-                                id="privacy-mode"
-                                checked={privacyMode}
-                                onCheckedChange={setPrivacyMode}
-                                className="data-[state=checked]:bg-purple-600"
-                            />
-                            <Label htmlFor="privacy-mode" className="text-sm text-muted-foreground flex items-center gap-1">
-                                Stealth
-                                {privacyMode ? (
-                                    <ShieldCheck className="w-3 h-3" />
-                                ) : (
-                                    <ShieldOff className="w-3 h-3" />
-                                )}
-                            </Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="secondary"
-                                        size="icon"
-                                        className="w-8 h-8 rounded-lg hover:bg-gray-100 hover:text-gray-900"
-                                    >
-                                        <Settings2 className="w-4 h-4" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <LoggedInSettingsPopover
-                                    selectedSite={selectedSite}
-                                    setSelectedSite={setSelectedSite}
-                                    currentFilter={currentFilter}
-                                    handleFilterChange={handleFilterChange}
-                                    customUrl={customUrl}
-                                    setCustomUrl={setCustomUrl}
-                                    membership={Membership}
-                                />
-                            </Popover>
-                        </div>
-                    </motion.div>
-                </motion.div>
-
-                {loading && <TabDataSkeleton />}
-                {hasResults && (
-                    <SearchResults
-                        platform={selectedSite === 'custom' ? customUrl : selectedSite}
-                        posts={searchResults}
-                        logo={selectedSite === 'custom' ? '/custom.png' : sites.find(site => site.name === selectedSite)?.icon || '/custom.png'}
-                        searchQuery={searchQuery}
-                        currentFilter={currentFilter}
-                        onBookmark={handleBookmark}
-                        onEngage={handleEngage}
-                        onCopyUrl={handleCopyUrl}
-                        email={email}
-                        onLoadMore={handleLoadMore}
-                        hasMore={hasMore}
-                        isLoadingMore={loading}
-                        setCustomUrl={setCustomUrl}
-                        setSelectedSite={setSelectedSite}
-                        handleSearch={handleSearch}
-                        credits={credits}
-                        onCreditUpdate={handleCreditUpdate}
-                        searchType={searchType}
-                    />
-                )}
-            </motion.div>
-
-            {/* Add the History Modal */}
-            <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-                <DialogContent className="sm:max-w-[600px]">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <History className="w-5 h-5" />
-                            Search History
-                        </DialogTitle>
-                    </DialogHeader>
-                    <div className="max-h-[60vh] overflow-y-auto">
-                        {isHistoryLoading ? (
-                            <div className="flex items-center justify-center py-8">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                            </div>
-                        ) : searchHistory.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
-                                No search history found
+                {/* Content Area */}
+                {isAiMode ? (
+                    <div className="py-6">
+                        {messages.length === 0 ? (
+                            <div className="text-center py-5">
+                                <div className="bg-gradient-to-b from-purple-500/20 to-purple-500/5 rounded-full p-4 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                                    <SparklesIcon className="w-10 h-10 text-purple-500" />
+                                </div>
+                                <h3 className="text-xl font-medium mb-3">Welcome to AI-powered search</h3>
+                                <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed mb-4">
+                                    Get comprehensive answers with cited sources from across the web. You can:
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto px-4 mb-8">
+                                    <div className="p-4 rounded-lg border bg-card">
+                                        <h4 className="font-medium mb-2">Find Information</h4>
+                                        <p className="text-sm text-muted-foreground mb-2">Search for research papers, articles, tutorials, and general information</p>
+                                        <div className="text-sm text-purple-600 dark:text-purple-400 font-medium italic animate-fade-in-out">
+                                            "latest research on quantum computing"
+                                        </div>
+                                    </div>
+                                    <div className="p-4 rounded-lg border bg-card">
+                                        <h4 className="font-medium mb-2">Search Documents</h4>
+                                        <p className="text-sm text-muted-foreground mb-2">Find specific file types like PDFs, CSVs, presentations, and more</p>
+                                        <div className="text-sm text-purple-600 dark:text-purple-400 font-medium italic animate-fade-in-out">
+                                            "find 1984 book in pdf"
+                                        </div>
+                                    </div>
+                                    <div className="p-4 rounded-lg border bg-card">
+                                        <h4 className="font-medium mb-2">Make Bookings</h4>
+                                        <p className="text-sm text-muted-foreground mb-2">Book restaurants, flights, hotels, and more</p>
+                                        <div className="text-sm text-purple-600 dark:text-purple-400 font-medium italic animate-fade-in-out">
+                                            "book a table at Italian restaurant in San Francisco"
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         ) : (
-                            <div className="space-y-2">
-                                {searchHistory
-                                    .sort((a, b) => b.timestamp - a.timestamp) // Sort by timestamp in descending order
-                                    .map((item, index) => (
-                                    <div
-                                        key={index}
-                                        className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group"
-                                    >
-                                        <div className="flex-1">
-                                            <p className="font-medium">{item.query}</p>
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                            onClick={() => {
-                                                setShowHistoryModal(false)
-                                                handleSearch(item.query)
-                                            }}
-                                        >
-                                            Search Again
-                                        </Button>
+                            <div className="space-y-6">
+                                {/* Show only the last AI message */}
+                                {messages.length > 0 && messages[messages.length - 1].sender === 'ai' && (
+                                    <div className="bg-card rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6">
+                                        {formatMessage(messages[messages.length - 1].content, messages[messages.length - 1].relatedResults)}
                                     </div>
-                                ))}
+                                )}
+                                {(loadingState.search || loadingState.aiQuery || loadingState.aiResponse) && (
+                                    <div className="flex items-center gap-3 text-muted-foreground animate-pulse">
+                                        <div className="h-4 w-4 relative">
+                                            <div className="absolute inset-0 border-2 border-current border-r-transparent rounded-full animate-spin"></div>
+                                        </div>
+                                        <span className="text-sm">
+                                            {loadingState.aiQuery 
+                                                ? "Optimizing search query..." 
+                                                : loadingState.aiResponse 
+                                                    ? "Analyzing results..." 
+                                                    : "Searching..."}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
-                </DialogContent>
-            </Dialog>
+                ) : (
+                    <div className="py-6">
+                        {loadingState.search ? (
+                            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Searching...</span>
+                            </div>
+                        ) : hasResults ? (
+                            <SearchResults
+                                platform={selectedSite}
+                                posts={searchResults}
+                                logo={selectedSite === 'custom' ? '/custom.png' : sites.find(site => site.name === selectedSite)?.icon || '/custom.png'}
+                                searchQuery={searchQuery}
+                                currentFilter={currentFilter}
+                                onBookmark={handleBookmark}
+                                onEngage={handleEngage}
+                                onCopyUrl={handleCopyUrl}
+                                email={email}
+                                onLoadMore={handleLoadMore}
+                                hasMore={hasMore}
+                                isLoadingMore={loadingState.loadMore}
+                                setCustomUrl={setCustomUrl}
+                                setSelectedSite={setSelectedSite}
+                                handleSearch={handleSearch}
+                                credits={credits}
+                                onCreditUpdate={handleCreditUpdate}
+                                searchType={searchType}
+                            />
+                        ) : searchQuery && (
+                            <div className="text-center py-20 text-muted-foreground">
+                                <p>No results found for your search.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            <style jsx global>{`
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                .animate-slideIn {
+                    animation: slideIn 0.3s ease-out forwards;
+                }
+                @keyframes fadeInOut {
+                    0%, 100% { opacity: 0.7; }
+                    50% { opacity: 1; }
+                }
+                .animate-fade-in-out {
+                    animation: fadeInOut 4s ease-in-out infinite;
+                }
+            `}</style>
         </main>
     )
 }

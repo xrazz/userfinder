@@ -8,6 +8,10 @@ import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Switch } from "@/components/ui/switch"
+import { toast } from 'sonner'
+import { BookingModal } from './BookingModal'
+import { LoadingSpinner } from './LoadingSpinner'
 
 export type SearchType = 'web' | 'media' | 'social';
 
@@ -45,6 +49,14 @@ interface SearchBarProps {
     onSearchTypeChange?: (type: SearchType) => void
     showHistory?: boolean
     onHistoryClick?: () => void
+    isAiMode?: boolean
+    onAiModeChange?: (enabled: boolean) => void
+    messages?: Array<any>
+    onClearChat?: () => void
+    userInfo?: {
+        name?: string;
+        email?: string;
+    }
 }
 
 const placeholderQueries = {
@@ -104,13 +116,22 @@ const getFileTypeLabel = (type: string, fileTypes: Array<{ value: string, label:
     return fileTypes.find(t => t.value === type)?.label.toLowerCase() || 'files';
 }
 
-const SearchTypeButton = ({ type, active, icon: Icon, onClick, children, compact = false }: { 
+const SearchTypeButton = ({ 
+    type, 
+    active, 
+    icon: Icon, 
+    onClick, 
+    children, 
+    compact = false,
+    disabled = false 
+}: { 
     type: SearchType, 
     active: boolean, 
     icon: React.ElementType,
     onClick: () => void,
     children: React.ReactNode,
-    compact?: boolean
+    compact?: boolean,
+    disabled?: boolean
 }) => (
     <Button
         variant={active ? "default" : "ghost"}
@@ -120,8 +141,11 @@ const SearchTypeButton = ({ type, active, icon: Icon, onClick, children, compact
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
         } ${
             compact ? 'h-7 px-2 text-xs' : ''
+        } ${
+            disabled ? 'opacity-50 cursor-not-allowed' : ''
         }`}
         onClick={onClick}
+        disabled={disabled}
     >
         <Icon className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
         {children}
@@ -354,8 +378,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     searchType = 'web',
     onSearchTypeChange = () => {},
     showHistory = false,
-    onHistoryClick = () => {}
-}) => {
+    onHistoryClick = () => {},
+    isAiMode = false,
+    onAiModeChange = () => {},
+    messages = [],
+    onClearChat = () => {}
+}): JSX.Element => {
     const searchInputRef = useRef<HTMLInputElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isSearchFocused, setIsSearchFocused] = useState(false)
@@ -367,6 +395,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const [searchTerm, setSearchTerm] = useState(typingQuery)
     const [currentSearchType, setCurrentSearchType] = useState<SearchType>(searchType)
     const [searchFilters, setSearchFilters] = useState<SearchFilters>({})
+    const [showBookingModal, setShowBookingModal] = useState(false);
+    const [bookingData, setBookingData] = useState<{
+        type: 'restaurant' | 'hotel' | 'flight';
+        followUpQuestions: string[];
+        currentDetails: any;
+    } | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     // Placeholder animation with typing effect
     useEffect(() => {
@@ -445,17 +480,56 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         }
     }
 
-    const handleSearch = () => {
-        if (!searchTerm.trim()) return
-        // First scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-        // Then trigger the search after a small delay to ensure smooth scroll
-        setTimeout(() => {
-            setTypingQuery(searchTerm)
-            onSearch(searchTerm, currentSearchType, searchFilters)
-            setShowSuggestions(false)
-        }, 100)
-    }
+    const handleSearch = async () => {
+        if (!searchTerm.trim()) return;
+        setIsLoading(true);
+
+        try {
+            const response = await fetch('/api/booking-intent', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: searchTerm }),
+            });
+
+            const data = await response.json();
+
+            if (data.isBooking) {
+                if (data.needsFollowUp) {
+                    setBookingData({
+                        type: data.type,
+                        followUpQuestions: data.followUpQuestions,
+                        currentDetails: data.currentDetails
+                    });
+                    setShowBookingModal(true);
+                    return;
+                }
+
+                toast.success(`${data.type.charAt(0).toUpperCase() + data.type.slice(1)} booking confirmed!`);
+                return;
+            }
+
+            // If not a booking, proceed with normal search
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => {
+                setTypingQuery(searchTerm);
+                onSearch(searchTerm, currentSearchType, searchFilters);
+                setShowSuggestions(false);
+            }, 100);
+        } catch (error) {
+            console.error('Error checking booking intent:', error);
+            // Proceed with normal search on error
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => {
+                setTypingQuery(searchTerm);
+                onSearch(searchTerm, currentSearchType, searchFilters);
+                setShowSuggestions(false);
+            }, 100);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value
@@ -469,11 +543,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' && searchTerm.trim()) {
-            e.preventDefault()
-            handleSearch()
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSearch();
         }
-    }
+    };
 
     const handleSuggestionClick = (suggestion: string) => {
         setSearchTerm(suggestion)
@@ -508,6 +582,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     return (
         <div className="w-full space-y-2">
+            <LoadingSpinner isLoading={isLoading} />
             <div className={`flex items-center gap-2 justify-center ${showSettings ? 'mb-2' : 'mb-4'}`}>
                 {showSettings && isScrolled && (
                     <motion.div
@@ -522,46 +597,48 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 )}
                 <div className="flex flex-col items-center gap-2">
                     <div className="flex items-center gap-2">
-                        <SearchTypeButton
-                            type="web"
-                            active={currentSearchType === 'web'}
-                            icon={Globe}
-                            onClick={() => handleSearchTypeClick('web')}
-                            compact={showSettings}
-                        >
-                            Web
-                        </SearchTypeButton>
-                        <SearchTypeButton
-                            type="social"
-                            active={currentSearchType === 'social'}
-                            icon={Share2}
-                            onClick={() => handleSearchTypeClick('social')}
-                            compact={showSettings}
-                        >
-                            Social
-                        </SearchTypeButton>
-                        <SearchTypeButton
-                            type="media"
-                            active={currentSearchType === 'media'}
-                            icon={Play}
-                            onClick={() => handleSearchTypeClick('media')}
-                            compact={showSettings}
-                        >
-                            Media
-                        </SearchTypeButton>
+                        <div className="flex items-center gap-2">
+                            <SearchTypeButton
+                                type="web"
+                                active={currentSearchType === 'web'}
+                                icon={Globe}
+                                onClick={() => handleSearchTypeClick('web')}
+                                compact={showSettings}
+                                disabled={isAiMode}
+                            >
+                                Web
+                            </SearchTypeButton>
+                            <SearchTypeButton
+                                type="social"
+                                active={currentSearchType === 'social'}
+                                icon={Share2}
+                                onClick={() => handleSearchTypeClick('social')}
+                                compact={showSettings}
+                                disabled={isAiMode}
+                            >
+                                Social
+                            </SearchTypeButton>
+                            <SearchTypeButton
+                                type="media"
+                                active={currentSearchType === 'media'}
+                                icon={Play}
+                                onClick={() => handleSearchTypeClick('media')}
+                                compact={showSettings}
+                                disabled={isAiMode}
+                            >
+                                Media
+                            </SearchTypeButton>
+                        </div>
+                        <div className="flex items-center gap-3 p-1.5 rounded-lg bg-muted/50">
+                            <Switch
+                                checked={isAiMode}
+                                onCheckedChange={onAiModeChange}
+                                className="data-[state=checked]:bg-purple-600"
+                            />
+                            <Label className="text-sm font-medium">AI-powered search</Label>
+                        </div>
                     </div>
-                    {/* {currentSearchType === 'social' && !isScrolled && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="flex items-center gap-1.5 text-xs text-yellow-600 dark:text-yellow-400"
-                        >
-                            <SparklesIcon className="w-3 h-3" />
-                            <span>Uses 1 credit per search</span>
-                        </motion.div>
-                    )} */}
-                    {currentSearchType === 'media' && !isScrolled && (
+                    {currentSearchType === 'media' && !isScrolled && !isAiMode && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -757,6 +834,21 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     )}
                 </AnimatePresence>
             </div>
+            
+            {/* Add BookingModal */}
+            {bookingData && (
+                <BookingModal
+                    isOpen={showBookingModal}
+                    onClose={() => {
+                        setShowBookingModal(false);
+                        setBookingData(null);
+                    }}
+                    initialQuery={searchTerm}
+                    followUpQuestions={bookingData.followUpQuestions}
+                    bookingType={bookingData.type}
+                    currentDetails={bookingData.currentDetails}
+                />
+            )}
         </div>
     )
 }
