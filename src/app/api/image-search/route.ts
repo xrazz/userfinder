@@ -3,6 +3,16 @@ import { NextResponse } from 'next/server';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/app/firebaseClient';
 
+interface WebDetectionResult {
+    url?: string;
+    score?: number;
+}
+
+interface WebEntity {
+    description?: string;
+    score?: number;
+}
+
 // Initialize Vision client with error handling
 let vision: ImageAnnotatorClient;
 try {
@@ -91,17 +101,35 @@ export async function POST(request: Request) {
         console.log('Processing image search for user:', email);
         const imageBuffer = Buffer.from(base64Data, 'base64');
 
-        // Perform web detection with timeout
-        const [result] = await Promise.race([
-            vision.webDetection({ 
-                image: { content: imageBuffer }
-            }),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Vision API timeout')), 30000)
-            )
-        ]);
+        // Perform web detection with timeout and proper type handling
+        let result;
+        try {
+            result = await Promise.race([
+                vision.webDetection({ 
+                    image: { content: imageBuffer }
+                }),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Vision API timeout')), 30000)
+                )
+            ]);
+        } catch (error) {
+            console.error('Error during Vision API call:', error);
+            return NextResponse.json(
+                { error: 'Failed to process image search. Please try again.' },
+                { status: 500 }
+            );
+        }
 
-        const webDetection = result.webDetection;
+        if (!result || !Array.isArray(result) || result.length === 0) {
+            console.error('Invalid response from Vision API');
+            return NextResponse.json(
+                { error: 'Invalid response from image processing service' },
+                { status: 500 }
+            );
+        }
+
+        const [webDetectionResult] = result;
+        const webDetection = webDetectionResult.webDetection;
         if (!webDetection) {
             console.error('No web detection results found');
             return NextResponse.json(
@@ -112,15 +140,15 @@ export async function POST(request: Request) {
 
         // Extract and filter results
         const similarImages = (webDetection.visuallySimilarImages || [])
-            .filter(img => img.url) // Only include results with valid URLs
-            .map(img => ({
+            .filter((img: WebDetectionResult) => img.url) // Only include results with valid URLs
+            .map((img: WebDetectionResult) => ({
                 url: img.url,
                 score: img.score
             }));
 
         const webEntities = (webDetection.webEntities || [])
-            .filter(entity => entity.description) // Only include results with descriptions
-            .map(entity => ({
+            .filter((entity: WebEntity) => entity.description) // Only include results with descriptions
+            .map((entity: WebEntity) => ({
                 description: entity.description,
                 score: entity.score
             }));
