@@ -293,23 +293,6 @@ const MediaFilters = ({ filters, onChange }: {
             </div>
 
             <div className="space-y-2">
-                <Label>Content Type</Label>
-                <Select
-                    value={filters.contentType || 'all'}
-                    onValueChange={(value) => onChange({ ...filters, contentType: value as SearchFilters['contentType'] })}
-                >
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select content type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Content</SelectItem>
-                        <SelectItem value="videos">Videos</SelectItem>
-                        <SelectItem value="images">Images</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
-            <div className="space-y-2">
                 <Label>Search by Image</Label>
                 <input
                     type="file"

@@ -671,30 +671,20 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             case 'media':
                 let mediaQuery = baseQuery;
                 
-                // Aggiungi filtri per tipo di contenuto se specificato
-                if (filters?.contentType && filters.contentType !== 'all') {
-                    if (filters.contentType === 'videos') {
-                        mediaQuery += ` (site:youtube.com OR site:vimeo.com OR site:dailymotion.com OR site:twitch.tv OR filetype:mp4 OR filetype:webm OR filetype:mov OR intext:"video" OR intext:"watch")`;
-                    } else if (filters.contentType === 'images') {
-                        mediaQuery += ` (site:flickr.com OR site:imgur.com OR site:500px.com OR site:deviantart.com OR site:behance.net OR site:unsplash.com OR filetype:jpg OR filetype:jpeg OR filetype:png OR filetype:gif OR intext:"photo" OR intext:"image")`;
-                    }
-                } else {
-                    // Query bilanciata per tutti i tipi di contenuti
-                    mediaQuery += ` (
-                        site:flickr.com OR site:imgur.com OR site:500px.com OR 
-                        site:unsplash.com OR site:pexels.com OR site:pixabay.com OR
-                        site:youtube.com OR site:vimeo.com OR site:dailymotion.com OR
-                        site:twitch.tv OR site:behance.net OR site:artstation.com OR
-                        site:giphy.com OR site:tenor.com OR
-                        filetype:jpg OR filetype:jpeg OR filetype:png OR filetype:gif OR 
-                        filetype:mp4 OR filetype:webm OR filetype:mov OR
-                        intext:"photo" OR intext:"image" OR intext:"video" OR intext:"watch" OR
-                        intext:"gallery" OR intext:"portfolio"
-                    )`;
-                    
-                    // Aggiungi filtri per escludere risultati eccessivi da YouTube
-                    mediaQuery += ` -site:youtube.com/channel -site:youtube.com/user -site:youtube.com/playlist`;
+                // If it's a vision search (image file provided), return the base query
+                if (filters?.isImageSearch) {
+                    return mediaQuery;
                 }
+                
+                // Always search for videos only (removing image search options)
+                mediaQuery += ` (
+                    site:youtube.com OR site:vimeo.com OR site:dailymotion.com OR
+                    site:twitch.tv OR filetype:mp4 OR filetype:webm OR filetype:mov OR
+                    intext:"video" OR intext:"watch"
+                )`;
+                
+                // Add filters to exclude non-video content
+                mediaQuery += ` -site:youtube.com/channel -site:youtube.com/user -site:youtube.com/playlist`;
                 
                 return mediaQuery;
             case 'social':
