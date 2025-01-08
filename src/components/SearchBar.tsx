@@ -36,7 +36,7 @@ export interface SearchFilters {
 }
 
 interface SearchBarProps {
-    onSearch: (query: string, searchType: SearchType, filters?: SearchFilters) => void
+    onSearch: (query: string, searchType: SearchType, filters?: SearchFilters) => Promise<void>
     typingQuery: string
     setTypingQuery: (query: string) => void
     className?: string
@@ -321,25 +321,23 @@ const MediaFilters = ({ filters, onChange, onSearch, onSearchTypeChange }: {
         const reader = new FileReader();
         reader.onloadend = () => {
             const base64String = reader.result as string;
-            setPreviewUrl(base64String);
             
             // Switch to media type and perform search
             onSearchTypeChange('media');
             
-            toast.promise(
-                onSearch('', 'media', { 
-                    image: base64String,
-                    isImageSearch: true
-                }),
-                {
-                    loading: 'Searching for similar images...',
-                    success: 'Search completed',
-                    error: (err) => {
-                        console.error('Image search error:', err);
-                        return err?.message || 'Failed to process image search';
-                    }
+            const searchPromise = onSearch('', 'media', { 
+                image: base64String,
+                isImageSearch: true
+            });
+
+            toast.promise(searchPromise, {
+                loading: 'Searching for similar images...',
+                success: 'Search completed',
+                error: (err) => {
+                    console.error('Image search error:', err);
+                    return err?.message || 'Failed to process image search';
                 }
-            );
+            });
         };
 
         reader.onerror = () => {
@@ -552,25 +550,23 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         const reader = new FileReader();
         reader.onloadend = () => {
             const base64String = reader.result as string;
-            // Switch to media type
-            setCurrentSearchType('media');
+            
+            // Switch to media type and perform search
             onSearchTypeChange('media');
             
-            toast.promise(
-                // Pass only the image data without a text query
-                onSearch('', 'media', { 
-                    image: base64String,
-                    isImageSearch: true
-                }),
-                {
-                    loading: 'Searching for similar images...',
-                    success: 'Search completed',
-                    error: (err) => {
-                        console.error('Image search error:', err);
-                        return err?.message || 'Failed to process image search';
-                    }
+            const searchPromise = onSearch('', 'media', { 
+                image: base64String,
+                isImageSearch: true
+            });
+
+            toast.promise(searchPromise, {
+                loading: 'Searching for similar images...',
+                success: 'Search completed',
+                error: (err) => {
+                    console.error('Image search error:', err);
+                    return err?.message || 'Failed to process image search';
                 }
-            );
+            });
         };
 
         reader.onerror = () => {
