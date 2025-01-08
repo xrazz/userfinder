@@ -39,18 +39,62 @@ interface SearchQuery {
     filter?: string
 }
 
-const getDateFromTimestamp = (timestamp: any) => {
-    // Handle both Firestore Timestamp objects and regular dates
-    if (timestamp?.toDate) {
-        return timestamp.toDate()
-    } else if (timestamp?.seconds) {
+const getDateFromTimestamp = (timestamp: any): Date => {
+    try {
+        // Handle Firestore Timestamp objects
+        if (timestamp?.toDate) {
+            return timestamp.toDate();
+        }
+        
         // Handle raw Firestore timestamp data
-        return new Date(timestamp.seconds * 1000)
-    } else if (timestamp instanceof Date) {
-        return timestamp
+        if (timestamp?.seconds) {
+            return new Date(timestamp.seconds * 1000);
+        }
+        
+        // Handle Date objects
+        if (timestamp instanceof Date) {
+            return timestamp;
+        }
+        
+        // Handle ISO string timestamps
+        if (typeof timestamp === 'string') {
+            const date = new Date(timestamp);
+            if (!isNaN(date.getTime())) {
+                return date;
+            }
+        }
+        
+        // Handle numeric timestamps (milliseconds)
+        if (typeof timestamp === 'number') {
+            const date = new Date(timestamp);
+            if (!isNaN(date.getTime())) {
+                return date;
+            }
+        }
+        
+        throw new Error('Invalid timestamp format');
+    } catch (error) {
+        console.error('Error parsing timestamp:', error, timestamp);
+        throw new Error('Failed to parse timestamp');
     }
-    // Fallback to current date if timestamp is invalid
-    return new Date()
+}
+
+const formatDate = (date: Date): string => {
+    return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        timeZone: 'UTC'
+    }).format(date);
+}
+
+const formatTime = (date: Date): string => {
+    return new Intl.DateTimeFormat('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'UTC'
+    }).format(date);
 }
 
 export default function AdminPage() {
@@ -289,10 +333,10 @@ export default function AdminPage() {
                                     <TableCell className="font-medium">{query.query}</TableCell>
                                     <TableCell>{query.platform}</TableCell>
                                     <TableCell>
-                                        {format(getDateFromTimestamp(query.timestamp), 'PP')}
+                                        {formatDate(getDateFromTimestamp(query.timestamp))}
                                     </TableCell>
                                     <TableCell>
-                                        {format(getDateFromTimestamp(query.timestamp), 'p')}
+                                        {formatTime(getDateFromTimestamp(query.timestamp))}
                                     </TableCell>
                                     <TableCell>{query.filter || '-'}</TableCell>
                                 </TableRow>

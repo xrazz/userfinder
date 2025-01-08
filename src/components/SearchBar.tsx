@@ -175,13 +175,6 @@ const SocialFilters = ({ filters, onChange }: {
 }) => {
     return (
         <div className="p-4 space-y-4 border-t">
-            <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-4">
-                <div className="flex items-center gap-2 text-sm text-yellow-800 dark:text-yellow-200">
-                    <SparklesIcon className="w-4 h-4" />
-                    <span>Social search uses 1 credit per search</span>
-                </div>
-            </div>
-
             <div className="space-y-2">
                 <Label>Platform</Label>
                 <Select
@@ -574,7 +567,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                             Media
                         </SearchTypeButton>
                     </div>
-                    {currentSearchType === 'social' && !isScrolled && (
+                    {/* {currentSearchType === 'social' && !isScrolled && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -584,7 +577,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                             <SparklesIcon className="w-3 h-3" />
                             <span>Uses 1 credit per search</span>
                         </motion.div>
-                    )}
+                    )} */}
                     {currentSearchType === 'media' && !isScrolled && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}

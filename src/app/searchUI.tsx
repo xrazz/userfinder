@@ -143,11 +143,16 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
     const [selectedFileType, setSelectedFileType] = useState('all');
     const [searchType, setSearchType] = useState<SearchType>('web');
     const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
-    const [privacyMode, setPrivacyMode] = useState(() => {
-        // Check localStorage for saved preference
-        const saved = localStorage.getItem('privacyMode')
-        return saved ? JSON.parse(saved) : false
-    });
+    const [privacyMode, setPrivacyMode] = useState(false);
+    
+    useEffect(() => {
+        // Only access localStorage on the client side
+        const saved = window.localStorage.getItem('privacyMode');
+        if (saved !== null) {
+            setPrivacyMode(JSON.parse(saved));
+        }
+    }, []);
+    
     const RESULTS_PER_PAGE = 10; // Constant for number of results per page
     const [credits, setCredits] = useState(0)
     const [typingQuery, setTypingQuery] = useState('')
@@ -388,27 +393,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             return
         }
 
-        // Check credits for social search
-        if ((newSearchType === 'social' || searchType === 'social') && credits <= 0) {
-            toast.error(
-                "You're out of credits!",
-                {
-                    description: (
-                        <div className="flex items-center gap-1">
-                            <span>Upgrade to </span>
-                            <button
-                                onClick={() => window.location.href = '/subscription'}
-                                className="font-medium text-purple-500 hover:text-purple-600 underline underline-offset-2"
-                            >
-                                get 50 daily credits
-                            </button>
-                        </div>
-                    ),
-                }
-            );
-            return;
-        }
-
         try {
             setSearchInProgress(true)
             setSearchResults([])
@@ -524,19 +508,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             const Results = await fetchResults(finalQuery, 1)
             setSearchResults(Results)
             setHasResults(Results.length > 0)
-
-            // Deduct credit for social search
-            if ((newSearchType === 'social' || searchType === 'social') && email) {
-                const userDocRef = doc(db, 'users', email);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                    const currentCredits = userDoc.data().credits || 0;
-                    if (currentCredits > 0) {
-                        await updateDoc(userDocRef, { credits: currentCredits - 1 });
-                        handleCreditUpdate();
-                    }
-                }
-            }
 
         } catch (error) {
             console.error("Error fetching data:", error)
