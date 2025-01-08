@@ -5,7 +5,16 @@ import { mockHotels, mockFlights, mockSalons } from '@/data/mockServices'
 
 export async function POST(request: Request) {
     try {
-        const { query } = await request.json();
+        const { query, isAiMode, email } = await request.json();
+
+        // Check if AI mode is active but user is not logged in
+        if (isAiMode && !email) {
+            return NextResponse.json({ 
+                error: 'Authentication required',
+                message: 'Please sign in to use AI-powered search',
+                requiresAuth: true
+            }, { status: 401 });
+        }
 
         const openai = new OpenAI({
             apiKey: process.env.OPENAI_API_KEY,
@@ -13,7 +22,7 @@ export async function POST(request: Request) {
 
         // First, analyze the intent
         const intentResponse = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "gpt-4o-mini",
             messages: [
                 {
                     role: "system",

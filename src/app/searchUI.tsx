@@ -175,33 +175,33 @@ const formatMessage = (content: string, relatedResults?: Post[]): React.ReactNod
                         {citedResults.map((result, idx) => (
                             <div 
                                 key={idx}
-                                className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                                className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors overflow-hidden"
                             >
                                 <div className="flex-none mt-0.5">
                                     <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
                                         {relatedResults?.indexOf(result)! + 1}
                                     </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
+                                <div className="flex-1 min-w-0 space-y-1">
+                                    <div className="flex items-center gap-2">
                                         <a 
                                             href={result.link} 
                                             target="_blank" 
                                             rel="noopener noreferrer"
-                                            className="font-medium hover:underline truncate"
+                                            className="font-medium hover:underline truncate flex-1"
                                         >
                                             {result.title}
                                         </a>
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-5 w-5"
+                                            className="h-5 w-5 flex-none"
                                             onClick={() => window.open(result.link, '_blank')}
                                         >
                                             <ExternalLink className="h-3 w-3" />
                                         </Button>
                                     </div>
-                                    <p className="text-sm text-muted-foreground line-clamp-2">
+                                    <p className="text-sm text-muted-foreground line-clamp-2 break-words">
                                         {result.snippet}
                                     </p>
                                 </div>
@@ -558,24 +558,23 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
 Your task is to create precise search queries that find relevant results based on the content type requested.
 
-Use these search techniques:
-1. Use appropriate filetype operators when specific formats are requested
-2. Add exclusion terms to filter out:
-   - Irrelevant content (-preview -excerpt)
-   - Shopping sites (-shop -buy -price)
-   - Low quality results (-review -summary)
-3. Include relevant search operators:
-   - For academic content: site:academia.edu OR site:scholar.google.com
-   - For documentation: site:docs.* OR site:documentation.*
-   - For educational content: site:.edu OR site:.ac.*
-4. Focus on legitimate sources and repositories
+IMPORTANT: Only modify the query if specific keywords are present:
 
-Examples:
-Query: "machine learning research papers"
-Output: "machine learning research filetype:pdf site:arxiv.org OR site:scholar.google.com"
+1. For document/file searches:
+   - ONLY add filetype operators when user explicitly mentions: pdf, doc, docx, xls, xlsx, csv, ppt, pptx, txt
+   Example: "find python documentation pdf" -> "python documentation filetype:pdf"
 
-Query: "cerca documentazione python"
-Output: "python documentation filetype:pdf site:python.org OR site:docs.python.org"
+2. For shopping/price related:
+   - ONLY add exclusions when user mentions: buy, price, cost, purchase, shop
+   Example: "buy new laptop" -> "buy new laptop -scam -fake"
+
+3. For academic/research:
+   - ONLY add site operators when user mentions: research papers, academic, scholarly, thesis
+   Example: "research papers on AI" -> "research papers on AI site:scholar.google.com"
+
+4. For all other queries:
+   - Return the query EXACTLY as provided by the user
+   Example: "best movies like Matrix" -> "best movies like Matrix"
 
 Reply ONLY with the optimized query.`,
                             userPrompt: queryToSearch,
@@ -982,7 +981,7 @@ Keep responses focused on legitimate sources and official channels.`,
 
             <div className="max-w-4xl mx-auto px-4">
                 {/* Search Input */}
-                <div className="sticky top-0 pt-6 pb-4 bg-background/95 backdrop-blur-lg z-50 border-b">
+                <div className="sticky top-0 pb-4 bg-background/95 backdrop-blur-lg z-50 border-b">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-4">
                             {/* Remove loading indicator section */}
@@ -1113,7 +1112,7 @@ Keep responses focused on legitimate sources and official channels.`,
                             />
                         ) : searchQuery && (
                             <div className="text-center py-20 text-muted-foreground">
-                                <p>No results found for your search.</p>
+
                             </div>
                         )}
                     </div>

@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from 'sonner'
 import { BookingModal } from './BookingModal'
 import { LoadingSpinner } from './LoadingSpinner'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 export type SearchType = 'web' | 'media' | 'social';
 
@@ -403,6 +404,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         currentDetails: any;
     } | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
+    const [searchHistory, setSearchHistory] = useState<Array<{ query: string, timestamp: number }>>([]);
+    const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
     // Placeholder animation with typing effect
     useEffect(() => {
@@ -481,9 +485,89 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         }
     }
 
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                // Switch to media type
+                setCurrentSearchType('media');
+                onSearchTypeChange('media');
+                // Pass only the image data without a text query
+                onSearch('', 'media', { 
+                    image: base64String,
+                    isImageSearch: true
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const fetchSearchHistory = async () => {
+        setIsHistoryLoading(true);
+        try {
+            if (!userInfo?.email) {
+                // For non-logged users, try to get history from localStorage
+                const localHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+                setSearchHistory(localHistory);
+                setIsHistoryLoading(false);
+                return;
+            }
+
+            const response = await fetch('/api/search-history', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'email': userInfo.email
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch search history');
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                setSearchHistory(data.data);
+            } else {
+                // Fallback to localStorage if API fails
+                const localHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+                setSearchHistory(localHistory);
+            }
+        } catch (error) {
+            console.error('Error fetching search history:', error);
+            // Fallback to localStorage on error
+            const localHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+            setSearchHistory(localHistory);
+        } finally {
+            setIsHistoryLoading(false);
+        }
+    };
+
+    // Add function to save search to history
+    const saveToHistory = (query: string) => {
+        const timestamp = Date.now();
+        const historyItem = { query, timestamp };
+
+        // Save to localStorage
+        const localHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+        const updatedHistory = [historyItem, ...localHistory].slice(0, 20); // Keep last 20 searches
+        localStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
+
+        // Update state if history modal is open
+        if (showHistoryModal) {
+            setSearchHistory(updatedHistory);
+        }
+    };
+
+    // Update handleSearch to save queries to history
     const handleSearch = async () => {
         if (!searchTerm.trim()) return;
         setIsLoading(true);
+
+        // Save search to history
+        saveToHistory(searchTerm);
 
         try {
             const response = await fetch('/api/booking-intent', {
@@ -491,10 +575,20 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ query: searchTerm }),
+                body: JSON.stringify({ 
+                    query: searchTerm,
+                    isAiMode: isAiMode,
+                    email: userInfo?.email
+                }),
             });
 
             const data = await response.json();
+
+            // Handle authentication error
+            if (data.requiresAuth) {
+                setIsLoading(false);
+                return;
+            }
 
             if (data.isBooking) {
                 if (data.needsFollowUp) {
@@ -562,24 +656,58 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         }, 100)
     }
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64String = reader.result as string;
-                // Switch to media type
-                setCurrentSearchType('media');
-                onSearchTypeChange('media');
-                // Pass only the image data without a text query
-                onSearch('', 'media', { 
-                    image: base64String,
-                    isImageSearch: true
-                });
-            };
-            reader.readAsDataURL(file);
-        }
+    const handleHistoryClick = () => {
+        setShowHistoryModal(true);
+        fetchSearchHistory();
     };
+
+    const HistoryModal = () => (
+        <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
+            <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                    <DialogTitle>Search History</DialogTitle>
+                    <DialogDescription>
+                        View and reuse your previous searches
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    {isHistoryLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                            <LoadingSpinner isLoading={true} />
+                        </div>
+                    ) : searchHistory.length > 0 ? (
+                        <div className="space-y-2">
+                            {searchHistory.map((item, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => {
+                                        setSearchTerm(item.query);
+                                        setTypingQuery(item.query);
+                                        setShowHistoryModal(false);
+                                        handleSearch();
+                                    }}
+                                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-left"
+                                >
+                                    <History className="w-4 h-4 text-gray-500" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{item.query}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {new Date(item.timestamp).toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <ArrowUpRight className="w-4 h-4 text-gray-500" />
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                            <p>No search history found</p>
+                        </div>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
 
     return (
         <div className="w-full space-y-2">
@@ -598,6 +726,19 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 )}
                 <div className="flex flex-col items-center gap-2">
                     <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3 p-1.5 rounded-lg bg-muted/50">
+                            <Switch
+                                checked={isAiMode}
+                                onCheckedChange={(checked) => {
+                                    onAiModeChange(checked);
+                                }}
+                                className="data-[state=checked]:bg-purple-600"
+                            />
+                            <Label className="text-sm font-medium flex items-center gap-1.5">
+                                <SparklesIcon className="w-3.5 h-3.5" />
+                                AI
+                            </Label>
+                        </div>
                         <div className="flex items-center gap-2">
                             <SearchTypeButton
                                 type="web"
@@ -610,16 +751,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                 Web
                             </SearchTypeButton>
                             <SearchTypeButton
-                                type="social"
-                                active={currentSearchType === 'social'}
-                                icon={Share2}
-                                onClick={() => handleSearchTypeClick('social')}
-                                compact={showSettings}
-                                disabled={isAiMode}
-                            >
-                                Social
-                            </SearchTypeButton>
-                            <SearchTypeButton
                                 type="media"
                                 active={currentSearchType === 'media'}
                                 icon={Play}
@@ -629,33 +760,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                             >
                                 Media
                             </SearchTypeButton>
-                        </div>
-                        <div className="flex items-center gap-3 p-1.5 rounded-lg bg-muted/50">
-                            <Switch
-                                checked={isAiMode}
-                                onCheckedChange={(checked) => {
-                                    if (!userInfo?.email && checked) {
-                                        toast.error("AI-powered search requires login", {
-                                            description: (
-                                                <div className="flex flex-col gap-1">
-                                                    <span>Please sign in to use AI features.</span>
-                                                    <a 
-                                                        href="/login" 
-                                                        className="text-xs text-purple-500 hover:text-purple-600 underline underline-offset-2"
-                                                    >
-                                                        Sign in now →
-                                                    </a>
-                                                </div>
-                                            ),
-                                            duration: 5000,
-                                        });
-                                        return;
-                                    }
-                                    onAiModeChange(checked);
-                                }}
-                                className="data-[state=checked]:bg-purple-600"
-                            />
-                            <Label className="text-sm font-medium">AI-powered search</Label>
                         </div>
                     </div>
                     {currentSearchType === 'media' && !isScrolled && !isAiMode && (
@@ -722,8 +826,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                 </div>
                             )}
 
-                            {/* File type selector - shown only for web search */}
-                            {currentSearchType === 'web' && (
+                            {/* File type selector - shown only for web search and when AI is disabled */}
+                            {currentSearchType === 'web' && !isAiMode && (
                                 <div className={`flex items-center ${showSettings ? 'px-1.5' : 'px-2'}`}>
                                     <Select value={selectedFileType} onValueChange={handleFileTypeChange}>
                                         <SelectTrigger className={`w-full border-0 bg-transparent focus:ring-0 shadow-none hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors ${
@@ -758,7 +862,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                         variant="ghost"
                                         size="icon"
                                         className={`w-8 h-8 ${showSettings ? 'h-7 w-7' : ''}`}
-                                        onClick={onHistoryClick}
+                                        onClick={handleHistoryClick}
                                     >
                                         <History className="w-4 h-4" />
                                     </Button>
@@ -813,6 +917,16 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         </div>
                     </div>
                 </div>
+
+                {/* Add auth message */}
+                {isAiMode && !userInfo?.email && searchTerm.trim() && (
+                    <div className="mt-2 text-sm text-center">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                            <SparklesIcon className="w-4 h-4" />
+                            <span>Please <a href="/login" className="font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 underline underline-offset-2">sign in</a> to use AI-powered search</span>
+                        </div>
+                    </div>
+                )}
 
                 <AnimatePresence>
                     {showSuggestions && suggestions.length > 0 && (
@@ -869,6 +983,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     currentDetails={bookingData.currentDetails}
                 />
             )}
+            <HistoryModal />
         </div>
     )
 }
