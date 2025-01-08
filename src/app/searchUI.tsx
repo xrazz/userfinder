@@ -621,11 +621,8 @@ Reply ONLY with the optimized query.`,
                                     systemPrompt: `You are a multilingual assistant that provides information about content availability from legitimate sources.
 
 Rules:
-1. Focus ONLY on legitimate sources and official repositories
-2. Ignore unofficial or questionable sources
-3. Cite sources using [1], [2] immediately after mentioning each resource
-4. If no legitimate sources are found, suggest alternative search approaches
-5. Never encourage or suggest downloading from unofficial sources
+1. Focus on all sources 
+2. Cite sources using [1], [2] immediately after mentioning each resource
 
 Examples:
 
@@ -680,6 +677,49 @@ Keep responses focused on legitimate sources and official channels.`,
 
     // Funzione helper per la ricerca normale
     const performNormalSearch = async (query: string, newSearchType?: SearchType, filters?: SearchFilters) => {
+        // Check if this is a vision search
+        if (filters?.isImageSearch && filters.image) {
+            try {
+                const response = await fetch('/api/image-search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image: filters.image,
+                        email: email
+                    }),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to process image search');
+                }
+
+                const data = await response.json();
+                
+                // Convert vision results to search results format
+                const Results = data.similarImages.map((img: any) => ({
+                    title: 'Similar Image',
+                    link: img.url,
+                    snippet: `Similarity score: ${Math.round(img.score * 100)}%`,
+                    media: {
+                        type: 'image' as const,
+                        url: img.url
+                    }
+                }));
+
+                setSearchResults(Results);
+                setHasResults(Results.length > 0);
+                return;
+            } catch (error) {
+                console.error('Vision search error:', error);
+                toast.error(error instanceof Error ? error.message : 'Vision search failed');
+                return;
+            }
+        }
+
+        // Normal search flow
         const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
         const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
         
@@ -1026,16 +1066,10 @@ Keep responses focused on legitimate sources and official channels.`,
                     <div className="py-6">
                         {messages.length === 0 ? (
                             <div className="text-center py-5">
-                                <div className="bg-gradient-to-b from-purple-500/20 to-purple-500/5 rounded-full p-4 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                                    <SparklesIcon className="w-10 h-10 text-purple-500" />
-                                </div>
-                                <h3 className="text-xl font-medium mb-3">Welcome to AI-powered search</h3>
-                                <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed mb-4">
-                                    Get comprehensive answers with cited sources from across the web. You can:
-                                </p>
+                               
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto px-4 mb-8">
                                     <div className="p-4 rounded-lg border bg-card">
-                                        <h4 className="font-medium mb-2">Find Information</h4>
+                                        <h4 className="font-medium mb-2">Find Informations</h4>
                                         <p className="text-sm text-muted-foreground mb-2">Search for research papers, articles, tutorials, and general information</p>
                                         <div className="text-sm text-purple-600 dark:text-purple-400 font-medium italic animate-fade-in-out">
                                             "latest research on quantum computing"
@@ -1112,7 +1146,24 @@ Keep responses focused on legitimate sources and official channels.`,
                             />
                         ) : searchQuery && (
                             <div className="text-center py-20 text-muted-foreground">
-
+                                {searchQuery.toLowerCase().includes('what is lexy') || searchQuery.toLowerCase().includes('about lexy') ? (
+                                    <div className="max-w-2xl mx-auto space-y-4">
+                                        <h3 className="text-lg font-semibold text-foreground">About Lexy</h3>
+                                        <p>Lexy is an AI-powered search and analysis tool that helps you find and understand information more effectively. With Lexy, you can:</p>
+                                        <ul className="space-y-2 text-sm">
+                                            <li>• Search across multiple platforms and sources</li>
+                                            <li>• Get AI-powered summaries and insights</li>
+                                            <li>• Analyze documents and web content</li>
+                                            <li>• Find specific file types (PDFs, documents, etc.)</li>
+                                            <li>• Make travel and dining bookings</li>
+                                        </ul>
+                                        <p className="text-sm mt-4">
+                                            Lexy combines powerful search capabilities with AI to help you find exactly what you're looking for and understand it better.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div>No results found for "{searchQuery}"</div>
+                                )}
                             </div>
                         )}
                     </div>
