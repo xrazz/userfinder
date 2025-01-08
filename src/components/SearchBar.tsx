@@ -48,8 +48,6 @@ interface SearchBarProps {
     fileTypes: Array<{ value: string, label: string, dork: string }>
     searchType?: SearchType
     onSearchTypeChange?: (type: SearchType) => void
-    showHistory?: boolean
-    onHistoryClick?: () => void
     isAiMode?: boolean
     onAiModeChange?: (enabled: boolean) => void
     messages?: Array<any>
@@ -288,24 +286,69 @@ const SocialFilters = ({ filters, onChange }: {
     );
 };
 
-const MediaFilters = ({ filters, onChange }: { 
+const MediaFilters = ({ filters, onChange, onSearch, onSearchTypeChange }: { 
     filters: SearchFilters, 
-    onChange: (filters: SearchFilters) => void 
+    onChange: (filters: SearchFilters) => void,
+    onSearch: (query: string, type: SearchType, filters?: SearchFilters) => Promise<void>,
+    onSearchTypeChange: (type: SearchType) => void
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [previewUrl, setPreviewUrl] = useState<string>('');
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64String = reader.result as string;
-                setPreviewUrl(base64String);
-                onChange({ ...filters, imageFile: base64String });
-            };
-            reader.readAsDataURL(file);
+        if (!file) {
+            toast.error("No file selected");
+            return;
         }
+
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("File too large", {
+                description: "Please select an image under 5MB"
+            });
+            return;
+        }
+
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+            toast.error("Invalid file type", {
+                description: "Please select an image file"
+            });
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64String = reader.result as string;
+            setPreviewUrl(base64String);
+            
+            // Switch to media type and perform search
+            onSearchTypeChange('media');
+            
+            toast.promise(
+                onSearch('', 'media', { 
+                    image: base64String,
+                    isImageSearch: true
+                }),
+                {
+                    loading: 'Searching for similar images...',
+                    success: 'Search completed',
+                    error: (err) => {
+                        console.error('Image search error:', err);
+                        return err?.message || 'Failed to process image search';
+                    }
+                }
+            );
+        };
+
+        reader.onerror = () => {
+            toast.error("Failed to read file", {
+                description: "Please try again with a different image"
+            });
+        };
+
+        reader.readAsDataURL(file);
     };
 
     return (
@@ -378,8 +421,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     fileTypes,
     searchType = 'web',
     onSearchTypeChange = () => {},
-    showHistory = false,
-    onHistoryClick = () => {},
     isAiMode = false,
     onAiModeChange = () => {},
     messages = [],
@@ -487,21 +528,58 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64String = reader.result as string;
-                // Switch to media type
-                setCurrentSearchType('media');
-                onSearchTypeChange('media');
+        if (!file) {
+            toast.error("No file selected");
+            return;
+        }
+
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("File too large", {
+                description: "Please select an image under 5MB"
+            });
+            return;
+        }
+
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+            toast.error("Invalid file type", {
+                description: "Please select an image file"
+            });
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64String = reader.result as string;
+            // Switch to media type
+            setCurrentSearchType('media');
+            onSearchTypeChange('media');
+            
+            toast.promise(
                 // Pass only the image data without a text query
                 onSearch('', 'media', { 
                     image: base64String,
                     isImageSearch: true
-                });
-            };
-            reader.readAsDataURL(file);
-        }
+                }),
+                {
+                    loading: 'Searching for similar images...',
+                    success: 'Search completed',
+                    error: (err) => {
+                        console.error('Image search error:', err);
+                        return err?.message || 'Failed to process image search';
+                    }
+                }
+            );
+        };
+
+        reader.onerror = () => {
+            toast.error("Failed to read file", {
+                description: "Please try again with a different image"
+            });
+        };
+
+        reader.readAsDataURL(file);
     };
 
     const fetchSearchHistory = async () => {
@@ -855,20 +933,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                 </div>
                             )}
 
-                            {/* History button - always visible */}
-                            {showHistory && (
-                                <div className={`flex items-center ${showSettings ? 'px-1.5' : 'px-2'} border-l border-gray-200 dark:border-gray-800`}>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className={`w-8 h-8 ${showSettings ? 'h-7 w-7' : ''}`}
-                                        onClick={handleHistoryClick}
-                                    >
-                                        <History className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            )}
-
                             {/* Show filters for marketplace and social */}
                             {(currentSearchType === 'media' || currentSearchType === 'social') && (
                                 <div className="px-2 border-l border-gray-200 dark:border-gray-800">
@@ -883,6 +947,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                                 <MediaFilters
                                                     filters={searchFilters}
                                                     onChange={setSearchFilters}
+                                                    onSearch={onSearch}
+                                                    onSearchTypeChange={onSearchTypeChange}
                                                 />
                                             )}
                                             {currentSearchType === 'social' && (

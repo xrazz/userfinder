@@ -522,14 +522,91 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         if (searchInProgress) return;
 
         try {
-            setSearchInProgress(true)
-            setSearchResults([])
-            setLoadingState(prev => ({ ...prev, search: true }))
-            setCurrentPage(1)
-            setHasMore(true)
+            setSearchInProgress(true);
+            setSearchResults([]);
+            setLoadingState(prev => ({ ...prev, search: true }));
+            setCurrentPage(1);
+            setHasMore(true);
 
-            const queryToSearch = (queryToUse || searchQuery).trim()
-            if (!queryToSearch) return
+            // Handle image search
+            if (filters?.isImageSearch && filters.image) {
+                if (!email) {
+                    toast.error("Authentication required", {
+                        description: "Please sign in to use image search.",
+                    });
+                    return;
+                }
+
+                try {
+                    // Track image search query
+                    await trackSearchQuery("Image Search");
+
+                    const response = await fetch('/api/image-search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            image: filters.image,
+                            email: email
+                        }),
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        if (response.status === 403) {
+                            toast.error("Insufficient credits", {
+                                description: "Please upgrade your plan to continue using image search.",
+                            });
+                        } else {
+                            toast.error("Image search failed", {
+                                description: data.error || "Please try again.",
+                            });
+                        }
+                        return;
+                    }
+
+                    if (!data.similarImages || data.similarImages.length === 0) {
+                        toast.error("No results found", {
+                            description: "No similar images were found. Try a different image.",
+                        });
+                        return;
+                    }
+
+                    // Transform the results into the Post format
+                    const imageResults: Post[] = data.similarImages.map((img: any) => ({
+                        title: "Similar Image",
+                        link: img.url,
+                        snippet: "Visually similar image found",
+                        media: {
+                            type: 'image',
+                            url: img.url
+                        }
+                    }));
+
+                    setSearchResults(imageResults);
+                    setHasResults(imageResults.length > 0);
+                    
+                    // Update credits after successful search
+                    handleCreditUpdate();
+                    
+                    return;
+                } catch (error) {
+                    console.error('Error in image search:', error);
+                    toast.error("Image search failed", {
+                        description: "Please try again later.",
+                    });
+                    return;
+                }
+            }
+
+            // Rest of the existing search logic...
+            const queryToSearch = (queryToUse || searchQuery).trim();
+            if (!queryToSearch) return;
+
+            // Track text search query
+            await trackSearchQuery(queryToSearch);
 
             // Add user message
             const userMessage: Message = {
@@ -677,49 +754,6 @@ Keep responses focused on legitimate sources and official channels.`,
 
     // Funzione helper per la ricerca normale
     const performNormalSearch = async (query: string, newSearchType?: SearchType, filters?: SearchFilters) => {
-        // Check if this is a vision search
-        if (filters?.isImageSearch && filters.image) {
-            try {
-                const response = await fetch('/api/image-search', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        image: filters.image,
-                        email: email
-                    }),
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to process image search');
-                }
-
-                const data = await response.json();
-                
-                // Convert vision results to search results format
-                const Results = data.similarImages.map((img: any) => ({
-                    title: 'Similar Image',
-                    link: img.url,
-                    snippet: `Similarity score: ${Math.round(img.score * 100)}%`,
-                    media: {
-                        type: 'image' as const,
-                        url: img.url
-                    }
-                }));
-
-                setSearchResults(Results);
-                setHasResults(Results.length > 0);
-                return;
-            } catch (error) {
-                console.error('Vision search error:', error);
-                toast.error(error instanceof Error ? error.message : 'Vision search failed');
-                return;
-            }
-        }
-
-        // Normal search flow
         const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
         const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
         
@@ -1043,11 +1077,6 @@ Keep responses focused on legitimate sources and official channels.`,
                             setSearchType(type);
                             setSearchFilters({});
                         }}
-                        showHistory={true}
-                        onHistoryClick={() => {
-                            fetchSearchHistory()
-                            setShowHistoryModal(true)
-                        }}
                         showSettings={true}
                         isScrolled={isScrolled}
                         isAiMode={isAiMode}
@@ -1162,7 +1191,7 @@ Keep responses focused on legitimate sources and official channels.`,
                                         </p>
                                     </div>
                                 ) : (
-                                    <div>No results found for "{searchQuery}"</div>
+                                    <div>What can I help you find?</div>
                                 )}
                             </div>
                         )}
