@@ -825,14 +825,14 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                 Web
                             </SearchTypeButton>
                             <SearchTypeButton
-                                type="media"
-                                active={currentSearchType === 'media'}
-                                icon={Play}
-                                onClick={() => handleSearchTypeClick('media')}
+                                type="social"
+                                active={currentSearchType === 'social'}
+                                icon={Share2}
+                                onClick={() => handleSearchTypeClick('social')}
                                 compact={showSettings}
                                 disabled={isAiMode}
                             >
-                                Media
+                                Social
                             </SearchTypeButton>
                         </div>
                     </div>
@@ -955,6 +955,27 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                             )}
                                         </PopoverContent>
                                     </Popover>
+                                </div>
+                            )}
+
+                            {/* Vision search button - show only in web mode */}
+                            {!isAiMode && currentSearchType === 'web' && (
+                                <div className={`flex items-center ${showSettings ? 'px-1.5' : 'px-2'}`}>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        ref={fileInputRef}
+                                        onChange={handleFileChange}
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={`w-8 h-8 ${showSettings ? 'h-7 w-7' : ''}`}
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <ImagePlus className="w-4 h-4" />
+                                    </Button>
                                 </div>
                             )}
 
