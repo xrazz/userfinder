@@ -102,9 +102,11 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
     const [platformFilter, setPlatformFilter] = useState('all')
-    const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({
-        from: null,
-        to: null,
+    const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>(() => {
+        const to = new Date()
+        const from = new Date(to)
+        from.setHours(to.getHours() - 72)
+        return { from, to }
     })
     const [aiAnalysis, setAiAnalysis] = useState('')
     const [isAnalyzing, setIsAnalyzing] = useState(false)
