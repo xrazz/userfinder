@@ -40,6 +40,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link 
+          rel="search" 
+          type="application/opensearchdescription+xml" 
+          title="Lexy Search" 
+          href="/opensearch.xml"
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable}  antialiased`}
