@@ -13,7 +13,7 @@ import { LoggedInSettingsPopover, LoggedOutSettingsPopover } from '@/components/
 import TabDataSkeleton from '@/components/searchProgressUI'
 import QueryTutorialModal from './docs/QueryModal'
 import { Button } from "@/components/ui/button"
-import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History, ExternalLink } from 'lucide-react'
+import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History, ExternalLink, FileText, BookOpen, Code2, GraduationCap, Presentation, FileSpreadsheet, Share2, ImageIcon } from 'lucide-react'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
 import { motion, useScroll, useTransform } from 'framer-motion'
@@ -1098,31 +1098,82 @@ Keep responses focused on legitimate sources and official channels.`,
                                     <SparklesIcon className="w-10 h-10 text-purple-500" />
                                 </div>
                                 <h3 className="text-xl font-medium mb-3">Welcome to Lexy AI search</h3>
-                                <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed mb-4">
-                                    Get comprehensive answers with cited sources from across the web. You can:
+                                <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed mb-6">
+                                    Discover anything with AI-powered search. Here's what you can explore:
                                 </p>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto px-4 mb-8">
-                                    <div className="p-4 rounded-lg border bg-card">
-                                        <h4 className="font-medium mb-2">Find Informations</h4>
-                                        <p className="text-sm text-muted-foreground mb-2">Search for research papers, articles, tutorials, and general information</p>
-                                        <div className="text-sm text-purple-600 dark:text-purple-400 font-medium italic animate-fade-in-out">
-                                            "latest research on quantum computing"
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 max-w-3xl mx-auto px-4">
+                                    <div className="flex flex-col items-center text-center group cursor-pointer">
+                                        <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-3 group-hover:scale-110 transition-transform">
+                                            <FileText className="w-6 h-6" />
                                         </div>
+                                        <span className="text-sm font-medium mb-1">Research Papers</span>
+                                        <span className="text-xs text-muted-foreground italic">
+                                            "quantum computing papers pdf"
+                                        </span>
                                     </div>
-                                    <div className="p-4 rounded-lg border bg-card">
-                                        <h4 className="font-medium mb-2">Search Documents</h4>
-                                        <p className="text-sm text-muted-foreground mb-2">Find specific file types like PDFs, CSVs, presentations, and more</p>
-                                        <div className="text-sm text-purple-600 dark:text-purple-400 font-medium italic animate-fade-in-out">
-                                            "find 1984 book in pdf"
+                                    <div className="flex flex-col items-center text-center group cursor-pointer">
+                                        <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 mb-3 group-hover:scale-110 transition-transform">
+                                            <BookOpen className="w-6 h-6" />
                                         </div>
+                                        <span className="text-sm font-medium mb-1">Books & Literature</span>
+                                        <span className="text-xs text-muted-foreground italic">
+                                            "find classic novels epub"
+                                        </span>
                                     </div>
-                                    {/* <div className="p-4 rounded-lg border bg-card">
-                                        <h4 className="font-medium mb-2">Make Bookings</h4>
-                                        <p className="text-sm text-muted-foreground mb-2">Book restaurants, flights, hotels, and more</p>
-                                        <div className="text-sm text-purple-600 dark:text-purple-400 font-medium italic animate-fade-in-out">
-                                            "book a table at Italian restaurant in San Francisco"
+                                    <div className="flex flex-col items-center text-center group cursor-pointer">
+                                        <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 mb-3 group-hover:scale-110 transition-transform">
+                                            <Code2 className="w-6 h-6" />
                                         </div>
-                                    </div> */}
+                                        <span className="text-sm font-medium mb-1">Code & Tutorials</span>
+                                        <span className="text-xs text-muted-foreground italic">
+                                            "react hooks examples github"
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col items-center text-center group cursor-pointer">
+                                        <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 mb-3 group-hover:scale-110 transition-transform">
+                                            <GraduationCap className="w-6 h-6" />
+                                        </div>
+                                        <span className="text-sm font-medium mb-1">Courses</span>
+                                        <span className="text-xs text-muted-foreground italic">
+                                            "machine learning courses mooc"
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col items-center text-center group cursor-pointer">
+                                        <div className="p-3 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 mb-3 group-hover:scale-110 transition-transform">
+                                            <Presentation className="w-6 h-6" />
+                                        </div>
+                                        <span className="text-sm font-medium mb-1">Presentations</span>
+                                        <span className="text-xs text-muted-foreground italic">
+                                            "startup pitch decks ppt"
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col items-center text-center group cursor-pointer">
+                                        <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 mb-3 group-hover:scale-110 transition-transform">
+                                            <FileSpreadsheet className="w-6 h-6" />
+                                        </div>
+                                        <span className="text-sm font-medium mb-1">Data & Spreadsheets</span>
+                                        <span className="text-xs text-muted-foreground italic">
+                                            "market analysis excel csv"
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col items-center text-center group cursor-pointer">
+                                        <div className="p-3 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 mb-3 group-hover:scale-110 transition-transform">
+                                            <Share2 className="w-6 h-6" />
+                                        </div>
+                                        <span className="text-sm font-medium mb-1">Social Insights</span>
+                                        <span className="text-xs text-muted-foreground italic">
+                                            "trending tech discussions"
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col items-center text-center group cursor-pointer">
+                                        <div className="p-3 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 mb-3 group-hover:scale-110 transition-transform">
+                                            <ImageIcon className="w-6 h-6" />
+                                        </div>
+                                        <span className="text-sm font-medium mb-1">Visual Search</span>
+                                        <span className="text-xs text-muted-foreground italic">
+                                            "upload image to find similar"
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
