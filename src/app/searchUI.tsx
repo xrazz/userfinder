@@ -538,9 +538,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                 }
 
                 try {
-                    // Track image search query
-                    await trackSearchQuery("Image Search");
-
                     const response = await fetch('/api/image-search', {
                         method: 'POST',
                         headers: {
@@ -605,8 +602,10 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             const queryToSearch = (queryToUse || searchQuery).trim();
             if (!queryToSearch) return;
 
-            // Track text search query
-            await trackSearchQuery(queryToSearch);
+            // Only track text search queries, not media searches
+            if (!filters?.isImageSearch) {
+                await trackSearchQuery(queryToSearch);
+            }
 
             // Add user message
             const userMessage: Message = {
@@ -1095,7 +1094,13 @@ Keep responses focused on legitimate sources and official channels.`,
                     <div className="py-6">
                         {messages.length === 0 ? (
                             <div className="text-center py-5">
-                               
+                                <div className="bg-gradient-to-b from-purple-500/20 to-purple-500/5 rounded-full p-4 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                                    <SparklesIcon className="w-10 h-10 text-purple-500" />
+                                </div>
+                                <h3 className="text-xl font-medium mb-3">Welcome to Lexy AI search</h3>
+                                <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed mb-4">
+                                    Get comprehensive answers with cited sources from across the web. You can:
+                                </p>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto px-4 mb-8">
                                     <div className="p-4 rounded-lg border bg-card">
                                         <h4 className="font-medium mb-2">Find Informations</h4>
@@ -1111,13 +1116,13 @@ Keep responses focused on legitimate sources and official channels.`,
                                             "find 1984 book in pdf"
                                         </div>
                                     </div>
-                                    <div className="p-4 rounded-lg border bg-card">
+                                    {/* <div className="p-4 rounded-lg border bg-card">
                                         <h4 className="font-medium mb-2">Make Bookings</h4>
                                         <p className="text-sm text-muted-foreground mb-2">Book restaurants, flights, hotels, and more</p>
                                         <div className="text-sm text-purple-600 dark:text-purple-400 font-medium italic animate-fade-in-out">
                                             "book a table at Italian restaurant in San Francisco"
                                         </div>
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
                         ) : (
