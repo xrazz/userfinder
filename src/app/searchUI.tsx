@@ -1101,7 +1101,7 @@ Keep responses focused on legitimate sources and official channels.`,
                                 <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed mb-4">
                                     Get comprehensive answers with cited sources from across the web. You can:
                                 </p>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto px-4 mb-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto px-4 mb-8">
                                     <div className="p-4 rounded-lg border bg-card">
                                         <h4 className="font-medium mb-2">Find Informations</h4>
                                         <p className="text-sm text-muted-foreground mb-2">Search for research papers, articles, tutorials, and general information</p>
