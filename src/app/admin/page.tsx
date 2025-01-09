@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { collection, query, getDocs, orderBy, where, Timestamp } from 'firebase/firestore'
+import { collection, query, getDocs, orderBy, where, Timestamp, limit } from 'firebase/firestore'
 import { db } from '@/app/firebaseClient'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import {
@@ -102,11 +102,9 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
     const [platformFilter, setPlatformFilter] = useState('all')
-    const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>(() => {
-        const to = new Date()
-        const from = new Date(to)
-        from.setHours(to.getHours() - 72)
-        return { from, to }
+    const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({
+        from: null,
+        to: null
     })
     const [aiAnalysis, setAiAnalysis] = useState('')
     const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -131,7 +129,8 @@ export default function AdminPage() {
         try {
             const queryRef = query(
                 collection(db, 'generalSearchHistory'),
-                orderBy('timestamp', 'desc')
+                orderBy('timestamp', 'desc'),
+                limit(300)
             )
             const querySnapshot = await getDocs(queryRef)
             const queriesData = querySnapshot.docs.map(doc => ({
