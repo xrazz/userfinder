@@ -225,61 +225,14 @@ async function googleSearch(query: string, start: number = 0): Promise<Formatted
   }
 }
 
-// Brave Search function
-async function braveSearch(query: string, offset: number = 0): Promise<FormattedSearchResult[]> {
-  try {
-    const BRAVE_API_KEY = process.env.BRAVE_SEARCH_API_KEY;
-    if (!BRAVE_API_KEY) {
-      console.warn('Brave Search API key not configured, skipping Brave results');
-      return [];
-    }
-
-    const response = await axios.get('https://api.search.brave.com/res/v1/web/search', {
-      headers: {
-        'Accept': 'application/json',
-        'X-Subscription-Token': BRAVE_API_KEY,
-        'Content-Type': 'application/json'
-      },
-      params: {
-        q: query,
-        offset: offset * 10,
-        count: 10,
-        search_lang: 'en',
-        safesearch: 'moderate'
-      }
-    });
-
-    if (!response.data?.web?.results) {
-      return [];
-    }
-
-    return response.data.web.results.map((result: any) => ({
-      title: stripHtmlTags(result.title),
-      link: result.url,
-      snippet: stripHtmlTags(result.description || ''),
-      media: result.thumbnail ? { type: 'image', url: result.thumbnail.src } : undefined,
-      source: 'brave' as const
-    }));
-  } catch (error) {
-    console.error('Error in Brave search:', error);
-    return [];
-  }
-}
-
 // Combined search function
 async function combinedSearch(query: string, start: number = 0): Promise<FormattedSearchResult[]> {
   try {
-    // Run both searches in parallel
-    const [googleResults, braveResults] = await Promise.all([
-      googleSearch(query, start).catch(error => {
-        console.error('Google search failed:', error);
-        return [];
-      }),
-      braveSearch(query, start).catch(error => {
-        console.error('Brave search failed:', error);
-        return [];
-      })
-    ]);
+    // Run only Google search
+    const googleResults = await googleSearch(query, start).catch(error => {
+      console.error('Google search failed:', error);
+      return [];
+    });
 
     // Add source information to Google results
     const googleResultsWithSource = googleResults.map(result => ({
@@ -287,76 +240,11 @@ async function combinedSearch(query: string, start: number = 0): Promise<Formatt
       source: 'google' as const
     }));
 
-    // Merge results using a relevance-based algorithm
-    const mergedResults = mergeSearchResults(googleResultsWithSource, braveResults);
-
-    return mergedResults;
+    return googleResultsWithSource;
   } catch (error) {
     console.error('Error in combined search:', error);
     throw error;
   }
-}
-
-// Helper function to merge and deduplicate results
-function mergeSearchResults(googleResults: FormattedSearchResult[], braveResults: FormattedSearchResult[]): FormattedSearchResult[] {
-  // Create a Map to track unique URLs
-  const uniqueResults = new Map<string, FormattedSearchResult>();
-  
-  // Helper function to normalize URLs for comparison
-  const normalizeUrl = (url: string) => {
-    try {
-      const urlObj = new URL(url);
-      return urlObj.hostname + urlObj.pathname.replace(/\/$/, '');
-    } catch {
-      return url;
-    }
-  };
-
-  // Process Google results first (they get priority for duplicates)
-  googleResults.forEach(result => {
-    const normalizedUrl = normalizeUrl(result.link);
-    uniqueResults.set(normalizedUrl, result);
-  });
-
-  // Add Brave results if they're not duplicates
-  braveResults.forEach(result => {
-    const normalizedUrl = normalizeUrl(result.link);
-    if (!uniqueResults.has(normalizedUrl)) {
-      uniqueResults.set(normalizedUrl, result);
-    }
-  });
-
-  // Convert back to array and sort by relevance
-  const mergedResults = Array.from(uniqueResults.values());
-
-  // Sort results - prioritize results with media and longer snippets
-  return mergedResults.sort((a, b) => {
-    const scoreA = calculateRelevanceScore(a);
-    const scoreB = calculateRelevanceScore(b);
-    return scoreB - scoreA;
-  });
-}
-
-// Helper function to calculate result relevance score
-function calculateRelevanceScore(result: FormattedSearchResult): number {
-  let score = 0;
-  
-  // Prefer results with media
-  if (result.media) {
-    score += 2;
-  }
-
-  // Prefer results with longer, more informative snippets
-  if (result.snippet) {
-    score += Math.min(result.snippet.length / 100, 3); // Cap at 3 points
-  }
-
-  // Slightly prefer Google results as they tend to be more relevant
-  if (result.source === 'google') {
-    score += 1;
-  }
-
-  return score;
 }
 
 export async function POST(req: Request) {
