@@ -85,7 +85,7 @@ export class UserCreditManager implements CreditManager {
         // Normalize membership level to handle different cases
         const normalizedLevel = membershipLevel.toLowerCase();
         if (normalizedLevel === 'free') {
-          creditsToSet = 5;
+          creditsToSet = 10;
         } else if (normalizedLevel === 'pro' || normalizedLevel === 'basic') {
           creditsToSet = 50;
         }

@@ -50,7 +50,7 @@ export const createUserSettings = async (user: User) => {
     await setDoc(userDocRef, {
       uid: user.uid,
       email: user.email,
-      credits: 5,
+      credits: 10,
       membershipLevel: 'Free',
       membership_start: null,
       lastCreditReset: new Date()
