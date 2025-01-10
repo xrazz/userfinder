@@ -667,6 +667,11 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
                     // Set AI query loading state
                     setLoadingState(prev => ({ ...prev, aiQuery: true }))
 
+                    // Prepare conversation context from previous messages
+                    const conversationContext = messages
+                        .map(m => `${m.sender.toUpperCase()}: ${m.content}`)
+                        .join('\n\n');
+
                     const queryResponse = await fetch('/api/prompt', {
                         method: 'POST',
                         headers: {
@@ -698,7 +703,8 @@ IMPORTANT: Only modify the query if specific keywords are present:
 
 Reply ONLY with the optimized query.`,
                             userPrompt: queryToSearch,
-                            email: email
+                            email: email,
+                            context: conversationContext // Add conversation context
                         }),
                     });
 
@@ -744,6 +750,7 @@ Rules:
 1. Focus on all sources 
 2. Cite sources using [1], [2] immediately after mentioning each resource
 3. After your main response, add a section with 3-4 relevant follow-up questions
+4. IMPORTANT: Use the conversation context to maintain continuity in your responses
 
 Format:
 1. Main response with citations
@@ -762,7 +769,7 @@ Follow-up Questions:
 • How does this compare to related research in the field?
 
 Keep responses focused on legitimate sources and official channels.`,
-                                    userPrompt: `Original query: ${queryToSearch}\nOptimized query: ${optimizedQuery}\n\nSearch results:\n${contextStr}`,
+                                    userPrompt: `Previous conversation:\n${conversationContext}\n\nOriginal query: ${queryToSearch}\nOptimized query: ${optimizedQuery}\n\nSearch results:\n${contextStr}`,
                                     email: email
                                 }),
                             });
