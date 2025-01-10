@@ -4,6 +4,12 @@ import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
+const PLAN_PRICE = {
+  amount: 1999,
+  name: 'Pro Subscription',
+  description: 'Unlimited AI credits'
+};
+
 export async function POST(req: Request) {
   try {
     const { email, userId } = await req.json();
@@ -33,12 +39,12 @@ export async function POST(req: Request) {
       line_items: [
         {
           price_data: {
-            currency: 'eur',
+            currency: 'usd',
             product_data: {
-              name: 'Pro Subscription',
-              description: '50 AI credits per day',
+              name: PLAN_PRICE.name,
+              description: PLAN_PRICE.description,
             },
-            unit_amount: 999, // $9.99 in cents
+            unit_amount: PLAN_PRICE.amount,
             recurring: {
               interval: 'month',
             },
@@ -52,6 +58,7 @@ export async function POST(req: Request) {
       metadata: {
         userId: userId,
         userEmail: email,
+        plan: 'pro'
       },
     });
 

@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     await updateDoc(userRef, {
       isSubscribed: true,
       subscriptionId: (session.subscription as Stripe.Subscription)?.id || session.id,
-      credits: 100, // Reset to Pro level
+      credits: 999, // Set to 999 credits for Pro level
       lastCreditReset: new Date(),
       stripeCustomerId: (session.customer as Stripe.Customer)?.id,
       subscriptionStatus: (session.subscription as Stripe.Subscription)?.status || 'active',

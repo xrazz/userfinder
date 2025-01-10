@@ -5,7 +5,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 function SuccessContent() {
@@ -108,19 +108,21 @@ function SuccessContent() {
           <div className="space-y-2">
             <h3 className="font-medium">What's included:</h3>
             <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-              <li>50 AI credits daily</li>
-              <li>Advanced AI summaries</li>
+              <li>Unlimited AI credits</li>
+              <li>Advanced AI analysis</li>
+              <li>Vision search capabilities</li>
+              <li>Social media insights</li>
               <li>Priority support</li>
-              <li>Credits reset every day</li>
             </ul>
           </div>
-          <Alert>
-            <AlertDescription>
-              Your credits have been reset to 50. They will automatically reset every day at midnight.
+          <Alert className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 border-purple-200 dark:border-purple-800">
+            <Sparkles className="h-4 w-4 text-purple-500" />
+            <AlertDescription className="text-purple-950 dark:text-purple-200">
+              You now have unlimited access to all Pro features. Start exploring the full power of AI!
             </AlertDescription>
           </Alert>
           <Button 
-            className="w-full" 
+            className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700" 
             onClick={() => router.push('/')}
           >
             Start Using Pro Features

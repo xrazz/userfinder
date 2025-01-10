@@ -140,33 +140,45 @@ interface Message {
     relatedResults?: Post[]
 }
 
-const formatMessage = (content: string, relatedResults?: Post[]): React.ReactNode => {
+const formatMessage = (content: string, relatedResults?: Post[], onSearch?: (query: string) => void): React.ReactNode => {
     if (!content) return null;
 
-    // Funzione per ottenere i risultati citati
+    // Function to get cited results
     const getCitedResults = (citation: string): Post[] => {
         if (!relatedResults) return [];
         const numbers = citation.match(/\[(\d+)\]/g)?.map(n => parseInt(n.replace(/[\[\]]/g, '')) - 1) || [];
         return numbers.map(n => relatedResults[n]).filter(Boolean);
     };
 
-    // Rimuove la punteggiatura dopo le citazioni
-    const cleanContent = content.replace(/\[(\d+(?:,\s*\d+)*)\][.,]/g, '[$1]');
+    // Extract follow-up questions if they exist
+    const sections = content.split(/\n(?=(?:Main Answer|Key Details|Additional Context|Follow-up Questions):)/);
+    const followUpSection = sections.find(section => section.trim().startsWith('Follow-up Questions:'));
+    const followUpQuestions = followUpSection
+        ? followUpSection
+            .replace('Follow-up Questions:', '')
+            .trim()
+            .split('\n')
+            .filter(q => q.trim())
+            .map(q => q.replace(/^[•-]\s*/, '').trim())
+        : [];
 
-    // Processa il testo per il grassetto
+    // Clean up markdown formatting and HTML tags
+    const cleanContent = content
+        .replace(/\[(\d+(?:,\s*\d+)*)\][.,]/g, '[$1]') // Remove punctuation after citations
+        .replace(/\n---\s*Follow-up Questions:[\s\S]*$/, ''); // Remove old follow-up questions section if exists
+
+    // Process text for bold formatting
     const processText = (text: string) => {
         return text.split(/(\*\*.*?\*\*)/).map((part, i) => {
             if (part.startsWith('**') && part.endsWith('**')) {
-                // Rimuove gli asterischi e applica il grassetto
                 return <strong key={i}>{part.slice(2, -2)}</strong>;
             }
             return part;
         });
     };
 
-    // Divide il contenuto in sezioni basate sulle citazioni
+    // Split content into sections based on citations
     const parts = cleanContent.split(/(\[[0-9,\s]+\])/).map((part, index) => {
-        // Se è una citazione
         if (part.match(/^\[[0-9,\s]+\]$/)) {
             const citedResults = getCitedResults(part);
             return (
@@ -212,7 +224,6 @@ const formatMessage = (content: string, relatedResults?: Post[]): React.ReactNod
             );
         }
         
-        // Se è testo normale, processa per il grassetto
         return (
             <div key={index} className="prose dark:prose-invert max-w-none text-base leading-relaxed">
                 {processText(part)}
@@ -221,8 +232,41 @@ const formatMessage = (content: string, relatedResults?: Post[]): React.ReactNod
     });
 
     return (
-        <div className="space-y-1">
-            {parts}
+        <div className="space-y-4">
+            <div className="space-y-1">
+                {parts}
+            </div>
+            {followUpQuestions.length > 0 && (
+                <div className="mt-6 space-y-3">
+                    <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <SparklesIcon className="w-4 h-4" />
+                        Follow-up Questions
+                    </h4>
+                    <div className="grid gap-2">
+                        {followUpQuestions.map((question, idx) => (
+                            <Button
+                                key={idx}
+                                variant="outline"
+                                className="justify-start text-left h-auto py-2 px-3 hover:bg-primary/10 hover:text-primary transition-colors"
+                                onClick={() => {
+                                    if (onSearch) {
+                                        onSearch(question);
+                                    } else {
+                                        const searchBar = document.querySelector('input[type="text"]') as HTMLInputElement;
+                                        if (searchBar) {
+                                            searchBar.value = question;
+                                            searchBar.dispatchEvent(new Event('input', { bubbles: true }));
+                                            searchBar.focus();
+                                        }
+                                    }
+                                }}
+                            >
+                                <span className="line-clamp-2">{question}</span>
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -699,14 +743,23 @@ Reply ONLY with the optimized query.`,
 Rules:
 1. Focus on all sources 
 2. Cite sources using [1], [2] immediately after mentioning each resource
+3. After your main response, add a section with 3-4 relevant follow-up questions
 
-Examples:
+Format:
+1. Main response with citations
+2. Add a separator "---"
+3. Add "Follow-up Questions:" followed by one question per line, each prefixed with "•"
 
-Good response:
-"The research paper is available on arXiv [1] and Google Scholar [2]. The official documentation can be found on Python.org [3]."
+Example:
 
-Bad response:
-"I found several download links and file sharing sites where you can get this content [1, 2]."
+The research paper is available on arXiv [1] and Google Scholar [2]. The official documentation can be found on Python.org [3].
+
+---
+Follow-up Questions:
+• What are the key findings from the arXiv paper?
+• Are there any alternative implementations discussed in the documentation?
+• What are the system requirements mentioned in the paper?
+• How does this compare to related research in the field?
 
 Keep responses focused on legitimate sources and official channels.`,
                                     userPrompt: `Original query: ${queryToSearch}\nOptimized query: ${optimizedQuery}\n\nSearch results:\n${contextStr}`,
@@ -1085,6 +1138,7 @@ Keep responses focused on legitimate sources and official channels.`,
                         userInfo={email ? {
                             name,
                             email,
+                            isPro: subscriptionPlan === 'Pro'
                         } : undefined}
                     />
                 </div>
@@ -1181,7 +1235,7 @@ Keep responses focused on legitimate sources and official channels.`,
                                 {/* Show only the last AI message */}
                                 {messages.length > 0 && messages[messages.length - 1].sender === 'ai' && (
                                     <div className="bg-card rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6">
-                                        {formatMessage(messages[messages.length - 1].content, messages[messages.length - 1].relatedResults)}
+                                        {formatMessage(messages[messages.length - 1].content, messages[messages.length - 1].relatedResults, handleSearch)}
                                     </div>
                                 )}
                                 {(loadingState.search || loadingState.aiQuery || loadingState.aiResponse) && (

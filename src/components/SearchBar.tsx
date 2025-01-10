@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Globe, Play, Share2, Mail, Phone, MapPin, MessageCircle, Hash, AtSign, History, XIcon, ImagePlus, Upload, SparklesIcon } from 'lucide-react'
+import { Search, ArrowUpRight, Settings2, FileText, FileType, FileSpreadsheet, Presentation, FileJson, FileCode, Archive, ChevronDown, Globe, Play, Share2, Mail, Phone, MapPin, MessageCircle, Hash, AtSign, History, XIcon, ImagePlus, Upload, SparklesIcon, Crown } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -55,6 +55,7 @@ interface SearchBarProps {
     userInfo?: {
         name?: string
         email?: string
+        isPro?: boolean
     }
 }
 
@@ -1007,6 +1008,21 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg border border-yellow-200 dark:border-yellow-800">
                             <SparklesIcon className="w-4 h-4" />
                             <span>Please <a href="/login" className="font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 underline underline-offset-2">sign in</a> to use AI-powered search</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Add upgrade message for non-Pro users */}
+                {isAiMode && userInfo?.email && !userInfo.isPro && (
+                    <div className="mt-2 text-sm text-center">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 text-violet-700 dark:text-violet-200 rounded-lg border border-violet-200 dark:border-violet-800">
+                            <Crown className="w-4 h-4 text-yellow-500" />
+                            <span>
+                                <a href="/subscription" className="font-medium hover:text-violet-800 dark:hover:text-violet-300 underline">
+                                    Click here
+                                </a>
+                                {" "}for unlimited AI searches
+                            </span>
                         </div>
                     </div>
                 )}

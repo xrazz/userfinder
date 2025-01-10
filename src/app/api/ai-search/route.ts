@@ -219,6 +219,12 @@ export async function POST(req: NextRequest) {
 • Alternative viewpoints if relevant
 • Related considerations
 
+4. Follow-up Questions (3-4 questions):
+• Generate thought-provoking questions based on the content
+• Focus on unexplored aspects of the topic
+• Questions should lead to deeper understanding
+• Each question should be answerable from available sources
+
 Formatting Rules:
 - Every fact must have a citation in format: <a href="url" target="_blank">[number]</a>
 - Use <strong>text</strong> for key concepts
@@ -227,6 +233,7 @@ Formatting Rules:
 - Prioritize specific, actionable information
 - Include exact numbers, dates, or measurements when available
 - If information is not in sources, explicitly state "Based on provided sources, this information is not available"
+- Format follow-up questions with bullet points and prefix with "• "
 
 Example format:
 Main Answer:
@@ -237,7 +244,12 @@ Key Details:
 • Implementation requires -273°C cooling system <a href="url3" target="_blank">[3]</a>
 
 Additional Context:
-• Current limitations include decoherence after 100 microseconds <a href="url2" target="_blank">[2]</a>`
+• Current limitations include decoherence after 100 microseconds <a href="url2" target="_blank">[2]</a>
+
+Follow-up Questions:
+• What are the specific cryptography applications enabled by the 64-qubit processor?
+• How does the cooling system impact the scalability of quantum computers?
+• What improvements are needed to extend the decoherence time beyond 100 microseconds?`
                 },
                 {
                     role: "user",
