@@ -241,6 +241,18 @@ export const trackReferral = async () => {
 
   const referrer = document.referrer;
   const currentPath = window.location.pathname;
+  const currentHost = window.location.hostname;
+
+  // Don't track if we're on localhost
+  if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+    return;
+  }
+
+  // Don't track if the referrer is from localhost
+  if (referrer && (referrer.includes('localhost') || referrer.includes('127.0.0.1'))) {
+    return;
+  }
+
   const timestamp = serverTimestamp();
 
   try {
