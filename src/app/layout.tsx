@@ -5,8 +5,7 @@ import "./globals.css";
 import { Theme } from '@radix-ui/themes';
 import ClientProvider from './providers/ClientProvider';
 import { ThemeProvider } from './providers/ThemeProvider';
-import { trackReferral } from './firebaseClient';
-import { useEffect } from 'react';
+import ReferralTracker from '../components/ReferralTracker';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -33,14 +32,6 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false
 };
-
-function ReferralTracker() {
-  useEffect(() => {
-    trackReferral();
-  }, []);
-
-  return null;
-}
 
 export default function RootLayout({
   children,
