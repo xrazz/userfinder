@@ -26,8 +26,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 // Make sure we're using the correct environment variable name
-// const stripePublishableKey = 'pk_live_51PtCfLBf9CZHTEFpXX6FtJ5XiXdbebZdKPEE7HQkodedmRBoJthtSg8QJ5v9mLKLBE7fJd30TKAs9UYmnDI04SyO00pxtGsKFV';
-const stripePublishableKey = 'pk_test_51PtCfLBf9CZHTEFp4ALwMBz12cI7r2ZsXWuaDOVwjjdNwrHxAlwDRz8i70tT0dT8HDXyU9GdpS6iusjFRq9UNS3w00euRBUv1M';
+const stripePublishableKey = 'pk_live_51PtCfLBf9CZHTEFpXX6FtJ5XiXdbebZdKPEE7HQkodedmRBoJthtSg8QJ5v9mLKLBE7fJd30TKAs9UYmnDI04SyO00pxtGsKFV';
+// const stripePublishableKey = 'pk_test_51PtCfLBf9CZHTEFp4ALwMBz12cI7r2ZsXWuaDOVwjjdNwrHxAlwDRz8i70tT0dT8HDXyU9GdpS6iusjFRq9UNS3w00euRBUv1M';
 
 if (!stripePublishableKey) {
   console.error('Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
