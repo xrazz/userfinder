@@ -839,6 +839,18 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             setCurrentPage(1);
             setHasMore(true);
 
+            // Update URL with search parameters
+            const queryToSearch = (queryToUse || searchQuery).trim();
+            if (queryToSearch) {
+                const searchParams = new URLSearchParams();
+                searchParams.set('q', queryToSearch);
+                if (newSearchType) {
+                    searchParams.set('type', newSearchType);
+                }
+                // Update URL without reloading the page
+                window.history.pushState({}, '', `/?${searchParams.toString()}`);
+            }
+
             // Handle image search
             if (filters?.isImageSearch && filters.image) {
                 if (!email) {
@@ -910,7 +922,6 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             }
 
             // Rest of the existing search logic...
-            const queryToSearch = (queryToUse || searchQuery).trim();
             if (!queryToSearch) return;
 
             // Only track text search queries, not media searches
@@ -1214,6 +1225,7 @@ Keep responses focused on legitimate sources and official channels.`,
 
     useEffect(() => {
         const query = searchParams?.get('q')
+        const type = searchParams?.get('type') as SearchType | null
         
         // Only proceed if we have a query and it's the initial mount
         if (query && isInitialMount.current) {
@@ -1221,7 +1233,10 @@ Keep responses focused on legitimate sources and official channels.`,
             urlTriggeredRef.current = true
             setSearchQuery(query)
             setTypingQuery(query)
-            handleSearch(query)
+            if (type && ['web', 'media', 'social'].includes(type)) {
+                setSearchType(type as SearchType)
+            }
+            handleSearch(query, type as SearchType)
         }
     }, [searchParams])
 
