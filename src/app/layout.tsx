@@ -5,7 +5,6 @@ import "./globals.css";
 import { Theme } from '@radix-ui/themes';
 import ClientProvider from './providers/ClientProvider';
 import { ThemeProvider } from './providers/ThemeProvider';
-import ReferralTracker from '../components/ReferralTracker';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -54,7 +53,6 @@ export default function RootLayout({
         <ThemeProvider>
           <Theme className='font-medium'> 
             <ClientProvider>
-              <ReferralTracker />
               {children}
             </ClientProvider>
           </Theme>
