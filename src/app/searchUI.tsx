@@ -148,6 +148,8 @@ interface Message {
     timestamp: string
     type?: 'search' | 'refinement' | 'summary'
     relatedResults?: Post[]
+    isSaved?: boolean
+    onSave?: () => void
 }
 
 interface SavedResponse {
@@ -186,6 +188,16 @@ interface LoadingState {
     loadMore: boolean
 }
 
+// Extract key topics from the content
+const extractTopics = (text: string): string[] => {
+    const topics = new Set<string>();
+    const boldMatches = text.match(/\*\*(.*?)\*\*/g) || [];
+    boldMatches.forEach(match => {
+        topics.add(match.replace(/\*\*/g, '').toLowerCase());
+    });
+    return Array.from(topics).slice(0, 5); // Return top 5 topics
+};
+
 // Convert formatMessage to a React component
 const MessageContent: React.FC<{
     content: string;
@@ -200,6 +212,26 @@ const MessageContent: React.FC<{
     const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
     const [discussionTitle, setDiscussionTitle] = useState('');
     const [discussionContent, setDiscussionContent] = useState('');
+
+    // Process text for bold formatting
+    const processText = (text: string) => {
+        return text.split(/(\*\*.*?\*\*)/).map((part, i) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={i}>{part.slice(2, -2)}</strong>;
+            }
+            return part;
+        });
+    };
+
+    // Extract key topics from the content
+    const extractTopicsLocal = (text: string): string[] => {
+        const topics = new Set<string>();
+        const boldMatches = text.match(/\*\*(.*?)\*\*/g) || [];
+        boldMatches.forEach(match => {
+            topics.add(match.replace(/\*\*/g, '').toLowerCase());
+        });
+        return Array.from(topics).slice(0, 5); // Return top 5 topics
+    };
 
     // Handler for saving responses
     const handleSaveResponse = async () => {
@@ -348,26 +380,6 @@ const MessageContent: React.FC<{
     const cleanContent = content
         .replace(/\[(\d+(?:,\s*\d+)*)\][.,]/g, '[$1]') // Remove punctuation after citations
         .replace(/\n---\s*Follow-up Questions:[\s\S]*$/, ''); // Remove old follow-up questions section if exists
-
-    // Process text for bold formatting
-    const processText = (text: string) => {
-        return text.split(/(\*\*.*?\*\*)/).map((part, i) => {
-            if (part.startsWith('**') && part.endsWith('**')) {
-                return <strong key={i}>{part.slice(2, -2)}</strong>;
-            }
-            return part;
-        });
-    };
-
-    // Extract key topics from the content
-    const extractTopics = (text: string): string[] => {
-        const topics = new Set<string>();
-        const boldMatches = text.match(/\*\*(.*?)\*\*/g) || [];
-        boldMatches.forEach(match => {
-            topics.add(match.replace(/\*\*/g, '').toLowerCase());
-        });
-        return Array.from(topics).slice(0, 5); // Return top 5 topics
-    };
 
     // Split content into sections based on citations
     const parts = cleanContent.split(/(\[[0-9,\s]+\])/).map((part, index) => {
@@ -1062,7 +1074,50 @@ Keep responses focused on legitimate sources and official channels.`,
                                     sender: 'ai',
                                     timestamp: new Date().toISOString(),
                                     type: 'summary',
-                                    relatedResults: Results
+                                    relatedResults: Results,
+                                    isSaved: false,
+                                    onSave: async () => {
+                                        if (!email) {
+                                            toast.error("Please sign in to save responses", {
+                                                description: "Create an account to access all features",
+                                                action: {
+                                                    label: "Sign In",
+                                                    onClick: () => window.location.href = '/login'
+                                                }
+                                            });
+                                            return;
+                                        }
+
+                                        try {
+                                            const savedResponse: SavedResponse = {
+                                                id: Date.now().toString(),
+                                                content: data.output,
+                                                timestamp: Date.now(),
+                                                topics: extractTopics(data.output),
+                                                query: searchQuery || '',
+                                                results: Results
+                                            };
+
+                                            // Save to Firestore
+                                            const userDocRef = doc(db, 'users', email);
+                                            const savedResponsesRef = collection(userDocRef, 'savedResponses');
+                                            await addDoc(savedResponsesRef, savedResponse);
+
+                                            // Update the message's isSaved state
+                                            setMessages(prev => prev.map(msg => 
+                                                msg.id === aiMessage.id 
+                                                    ? { ...msg, isSaved: true }
+                                                    : msg
+                                            ));
+
+                                            toast.success("Response saved!", {
+                                                description: "You can find it in your saved items"
+                                            });
+                                        } catch (error) {
+                                            console.error('Error saving response:', error);
+                                            toast.error("Failed to save response");
+                                        }
+                                    }
                                 }
                                 setMessages(prev => [...prev, aiMessage]);
                                 setTimeout(() => scrollToMessage(aiMessage.id), 100);
@@ -1407,8 +1462,6 @@ Keep responses focused on legitimate sources and official channels.`,
                         typingQuery={searchQuery}
                         setTypingQuery={(query) => {
                             setSearchQuery(query)
-                            // Reset messages when user types a new query
-                            setMessages([])
                         }}
                         onFileTypeChange={handleFileTypeChange}
                         selectedFileType={selectedFileType}
@@ -1524,6 +1577,24 @@ Keep responses focused on legitimate sources and official channels.`,
                                 {/* Show only the last AI message */}
                                 {messages.length > 0 && messages[messages.length - 1].sender === 'ai' && (
                                     <div className="bg-card rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex items-center gap-2">
+                                                <SparklesIcon className="w-4 h-4 text-purple-500" />
+                                                <span className="text-sm font-medium">AI Response</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="gap-2"
+                                                    onClick={() => messages[messages.length - 1].onSave?.()}
+                                                    disabled={messages[messages.length - 1].isSaved}
+                                                >
+                                                    <Bookmark className={`w-4 h-4 ${messages[messages.length - 1].isSaved ? 'fill-current' : ''}`} />
+                                                    {messages[messages.length - 1].isSaved ? 'Saved' : 'Save'}
+                                                </Button>
+                                            </div>
+                                        </div>
                                         {formatMessage(
                                             messages[messages.length - 1].content,
                                             messages[messages.length - 1].relatedResults,
