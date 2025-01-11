@@ -255,7 +255,7 @@ export default function SubscriptionContent() {
             <p className="text-lg md:text-xl text-muted-foreground">
               {subscriptionPlan === 'Pro' 
                 ? "You're now part of our elite community of power users"
-                : "Join thousands of professionals who've already upgraded"}
+                : "Join thousands of power users"}
             </p>
             <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
               <div className="flex items-center">
