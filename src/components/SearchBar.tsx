@@ -61,25 +61,25 @@ interface SearchBarProps {
 
 const placeholderQueries = {
     web: [
-        "Let's find groundbreaking research...",
-        "Let's discover academic papers...",
-        "Let's explore scientific articles...",
-        "Let's search technical documents...",
-        "Let's find expert publications..."
+        "Let's find out if plants feel music...",
+        "Let's explore abandoned space projects...",
+        "Let's discover why time feels slower on Mondays...",
+        "Let's investigate lost civilizations under the sea...",
+        "Let's search for parallel universe theories..."
     ],
     media: [
-        "Let's find amazing videos...",
-        "Let's discover stunning images...",
-        "Let's explore visual content...",
-        "Let's find viral videos...",
-        "Let's search for media..."
+        "Let's find street art that predicted the future...",
+        "Let's discover accidental masterpieces...",
+        "Let's explore photos of sleeping cities...",
+        "Let's find architecture that defies gravity...",
+        "Let's search for colors that don't exist yet..."
     ],
     social: [
-        "Let's find trending discussions...",
-        "Let's discover influencer insights...",
-        "Let's explore social conversations...",
-        "Let's find viral content...",
-        "Let's search social mentions..."
+        "Let's find people who talk to their computers...",
+        "Let's discover underground food movements...",
+        "Let's explore digital nomad secret spots...",
+        "Let's find out who's living in the year 3000...",
+        "Let's investigate why robots need social media..."
     ]
 }
 
