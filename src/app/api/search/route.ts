@@ -17,11 +17,11 @@ interface ImageContent {
 
 type MediaContent = VideoContent | ImageContent;
 
-// Add interface for Google Search result
-interface GoogleSearchResult {
+// Add interface for Brave Search result
+interface BraveSearchResult {
   title: string;
-  link: string;
-  snippet: string;
+  url: string;
+  description: string;
 }
 
 // Add interface for our formatted result
@@ -30,7 +30,7 @@ interface FormattedSearchResult {
   link: string;
   snippet: string;
   media?: MediaContent;
-  source?: 'google' | 'brave';
+  source?: 'brave';
 }
 
 // Helper function to extract video information
@@ -163,44 +163,30 @@ async function extractThumbnail(url: string): Promise<MediaContent | undefined> 
   }
 }
 
-// Helper function to strip HTML tags
-function stripHtmlTags(html: string): string {
-  return html.replace(/<[^>]*>/g, '');
-}
-
-// Google Search function
-async function googleSearch(query: string, start: number = 0): Promise<FormattedSearchResult[]> {
+// Brave Search function
+async function braveSearch(query: string, start: number = 0): Promise<FormattedSearchResult[]> {
   try {
-    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&start=${start}`;
-    
-    const response = await axios.get(searchUrl, {
+    const response = await axios.get('https://api.search.brave.com/res/v1/web/search', {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip',
+        'X-Subscription-Token': process.env.BRAVE_SEARCH_API_KEY
       },
-      timeout: 5000 // Add timeout for Google search
+      params: {
+        q: query,
+        offset: start,
+        count: 10,
+        search_lang: 'en'
+      },
+      timeout: 5000 // Add timeout for Brave search
     });
 
-    const $ = cheerio.load(response.data);
-    const results: FormattedSearchResult[] = [];
-
-    // Extract search results
-    $('.g').each((_, element) => {
-      const titleElement = $(element).find('h3').first();
-      const linkElement = $(element).find('a').first();
-      const snippetElement = $(element).find('.VwiC3b').first();
-
-      const title = titleElement.text();
-      const link = linkElement.attr('href');
-      const snippet = snippetElement.text();
-
-      if (title && link && link.startsWith('http')) {
-        results.push({
-          title: stripHtmlTags(title),
-          link,
-          snippet: stripHtmlTags(snippet || '')
-        });
-      }
-    });
+    const results: FormattedSearchResult[] = response.data.web.results.map((result: any) => ({
+      title: result.title,
+      link: result.url,
+      snippet: result.description,
+      source: 'brave' as const
+    }));
 
     // Process media content in parallel with a limited concurrency of 3
     const resultsWithMedia = await Promise.all(
@@ -220,29 +206,7 @@ async function googleSearch(query: string, start: number = 0): Promise<Formatted
 
     return resultsWithMedia;
   } catch (error) {
-    console.error('Error in Google search:', error);
-    throw error;
-  }
-}
-
-// Combined search function
-async function combinedSearch(query: string, start: number = 0): Promise<FormattedSearchResult[]> {
-  try {
-    // Run only Google search
-    const googleResults = await googleSearch(query, start).catch(error => {
-      console.error('Google search failed:', error);
-      return [];
-    });
-
-    // Add source information to Google results
-    const googleResultsWithSource = googleResults.map(result => ({
-      ...result,
-      source: 'google' as const
-    }));
-
-    return googleResultsWithSource;
-  } catch (error) {
-    console.error('Error in combined search:', error);
+    console.error('Error in Brave search:', error);
     throw error;
   }
 }
@@ -263,7 +227,7 @@ export async function POST(req: Request) {
       setTimeout(() => reject(new Error('Operation timeout')), 15000)
     );
     
-    const resultPromise = combinedSearch(query, start);
+    const resultPromise = braveSearch(query, start);
     
     const result = await Promise.race([resultPromise, timeoutPromise]);
     
