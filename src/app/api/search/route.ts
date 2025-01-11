@@ -33,6 +33,11 @@ interface FormattedSearchResult {
   source?: 'brave';
 }
 
+// Helper function to strip HTML tags
+function stripHtmlTags(text: string): string {
+  return text.replace(/<[^>]*>/g, '');
+}
+
 // Helper function to extract video information
 function extractVideoInfo(url: string): VideoContent | null {
   try {
@@ -182,9 +187,9 @@ async function braveSearch(query: string, start: number = 0): Promise<FormattedS
     });
 
     const results: FormattedSearchResult[] = response.data.web.results.map((result: any) => ({
-      title: result.title,
+      title: stripHtmlTags(result.title),
       link: result.url,
-      snippet: result.description,
+      snippet: stripHtmlTags(result.description),
       source: 'brave' as const
     }));
 
