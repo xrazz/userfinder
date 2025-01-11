@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef, ChangeEvent } from 'react'
 import { toast, Toaster } from "sonner"
 import { doc, onSnapshot, updateDoc, setDoc, collection, addDoc, Timestamp, getDoc } from 'firebase/firestore'
 import { auth, db, firebaseAnalytics } from '@/app/firebaseClient'
@@ -13,7 +13,9 @@ import { LoggedInSettingsPopover, LoggedOutSettingsPopover } from '@/components/
 import TabDataSkeleton from '@/components/searchProgressUI'
 import QueryTutorialModal from './docs/QueryModal'
 import { Button } from "@/components/ui/button"
-import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History, ExternalLink, FileText, BookOpen, Code2, GraduationCap, Presentation, FileSpreadsheet, Share2, ImageIcon } from 'lucide-react'
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History, ExternalLink, FileText, BookOpen, Code2, GraduationCap, Presentation, FileSpreadsheet, Share2, ImageIcon, ThumbsUp, ThumbsDown, Hash, Bookmark, MessageSquare } from 'lucide-react'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
 import { motion, useScroll, useTransform } from 'framer-motion'
@@ -25,6 +27,14 @@ import { SearchType, SearchFilters } from '@/components/SearchBar'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Loader2 } from 'lucide-react'
+
+// Update firebaseAnalytics interface
+declare module '@/app/firebaseClient' {
+    interface FirebaseAnalytics {
+        logPageView: (pagePath: string) => void;
+        logEvent: (eventName: string, eventParams?: any) => void;
+    }
+}
 
 const MEMBERSHIP_LEVELS = {
     FREE: 'Free',
@@ -140,8 +150,180 @@ interface Message {
     relatedResults?: Post[]
 }
 
-const formatMessage = (content: string, relatedResults?: Post[], onSearch?: (query: string) => void): React.ReactNode => {
-    if (!content) return null;
+interface SavedResponse {
+    id: string
+    content: string
+    timestamp: number
+    topics: string[]
+    query: string
+    results?: Post[]
+}
+
+interface FeedbackData {
+    responseId: string
+    isHelpful: boolean
+    timestamp: number
+    userId?: string
+    query: string
+    userQuery: string
+}
+
+interface DiscussionData {
+    id: string
+    responseId: string
+    title: string
+    content: string
+    timestamp: number
+    userId?: string
+    replies: number
+}
+
+// Add back the LoadingState interface
+interface LoadingState {
+    search: boolean
+    aiQuery: boolean
+    aiResponse: boolean
+    loadMore: boolean
+}
+
+// Convert formatMessage to a React component
+const MessageContent: React.FC<{
+    content: string;
+    relatedResults?: Post[];
+    onSearch?: (query: string) => void;
+    email?: string;
+    query?: string;
+    searchQuery?: string;
+}> = ({ content, relatedResults, onSearch, email, query, searchQuery }) => {
+    const [isSaved, setIsSaved] = useState(false);
+    const [feedbackGiven, setFeedbackGiven] = useState<'up' | 'down' | null>(null);
+    const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
+    const [discussionTitle, setDiscussionTitle] = useState('');
+    const [discussionContent, setDiscussionContent] = useState('');
+
+    // Handler for saving responses
+    const handleSaveResponse = async () => {
+        if (!email) {
+            toast.error("Please sign in to save responses", {
+                description: "Create an account to access all features",
+                action: {
+                    label: "Sign In",
+                    onClick: () => window.location.href = '/login'
+                }
+            });
+            return;
+        }
+
+        try {
+            const savedResponse: SavedResponse = {
+                id: Date.now().toString(),
+                content,
+                timestamp: Date.now(),
+                topics: extractTopics(content),
+                query: query || '',
+                results: relatedResults
+            };
+
+            // Save to Firestore
+            const userDocRef = doc(db, 'users', email);
+            const savedResponsesRef = collection(userDocRef, 'savedResponses');
+            await addDoc(savedResponsesRef, savedResponse);
+
+            setIsSaved(true);
+            toast.success("Response saved!", {
+                description: "You can find it in your saved items"
+            });
+        } catch (error) {
+            console.error('Error saving response:', error);
+            toast.error("Failed to save response");
+        }
+    };
+
+    // Handler for feedback
+    const handleFeedback = async (isHelpful: boolean) => {
+        if (feedbackGiven) return;
+
+        try {
+            const feedback: FeedbackData = {
+                responseId: Date.now().toString(),
+                isHelpful,
+                timestamp: Date.now(),
+                query: query || searchQuery || '', // AI's response
+                userQuery: searchQuery || '', // User's original query
+                ...(email && { userId: email })
+            };
+
+            // Save feedback to Firestore
+            const feedbackRef = collection(db, 'feedback');
+            await addDoc(feedbackRef, feedback);
+
+            setFeedbackGiven(isHelpful ? 'up' : 'down');
+            toast.success("Thank you for your feedback!");
+
+            // Track analytics
+            firebaseAnalytics.logEvent('response_feedback', {
+                isHelpful,
+                query: query || searchQuery || '',
+                userQuery: searchQuery || ''
+            });
+        } catch (error) {
+            console.error('Error saving feedback:', error);
+            toast.error("Failed to save feedback");
+        }
+    };
+
+    // Handler for starting discussions
+    const handleStartDiscussion = async () => {
+        if (!email) {
+            toast.error("Please sign in to start discussions", {
+                description: "Create an account to access all features",
+                action: {
+                    label: "Sign In",
+                    onClick: () => window.location.href = '/login'
+                }
+            });
+            return;
+        }
+
+        setIsDiscussionOpen(true);
+    };
+
+    // Handler for submitting discussions
+    const handleSubmitDiscussion = async () => {
+        if (!discussionTitle.trim() || !discussionContent.trim()) {
+            toast.error("Please fill in all fields");
+            return;
+        }
+
+        try {
+            const discussion: DiscussionData = {
+                id: Date.now().toString(),
+                responseId: Date.now().toString(),
+                title: discussionTitle,
+                content: discussionContent,
+                timestamp: Date.now(),
+                userId: email,
+                replies: 0
+            };
+
+            // Save to Firestore
+            const discussionsRef = collection(db, 'discussions');
+            await addDoc(discussionsRef, discussion);
+
+            setIsDiscussionOpen(false);
+            toast.success("Discussion started!", {
+                description: "Others can now join the conversation"
+            });
+
+            // Track analytics
+            firebaseAnalytics.logEvent('discussion_created', {
+                query: query || ''
+            });
+        } catch (error) {
+            console.error('Error creating discussion:', error);
+            toast.error("Failed to create discussion");
+        }
+    };
 
     // Function to get cited results
     const getCitedResults = (citation: string): Post[] => {
@@ -175,6 +357,16 @@ const formatMessage = (content: string, relatedResults?: Post[], onSearch?: (que
             }
             return part;
         });
+    };
+
+    // Extract key topics from the content
+    const extractTopics = (text: string): string[] => {
+        const topics = new Set<string>();
+        const boldMatches = text.match(/\*\*(.*?)\*\*/g) || [];
+        boldMatches.forEach(match => {
+            topics.add(match.replace(/\*\*/g, '').toLowerCase());
+        });
+        return Array.from(topics).slice(0, 5); // Return top 5 topics
     };
 
     // Split content into sections based on citations
@@ -231,52 +423,127 @@ const formatMessage = (content: string, relatedResults?: Post[], onSearch?: (que
         );
     });
 
+    // Extract topics for the knowledge graph
+    const topics = extractTopics(cleanContent);
+
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
+            {/* Main Content */}
             <div className="space-y-1">
                 {parts}
             </div>
-            {followUpQuestions.length > 0 && (
-                <div className="mt-6 space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <SparklesIcon className="w-4 h-4" />
-                        Follow-up Questions
-                    </h4>
-                    <div className="grid gap-2">
-                        {followUpQuestions.map((question, idx) => (
-                            <Button
-                                key={idx}
-                                variant="outline"
-                                className="justify-start text-left h-auto py-2 px-3 hover:bg-primary/10 hover:text-primary transition-colors"
-                                onClick={() => {
-                                    if (onSearch) {
-                                        onSearch(question);
-                                    } else {
-                                        const searchBar = document.querySelector('input[type="text"]') as HTMLInputElement;
-                                        if (searchBar) {
-                                            searchBar.value = question;
-                                            searchBar.dispatchEvent(new Event('input', { bubbles: true }));
-                                            searchBar.focus();
-                                        }
-                                    }
-                                }}
-                            >
-                                <span className="line-clamp-2">{question}</span>
-                            </Button>
-                        ))}
+
+            {/* Engagement Features */}
+            <div className="mt-8 space-y-6">
+                {/* Interactive Feedback */}
+                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                    <div className="text-sm text-muted-foreground">Was this response helpful?</div>
+                    <div className="flex items-center gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={`gap-2 ${feedbackGiven === 'up' ? 'bg-green-100 text-green-700' : ''}`}
+                            onClick={() => handleFeedback(true)}
+                            disabled={feedbackGiven !== null}
+                        >
+                            <ThumbsUp className="w-4 h-4" />
+                            Yes
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={`gap-2 ${feedbackGiven === 'down' ? 'bg-red-100 text-red-700' : ''}`}
+                            onClick={() => handleFeedback(false)}
+                            disabled={feedbackGiven !== null}
+                        >
+                            <ThumbsDown className="w-4 h-4" />
+                            No
+                        </Button>
                     </div>
                 </div>
-            )}
+
+                {/* Follow-up Questions */}
+                {followUpQuestions.length > 0 && (
+                    <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <SparklesIcon className="w-4 h-4" />
+                            Explore Further
+                        </h4>
+                        <div className="grid gap-2">
+                            {followUpQuestions.map((question, idx) => (
+                                <Button
+                                    key={idx}
+                                    variant="outline"
+                                    className="justify-start text-left h-auto py-2 px-3 hover:bg-primary/10 hover:text-primary transition-colors"
+                                    onClick={() => {
+                                        if (onSearch) {
+                                            onSearch(question);
+                                        } else {
+                                            const searchBar = document.querySelector('input[type="text"]') as HTMLInputElement;
+                                            if (searchBar) {
+                                                searchBar.value = question;
+                                                searchBar.dispatchEvent(new Event('input', { bubbles: true }));
+                                                searchBar.focus();
+                                            }
+                                        }
+                                    }}
+                                >
+                                    <span className="line-clamp-2">{question}</span>
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Knowledge Graph */}
+                {topics.length > 0 && (
+                    <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <Hash className="w-4 h-4" />
+                            Related Topics
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                            {topics.map((topic, idx) => (
+                                <Button
+                                    key={idx}
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-2"
+                                    onClick={() => onSearch?.(topic)}
+                                >
+                                    <Hash className="w-3 h-3" />
+                                    {topic}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
 
-interface LoadingState {
-    search: boolean
-    aiQuery: boolean
-    aiResponse: boolean
-    loadMore: boolean
-}
+// Replace formatMessage with a wrapper that uses the new component
+const formatMessage = (
+    content: string, 
+    relatedResults?: Post[], 
+    onSearch?: (query: string) => void,
+    email?: string,
+    query?: string,
+    searchQuery?: string
+): React.ReactNode => {
+    if (!content) return null;
+    return (
+        <MessageContent
+            content={content}
+            relatedResults={relatedResults}
+            onSearch={onSearch}
+            email={email}
+            query={query}
+            searchQuery={searchQuery}
+        />
+    );
+};
 
 export default function SearchTab({ Membership = '', name = '', email = '', userId = '', imageUrl = '' }: SearchUIProps) {
     const router = useRouter();
@@ -568,7 +835,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         try {
             setSearchInProgress(true);
             setSearchResults([]);
-            setLoadingState(prev => ({ ...prev, search: true }));
+            setLoadingState((prev: LoadingState) => ({ ...prev, search: true }));
             setCurrentPage(1);
             setHasMore(true);
 
@@ -665,7 +932,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             if (isAiMode) {
                 try {
                     // Set AI query loading state
-                    setLoadingState(prev => ({ ...prev, aiQuery: true }))
+                    setLoadingState((prev: LoadingState) => ({ ...prev, aiQuery: true }))
 
                     // Prepare conversation context from previous messages
                     const conversationContext = messages
@@ -708,7 +975,7 @@ Reply ONLY with the optimized query.`,
                         }),
                     });
 
-                    setLoadingState(prev => ({ ...prev, aiQuery: false }))
+                    setLoadingState((prev: LoadingState) => ({ ...prev, aiQuery: false }))
 
                     if (queryResponse.ok) {
                         const { output: optimizedQuery } = await queryResponse.json();
@@ -731,7 +998,7 @@ Reply ONLY with the optimized query.`,
 
                         if (Results.length > 0) {
                             // Set AI response loading state
-                            setLoadingState(prev => ({ ...prev, aiResponse: true }))
+                            setLoadingState((prev: LoadingState) => ({ ...prev, aiResponse: true }))
 
                             const contextStr = Results.map((result, index) => 
                                 `[${index + 1}] "${result.title}": ${result.snippet}`
@@ -774,7 +1041,7 @@ Keep responses focused on legitimate sources and official channels.`,
                                 }),
                             });
 
-                            setLoadingState(prev => ({ ...prev, aiResponse: false }))
+                            setLoadingState((prev: LoadingState) => ({ ...prev, aiResponse: false }))
 
                             if (response.ok) {
                                 const data = await response.json();
@@ -796,7 +1063,7 @@ Keep responses focused on legitimate sources and official channels.`,
                     toast.error("AI processing failed. Falling back to normal search.")
                     performNormalSearch(queryToSearch, newSearchType, filters)
                 } finally {
-                    setLoadingState(prev => ({ ...prev, aiQuery: false, aiResponse: false }))
+                    setLoadingState((prev: LoadingState) => ({ ...prev, aiQuery: false, aiResponse: false }))
                 }
             } else {
                 await performNormalSearch(queryToSearch, newSearchType, filters)
@@ -806,7 +1073,7 @@ Keep responses focused on legitimate sources and official channels.`,
             setHasResults(false)
             toast.error("Search failed. Please try again.")
         } finally {
-            setLoadingState(prev => ({ ...prev, search: false }))
+            setLoadingState((prev: LoadingState) => ({ ...prev, search: false }))
             setSearchInProgress(false)
         }
     }
@@ -833,7 +1100,7 @@ Keep responses focused on legitimate sources and official channels.`,
         if (loadingState.loadMore || !hasMore) return;
         
         try {
-            setLoadingState(prev => ({ ...prev, loadMore: true }));
+            setLoadingState((prev: LoadingState) => ({ ...prev, loadMore: true }));
             const nextPage = currentPage + 1;
             
             const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite;
@@ -852,7 +1119,7 @@ Keep responses focused on legitimate sources and official channels.`,
             console.error('Error loading more results:', error);
             toast.error('Failed to load more results. Please try again.');
         } finally {
-            setLoadingState(prev => ({ ...prev, loadMore: false }));
+            setLoadingState((prev: LoadingState) => ({ ...prev, loadMore: false }));
         }
     };
 
@@ -1242,7 +1509,14 @@ Keep responses focused on legitimate sources and official channels.`,
                                 {/* Show only the last AI message */}
                                 {messages.length > 0 && messages[messages.length - 1].sender === 'ai' && (
                                     <div className="bg-card rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6">
-                                        {formatMessage(messages[messages.length - 1].content, messages[messages.length - 1].relatedResults, handleSearch)}
+                                        {formatMessage(
+                                            messages[messages.length - 1].content,
+                                            messages[messages.length - 1].relatedResults,
+                                            handleSearch,
+                                            email,
+                                            messages[messages.length - 1].content,
+                                            searchQuery
+                                        )}
                                     </div>
                                 )}
                                 {(loadingState.search || loadingState.aiQuery || loadingState.aiResponse) && (

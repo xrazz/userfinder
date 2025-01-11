@@ -34,6 +34,11 @@ export const firebaseAnalytics = {
       logEvent(analytics, 'page_view', { page_path: pagePath });
     }
   },
+  logEvent: (eventName: string, eventData?: any) => {
+    if (typeof window !== 'undefined' && analytics) {
+      logEvent(analytics, eventName, eventData);
+    }
+  }
 };
 
 const auth = getAuth(firebaseApp);
