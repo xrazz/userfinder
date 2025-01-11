@@ -10,9 +10,15 @@ const PLAN_PRICE = {
   description: 'Unlimited AI credits'
 };
 
+const CREDITS_PRICE = {
+  amount: 100, // $1.00
+  name: '20 AI Credits',
+  description: 'One-time purchase of 20 AI credits'
+};
+
 export async function POST(req: Request) {
   try {
-    const { email, userId } = await req.json();
+    const { email, userId, plan = 'pro' } = await req.json();
 
     // First, create or retrieve a customer
     let customer;
@@ -32,7 +38,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // Create the checkout session
+    // Create the checkout session based on plan type
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
       payment_method_types: ['card'],
@@ -41,24 +47,26 @@ export async function POST(req: Request) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: PLAN_PRICE.name,
-              description: PLAN_PRICE.description,
+              name: plan === 'credits' ? CREDITS_PRICE.name : PLAN_PRICE.name,
+              description: plan === 'credits' ? CREDITS_PRICE.description : PLAN_PRICE.description,
             },
-            unit_amount: PLAN_PRICE.amount,
-            recurring: {
-              interval: 'month',
-            },
+            unit_amount: plan === 'credits' ? CREDITS_PRICE.amount : PLAN_PRICE.amount,
+            ...(plan !== 'credits' && {
+              recurring: {
+                interval: 'month',
+              },
+            }),
           },
           quantity: 1,
         },
       ],
-      mode: 'subscription',
+      mode: plan === 'credits' ? 'payment' : 'subscription',
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/subscription`,
       metadata: {
         userId: userId,
         userEmail: email,
-        plan: 'pro'
+        plan: plan
       },
     });
 

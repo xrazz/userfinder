@@ -1021,7 +1021,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                                 <a href="/subscription" className="font-medium hover:text-violet-800 dark:hover:text-violet-300 underline">
                                     Click here
                                 </a>
-                                {" "}for unlimited AI searches
+                                {" "}to get 10 more AI searches
                             </span>
                         </div>
                     </div>

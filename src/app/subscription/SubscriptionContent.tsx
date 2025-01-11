@@ -26,8 +26,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 // Make sure we're using the correct environment variable name
-const stripePublishableKey = 'pk_live_51PtCfLBf9CZHTEFpXX6FtJ5XiXdbebZdKPEE7HQkodedmRBoJthtSg8QJ5v9mLKLBE7fJd30TKAs9UYmnDI04SyO00pxtGsKFV';
-// const stripePublishableKey = 'pk_test_51PtCfLBf9CZHTEFp4ALwMBz12cI7r2ZsXWuaDOVwjjdNwrHxAlwDRz8i70tT0dT8HDXyU9GdpS6iusjFRq9UNS3w00euRBUv1M';
+// const stripePublishableKey = 'pk_live_51PtCfLBf9CZHTEFpXX6FtJ5XiXdbebZdKPEE7HQkodedmRBoJthtSg8QJ5v9mLKLBE7fJd30TKAs9UYmnDI04SyO00pxtGsKFV';
+const stripePublishableKey = 'pk_test_51PtCfLBf9CZHTEFp4ALwMBz12cI7r2ZsXWuaDOVwjjdNwrHxAlwDRz8i70tT0dT8HDXyU9GdpS6iusjFRq9UNS3w00euRBUv1M';
 
 if (!stripePublishableKey) {
   console.error('Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
@@ -68,7 +68,7 @@ export default function SubscriptionContent() {
     return () => unsubscribe();
   }, []);
 
-  const handleSubscribe = async (plan: 'pro' | 'unlimited' = 'pro') => {
+  const handleSubscribe = async (plan: 'pro' | 'unlimited' | 'credits' = 'pro') => {
     console.log('Subscribe button clicked for plan:', plan);
     
     if (!stripePromise) {
@@ -263,13 +263,66 @@ export default function SubscriptionContent() {
                 <span>4.9/5 Rating</span>
               </div>
               <span>•</span>
-              <div>2,000+ Pro Users</div>
-              <span>•</span>
               <div>97% Satisfaction</div>
             </div>
           </div>
 
-          <div className="max-w-md mx-auto">
+          <div className="max-w-md mx-auto space-y-6">
+            {/* One-time Credits Card - Now First */}
+            <Card className="relative overflow-hidden border-blue-200 dark:border-blue-800 shadow-lg">
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600" />
+              <CardHeader className="pb-4 md:pb-6">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex flex-col gap-1 md:gap-2">
+                    <span>Support the Launch</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl md:text-3xl font-bold">$1</span>
+                      <span className="text-muted-foreground">one-time</span>
+                    </div>
+                  </CardTitle>
+                  <div className="rounded-full bg-blue-100 dark:bg-blue-900 px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+                    Early Access
+                  </div>
+                </div>
+                <CardDescription>Get 20 credits while supporting our launch</CardDescription>
+              </CardHeader>
+              <CardContent className="pb-4 md:pb-6">
+                <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                  <p className="text-sm text-blue-600 dark:text-blue-400 font-medium text-center">
+                    Be among our first supporters!
+                  </p>
+                </div>
+                <ul className="space-y-2 md:space-y-3">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 md:w-5 md:h-5 text-green-500 flex-shrink-0" />
+                    <span className="text-sm md:text-base">20 AI credits</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 md:w-5 md:h-5 text-green-500 flex-shrink-0" />
+                    <span className="text-sm md:text-base">One-time payment</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 md:w-5 md:h-5 text-green-500 flex-shrink-0" />
+                    <span className="text-sm md:text-base">All AI capabilities</span>
+                  </li>
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleSubscribe('credits');
+                  }}
+                  className="w-full bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600 hover:from-blue-700 hover:via-cyan-700 hover:to-blue-700"
+                  size="lg"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  Support with $1
+                </Button>
+              </CardFooter>
+            </Card>
+
+            {/* Pro Plan Card - Now Second */}
             <Card className={`relative overflow-hidden border-purple-200 dark:border-purple-800 shadow-lg ${subscriptionPlan === 'Pro' ? 'ring-2 ring-purple-500' : ''}`}>
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600" />
               <CardHeader className="pb-4 md:pb-6">

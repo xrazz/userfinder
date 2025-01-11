@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { db } from '@/app/firebaseClient';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, increment } from 'firebase/firestore';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -40,25 +40,42 @@ export async function POST(req: Request) {
       );
     }
 
-    // Update user in Firestore
     const userRef = doc(db, 'users', customerEmail);
-    await updateDoc(userRef, {
-      isSubscribed: true,
-      subscriptionId: (session.subscription as Stripe.Subscription)?.id || session.id,
-      credits: 999, // Set to 999 credits for Pro level
-      lastCreditReset: new Date(),
-      stripeCustomerId: (session.customer as Stripe.Customer)?.id,
-      subscriptionStatus: (session.subscription as Stripe.Subscription)?.status || 'active',
-      subscriptionPlan: 'Pro',
-      updatedAt: new Date(),
-    });
+    
+    if (session.metadata?.plan === 'credits') {
+      // Handle one-time credits purchase
+      await updateDoc(userRef, {
+        credits: increment(20), // Increment existing credits by 20
+        updatedAt: new Date(),
+      });
 
-    return NextResponse.json({
-      success: true,
-      email: customerEmail,
-      subscriptionId: (session.subscription as Stripe.Subscription)?.id || session.id,
-      status: (session.subscription as Stripe.Subscription)?.status || 'active',
-    });
+      return NextResponse.json({
+        success: true,
+        email: customerEmail,
+        credits: 20,
+        type: 'credits'
+      });
+    } else {
+      // Handle subscription
+      await updateDoc(userRef, {
+        isSubscribed: true,
+        subscriptionId: (session.subscription as Stripe.Subscription)?.id || session.id,
+        credits: 999,
+        lastCreditReset: new Date(),
+        stripeCustomerId: (session.customer as Stripe.Customer)?.id,
+        subscriptionStatus: (session.subscription as Stripe.Subscription)?.status || 'active',
+        subscriptionPlan: 'Pro',
+        updatedAt: new Date(),
+      });
+
+      return NextResponse.json({
+        success: true,
+        email: customerEmail,
+        subscriptionId: (session.subscription as Stripe.Subscription)?.id || session.id,
+        status: (session.subscription as Stripe.Subscription)?.status || 'active',
+        type: 'subscription'
+      });
+    }
 
   } catch (error) {
     console.error('Error verifying subscription:', error);
