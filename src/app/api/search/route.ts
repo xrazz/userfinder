@@ -24,6 +24,13 @@ interface GoogleSearchResult {
   snippet: string;
 }
 
+// Add interface for Brave Search result
+interface BraveSearchResult {
+  title: string;
+  url: string;
+  description: string;
+}
+
 // Add interface for our formatted result
 interface FormattedSearchResult {
   title: string;
@@ -225,22 +232,76 @@ async function googleSearch(query: string, start: number = 0): Promise<Formatted
   }
 }
 
+// Add Brave Search function
+async function braveSearch(query: string, start: number = 0): Promise<FormattedSearchResult[]> {
+  try {
+    const offset = start;
+    const response = await axios.get('https://api.search.brave.com/res/v1/web/search', {
+      headers: {
+        'Accept': 'application/json',
+        'X-Subscription-Token': process.env.BRAVE_SEARCH_API_KEY || ''
+      },
+      params: {
+        q: query,
+        offset: offset,
+        count: 10
+      }
+    });
+
+    const results = (response.data.web?.results || []) as BraveSearchResult[];
+    
+    // Format Brave results to match our interface
+    const formattedResults: FormattedSearchResult[] = results.map(result => ({
+      title: result.title,
+      link: result.url,
+      snippet: result.description,
+      source: 'brave' as const
+    }));
+
+    // Process media content in parallel with a limited concurrency of 3
+    const resultsWithMedia = await Promise.all(
+      formattedResults.map(async (result, index) => {
+        // Only process first 5 results for media content
+        if (index < 5) {
+          try {
+            const media = await extractThumbnail(result.link);
+            return { ...result, media };
+          } catch (error) {
+            return { ...result, media: undefined };
+          }
+        }
+        return { ...result, media: undefined };
+      })
+    );
+
+    return resultsWithMedia;
+  } catch (error) {
+    console.error('Error in Brave search:', error);
+    throw error;
+  }
+}
+
 // Combined search function
 async function combinedSearch(query: string, start: number = 0): Promise<FormattedSearchResult[]> {
   try {
-    // Run only Google search
-    const googleResults = await googleSearch(query, start).catch(error => {
-      console.error('Google search failed:', error);
-      return [];
-    });
-
-    // Add source information to Google results
-    const googleResultsWithSource = googleResults.map(result => ({
-      ...result,
-      source: 'google' as const
-    }));
-
-    return googleResultsWithSource;
+    // Try Google search first
+    try {
+      const googleResults = await googleSearch(query, start);
+      // Add source information to Google results
+      const googleResultsWithSource = googleResults.map(result => ({
+        ...result,
+        source: 'google' as const
+      }));
+      return googleResultsWithSource;
+    } catch (error: any) {
+      // If Google returns 429 (Too Many Requests), fallback to Brave
+      if (error.response?.status === 429) {
+        console.log('Google search rate limited, falling back to Brave search');
+        return await braveSearch(query, start);
+      }
+      // For other errors, rethrow
+      throw error;
+    }
   } catch (error) {
     console.error('Error in combined search:', error);
     throw error;

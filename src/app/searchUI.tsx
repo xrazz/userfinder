@@ -198,14 +198,168 @@ const extractTopics = (text: string): string[] => {
     return Array.from(topics).slice(0, 5); // Return top 5 topics
 };
 
-// Convert formatMessage to a React component
+// Add ThreadDialog component before MessageContent
+interface ThreadMessage {
+    id: string;
+    content: string;
+    sender: 'user' | 'ai';
+    timestamp: Date;
+    replies?: ThreadMessage[];
+}
+
+const ThreadComponent: React.FC<{
+    source: Post;
+    sourceIndex: number;
+    email?: string;
+}> = ({ source, sourceIndex, email }) => {
+    const [messages, setMessages] = useState<ThreadMessage[]>([]);
+    const [inputValue, setInputValue] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
+    
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!inputValue.trim() || isLoading) return;
+        
+        const userMessage: ThreadMessage = {
+            id: Date.now().toString(),
+            content: inputValue,
+            sender: 'user',
+            timestamp: new Date(),
+            replies: []
+        };
+        
+        setMessages(prev => [...prev, userMessage]);
+        setInputValue('');
+        setIsLoading(true);
+        
+        try {
+            const response = await fetch('/api/prompt', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${email}`
+                },
+                body: JSON.stringify({
+                    systemPrompt: `You are analyzing a specific source in detail. The source is:
+Title: ${source.title}
+Content: ${source.snippet}
+
+Your task is to provide detailed insights about this specific source based on the user's question.
+Be concise but informative. Focus only on this source.`,
+                    userPrompt: inputValue,
+                    email: email
+                }),
+            });
+            
+            if (response.ok) {
+                const { output } = await response.json();
+                const aiMessage: ThreadMessage = {
+                    id: Date.now().toString(),
+                    content: output,
+                    sender: 'ai',
+                    timestamp: new Date(),
+                    replies: []
+                };
+                setMessages(prev => [...prev, aiMessage]);
+            }
+        } catch (error) {
+            console.error('Error in thread chat:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    if (!isExpanded) {
+        return (
+            <Button
+                variant="ghost"
+                size="sm"
+                className="w-full flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                onClick={() => setIsExpanded(true)}
+            >
+                <MessageSquare className="h-4 w-4" />
+                <span className="text-sm">Show discussion thread</span>
+            </Button>
+        );
+    }
+    
+    return (
+        <div className="pl-4 border-l-2 border-muted mt-2 space-y-3">
+            <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Discussion thread</span>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsExpanded(false)}
+                    className="h-6 px-2"
+                >
+                    <span className="text-xs">Collapse</span>
+                </Button>
+            </div>
+            
+            <div className="space-y-4">
+                {messages.map((message) => (
+                    <div key={message.id} className="space-y-2">
+                        <div
+                            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                            <div
+                                className={`max-w-[85%] rounded-lg p-3 ${
+                                    message.sender === 'user'
+                                        ? 'bg-primary text-primary-foreground ml-4'
+                                        : 'bg-muted mr-4'
+                                }`}
+                            >
+                                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                <div className="mt-1 flex items-center gap-2">
+                                    <span className="text-xs opacity-70">
+                                        {message.timestamp.toLocaleTimeString()}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                
+                {isLoading && (
+                    <div className="flex justify-start">
+                        <div className="max-w-[85%] rounded-lg p-3 bg-muted mr-4">
+                            <div className="flex items-center gap-2">
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                <span className="text-sm">Thinking...</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+            
+            <form onSubmit={handleSubmit} className="pt-2">
+                <div className="flex gap-2">
+                    <Input
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        placeholder="Ask about this source..."
+                        className="text-sm"
+                        disabled={isLoading}
+                    />
+                    <Button type="submit" size="sm" disabled={isLoading}>
+                        <MessageSquare className="h-4 w-4" />
+                    </Button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+// Modify the citation rendering in MessageContent
 const MessageContent: React.FC<{
     content: string;
     relatedResults?: Post[];
     onSearch?: (query: string) => void;
     email?: string;
     query?: string;
-    searchQuery?: string;
+    searchQuery?: string
 }> = ({ content, relatedResults, onSearch, email, query, searchQuery }) => {
     const [isSaved, setIsSaved] = useState(false);
     const [feedbackGiven, setFeedbackGiven] = useState<'up' | 'down' | null>(null);
@@ -391,36 +545,43 @@ const MessageContent: React.FC<{
                         {citedResults.map((result, idx) => (
                             <div 
                                 key={idx}
-                                className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors overflow-hidden"
+                                className="flex flex-col gap-2"
                             >
-                                <div className="flex-none mt-0.5">
-                                    <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                                        {relatedResults?.indexOf(result)! + 1}
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors overflow-hidden">
+                                    <div className="flex-none mt-0.5">
+                                        <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
+                                            {relatedResults?.indexOf(result)! + 1}
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0 space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <a 
+                                                href={result.link} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="font-medium hover:underline truncate flex-1"
+                                            >
+                                                {result.title}
+                                            </a>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-5 w-5"
+                                                onClick={() => window.open(result.link, '_blank')}
+                                            >
+                                                <ExternalLink className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground line-clamp-2 break-words">
+                                            {result.snippet}
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="flex-1 min-w-0 space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <a 
-                                            href={result.link} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="font-medium hover:underline truncate flex-1"
-                                        >
-                                            {result.title}
-                                        </a>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-5 w-5 flex-none"
-                                            onClick={() => window.open(result.link, '_blank')}
-                                        >
-                                            <ExternalLink className="h-3 w-3" />
-                                        </Button>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground line-clamp-2 break-words">
-                                        {result.snippet}
-                                    </p>
-                                </div>
+                                <ThreadComponent
+                                    source={result}
+                                    sourceIndex={relatedResults?.indexOf(result)!}
+                                    email={email}
+                                />
                             </div>
                         ))}
                     </div>
