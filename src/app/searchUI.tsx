@@ -15,7 +15,7 @@ import QueryTutorialModal from './docs/QueryModal'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History, ExternalLink, FileText, BookOpen, Code2, GraduationCap, Presentation, FileSpreadsheet, Share2, ImageIcon, ThumbsUp, ThumbsDown, Hash, Bookmark, MessageSquare } from 'lucide-react'
+import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History, ExternalLink, FileText, BookOpen, Code2, GraduationCap, Presentation, FileSpreadsheet, Share2, ImageIcon, ThumbsUp, ThumbsDown, Hash, Bookmark, MessageSquare, Globe, Calendar } from 'lucide-react'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
 import { motion, useScroll, useTransform } from 'framer-motion'
@@ -1619,85 +1619,67 @@ Keep responses focused on legitimate sources and official channels.`,
                     <div className="py-6">
                         {messages.length === 0 ? (
                             <div className="text-center py-5">
-                                <div className="bg-gradient-to-b from-purple-500/20 to-purple-500/5 rounded-full p-4 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                                    <SparklesIcon className="w-10 h-10 text-purple-500" />
-                                </div>
-                                <h3 className="text-xl font-medium mb-3">Welcome to Lexy AI search</h3>
-                                <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed mb-6">
-                                    Discover anything with AI-powered search. Here's what you can explore:
-                                </p>
+                                <blockquote className="max-w-lg mx-auto mb-8">
+                                    <p className="text-lg font-light text-muted-foreground leading-relaxed">
+                                        "Truth is not a single voice, but a symphony of perspectives."
+                                    </p>
+                                </blockquote>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 max-w-3xl mx-auto px-4">
-                                    <div className="flex flex-col items-center text-center group cursor-pointer">
-                                        <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-3 group-hover:scale-110 transition-transform">
-                                            <FileText className="w-6 h-6" />
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                                            <Globe className="w-5 h-5" />
                                         </div>
-                                        <span className="text-sm font-medium mb-1">Research Papers</span>
-                                        <span className="text-xs text-muted-foreground italic">
-                                            "quantum computing papers pdf"
-                                        </span>
+                                        <span className="text-sm font-medium">Web Search</span>
+                                        <span className="text-xs text-muted-foreground">Research & analysis</span>
                                     </div>
-                                    <div className="flex flex-col items-center text-center group cursor-pointer">
-                                        <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 mb-3 group-hover:scale-110 transition-transform">
-                                            <BookOpen className="w-6 h-6" />
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                                            <FileText className="w-5 h-5" />
                                         </div>
-                                        <span className="text-sm font-medium mb-1">Books & Literature</span>
-                                        <span className="text-xs text-muted-foreground italic">
-                                            "find classic novels epub"
-                                        </span>
+                                        <span className="text-sm font-medium">Document Search</span>
+                                        <span className="text-xs text-muted-foreground">PDFs, docs, sheets</span>
                                     </div>
-                                    <div className="flex flex-col items-center text-center group cursor-pointer">
-                                        <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 mb-3 group-hover:scale-110 transition-transform">
-                                            <Code2 className="w-6 h-6" />
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400">
+                                            <Share2 className="w-5 h-5" />
                                         </div>
-                                        <span className="text-sm font-medium mb-1">Code & Tutorials</span>
-                                        <span className="text-xs text-muted-foreground italic">
-                                            "react hooks examples github"
-                                        </span>
+                                        <span className="text-sm font-medium">Social Search</span>
+                                        <span className="text-xs text-muted-foreground">Community insights</span>
                                     </div>
-                                    <div className="flex flex-col items-center text-center group cursor-pointer">
-                                        <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 mb-3 group-hover:scale-110 transition-transform">
-                                            <GraduationCap className="w-6 h-6" />
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+                                            <Code2 className="w-5 h-5" />
                                         </div>
-                                        <span className="text-sm font-medium mb-1">Courses</span>
-                                        <span className="text-xs text-muted-foreground italic">
-                                            "machine learning courses mooc"
-                                        </span>
+                                        <span className="text-sm font-medium">Code Search</span>
+                                        <span className="text-xs text-muted-foreground">Repos & snippets</span>
                                     </div>
-                                    <div className="flex flex-col items-center text-center group cursor-pointer">
-                                        <div className="p-3 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 mb-3 group-hover:scale-110 transition-transform">
-                                            <Presentation className="w-6 h-6" />
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                                            <GraduationCap className="w-5 h-5" />
                                         </div>
-                                        <span className="text-sm font-medium mb-1">Presentations</span>
-                                        <span className="text-xs text-muted-foreground italic">
-                                            "startup pitch decks ppt"
-                                        </span>
+                                        <span className="text-sm font-medium">Academic Search</span>
+                                        <span className="text-xs text-muted-foreground">Papers & research</span>
                                     </div>
-                                    <div className="flex flex-col items-center text-center group cursor-pointer">
-                                        <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 mb-3 group-hover:scale-110 transition-transform">
-                                            <FileSpreadsheet className="w-6 h-6" />
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                                            <MessageSquare className="w-5 h-5" />
                                         </div>
-                                        <span className="text-sm font-medium mb-1">Data & Spreadsheets</span>
-                                        <span className="text-xs text-muted-foreground italic">
-                                            "market analysis excel csv"
-                                        </span>
+                                        <span className="text-sm font-medium">Forum Search</span>
+                                        <span className="text-xs text-muted-foreground">Discussions & QA</span>
                                     </div>
-                                    <div className="flex flex-col items-center text-center group cursor-pointer">
-                                        <div className="p-3 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 mb-3 group-hover:scale-110 transition-transform">
-                                            <Share2 className="w-6 h-6" />
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                                            <ImageIcon className="w-5 h-5" />
                                         </div>
-                                        <span className="text-sm font-medium mb-1">Social Insights</span>
-                                        <span className="text-xs text-muted-foreground italic">
-                                            "trending tech discussions"
-                                        </span>
+                                        <span className="text-sm font-medium">Visual Search</span>
+                                        <span className="text-xs text-muted-foreground">Images & designs</span>
                                     </div>
-                                    <div className="flex flex-col items-center text-center group cursor-pointer">
-                                        <div className="p-3 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 mb-3 group-hover:scale-110 transition-transform">
-                                            <ImageIcon className="w-6 h-6" />
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400">
+                                            <Presentation className="w-5 h-5" />
                                         </div>
-                                        <span className="text-sm font-medium mb-1">Visual Search</span>
-                                        <span className="text-xs text-muted-foreground italic">
-                                            "upload image to find similar"
-                                        </span>
+                                        <span className="text-sm font-medium">Media Search</span>
+                                        <span className="text-xs text-muted-foreground">Videos & slides</span>
                                     </div>
                                 </div>
                             </div>
