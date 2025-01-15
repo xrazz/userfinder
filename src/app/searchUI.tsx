@@ -860,19 +860,8 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         site?: string,
         aiMode?: boolean
     }) => {
-        const searchParams = new URLSearchParams(window.location.search);
-        
-        // Update only provided parameters
-        Object.entries(params).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-                searchParams.set(key, String(value));
-            } else {
-                searchParams.delete(key);
-            }
-        });
-        
-        // Update URL without reloading the page
-        const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
+        // Simply update the URL to '/' without any parameters
+        const newUrl = '/';
         window.history.pushState({ path: newUrl }, '', newUrl);
     };
 
