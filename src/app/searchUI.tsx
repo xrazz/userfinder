@@ -718,7 +718,7 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         }
     }, [searchResults])
 
-    // Update the fetchResults function to handle Google pagination
+    // Update the fetchResults function to handle empty results better
     const fetchResults = async (query: string, page: number): Promise<Post[]> => {
         try {
             // Calculate the start index for Google pagination (0-based)
@@ -742,16 +742,26 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             const data = await response.json();
             
             if (data.success) {
-                // If no results are returned, mark as no more results
-                if (data.data.length === 0) {
+                // If no results are returned, try to understand why
+                if (!data.data || data.data.length === 0) {
+                    console.log('No results found for query:', query);
+                    // If it's the first page, show a more helpful message
+                    if (page === 1) {
+                        toast.error("No results found", {
+                            description: "Try adjusting your search terms or removing some filters",
+                        });
+                    }
                     setHasMore(false);
                 }
-                return data.data;
+                return data.data || [];
             } else {
                 throw new Error(data.error || 'Unknown API error occurred');
             }
         } catch (error: any) {
             console.error('Error fetching results:', error.message || error);
+            toast.error("Search failed", {
+                description: error.message || "Please try again with different search terms",
+            });
             return [];
         }
     };
@@ -841,6 +851,71 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
         }
     }, [email]);
 
+    // Add this helper function to handle URL parameters
+    const updateUrlParams = (params: {
+        q?: string,
+        type?: SearchType,
+        fileType?: string,
+        filter?: string,
+        site?: string,
+        aiMode?: boolean
+    }) => {
+        const searchParams = new URLSearchParams(window.location.search);
+        
+        // Update only provided parameters
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                searchParams.set(key, String(value));
+            } else {
+                searchParams.delete(key);
+            }
+        });
+        
+        // Update URL without reloading the page
+        const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
+        window.history.pushState({ path: newUrl }, '', newUrl);
+    };
+
+    // Add this function to sync state from URL parameters
+    const syncStateFromUrl = () => {
+        const params = new URLSearchParams(window.location.search);
+        
+        // Get all parameters
+        const query = params.get('q');
+        const type = params.get('type') as SearchType;
+        const fileType = params.get('fileType');
+        const filter = params.get('filter');
+        const site = params.get('site');
+        const aiMode = params.get('aiMode');
+        
+        // Update state only if parameters exist
+        if (query) {
+            setSearchQuery(query);
+            setTypingQuery(query);
+        }
+        
+        if (type && ['web', 'media', 'social'].includes(type)) {
+            setSearchType(type);
+        }
+        
+        if (fileType) {
+            setSelectedFileType(fileType);
+        }
+        
+        if (filter) {
+            setCurrentFilter(filter);
+        }
+        
+        if (site) {
+            setSelectedSite(site);
+        }
+        
+        if (aiMode !== null) {
+            setIsAiMode(aiMode === 'true');
+        }
+    };
+
+    // Update the handleSearch function
     const handleSearch = async (queryToUse?: string, newSearchType?: SearchType, filters?: SearchFilters) => {
         if (searchInProgress) return;
 
@@ -851,16 +926,17 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
             setCurrentPage(1);
             setHasMore(true);
 
-            // Update URL with search parameters
+            // Update URL with all search parameters
             const queryToSearch = (queryToUse || searchQuery).trim();
             if (queryToSearch) {
-                const searchParams = new URLSearchParams();
-                searchParams.set('q', queryToSearch);
-                if (newSearchType) {
-                    searchParams.set('type', newSearchType);
-                }
-                // Update URL without reloading the page
-                window.history.pushState({}, '', `/?${searchParams.toString()}`);
+                updateUrlParams({
+                    q: queryToSearch,
+                    type: newSearchType || searchType,
+                    fileType: selectedFileType,
+                    filter: currentFilter,
+                    site: selectedSite !== 'Universal search' ? selectedSite : undefined,
+                    aiMode: isAiMode
+                });
             }
 
             // Handle image search
@@ -1034,13 +1110,19 @@ Reply ONLY with the optimized query.`,
                                     'Authorization': `Bearer ${email}`
                                 },
                                 body: JSON.stringify({
-                                    systemPrompt: `You are a multilingual assistant that provides information about content availability from legitimate sources.
+                                    systemPrompt: `You are a multilingual assistant that provides information about content availability from all the sources.
 
 Rules:
 1. Focus on all sources 
 2. Cite sources using [1], [2] immediately after mentioning each resource
 3. After your main response, add a section with 3-4 relevant follow-up questions
 4. IMPORTANT: Use the conversation context to maintain continuity in your responses
+5. Focus on all sources by:
+
+Presenting their key findings or content
+Comparing methodologies and approaches
+Highlighting agreements and disagreements
+Noting unique insights from each source
 
 Format:
 1. Main response with citations
@@ -1144,22 +1226,60 @@ Keep responses focused on legitimate sources and official channels.`,
         }
     }
 
-    // Funzione helper per la ricerca normale
+    // Update performNormalSearch to handle empty results better
     const performNormalSearch = async (query: string, newSearchType?: SearchType, filters?: SearchFilters) => {
-        const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
-        const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
-        
-        const finalQuery = buildSearchQuery(
-            query, 
-            siteToSearch, 
-            dateFilterString, 
-            newSearchType || searchType,
-            filters || searchFilters
-        )
-        
-        const Results = await fetchResults(finalQuery, 1)
-        setSearchResults(Results)
-        setHasResults(Results.length > 0)
+        try {
+            const dateFilterString = getDateFilterString(mapFilterToDate(currentFilter))
+            const siteToSearch = selectedSite === 'custom' ? customUrl : selectedSite === 'Universal search' ? '' : selectedSite
+            
+            // Log the search parameters for debugging
+            console.log('Search parameters:', {
+                query,
+                siteToSearch,
+                dateFilterString,
+                searchType: newSearchType || searchType,
+                filters: filters || searchFilters
+            });
+            
+            const finalQuery = buildSearchQuery(
+                query, 
+                siteToSearch, 
+                dateFilterString, 
+                newSearchType || searchType,
+                filters || searchFilters
+            )
+            
+            // Log the final query for debugging
+            console.log('Final query:', finalQuery);
+            
+            const Results = await fetchResults(finalQuery, 1)
+            
+            if (Results.length === 0) {
+                // If we have filters applied, suggest removing them
+                if (siteToSearch || dateFilterString !== 'all' || selectedFileType !== 'all') {
+                    toast.error("No results found with current filters", {
+                        description: "Try removing some filters to see more results",
+                        action: {
+                            label: "Clear Filters",
+                            onClick: () => {
+                                setSelectedSite('Universal search');
+                                setCurrentFilter('all');
+                                setSelectedFileType('all');
+                                handleSearch(query);
+                            }
+                        }
+                    });
+                }
+            }
+            
+            setSearchResults(Results)
+            setHasResults(Results.length > 0)
+        } catch (error) {
+            console.error('Error in performNormalSearch:', error);
+            toast.error("Search failed", {
+                description: "Please try again with different search terms",
+            });
+        }
     }
 
     const handleLoadMore = async () => {
@@ -1190,8 +1310,13 @@ Keep responses focused on legitimate sources and official channels.`,
     };
 
     const handleFilterChange = (value: string) => {
-        setCurrentFilter(value)
-    }
+        setCurrentFilter(value);
+        updateUrlParams({ filter: value });
+        
+        if (searchQuery.trim()) {
+            handleSearch(searchQuery);
+        }
+    };
 
     const handleBookmark = async (post: Post) => {
         try {
@@ -1269,31 +1394,35 @@ Keep responses focused on legitimate sources and official channels.`,
     // Aggiungi questa funzione per gestire il cambio di tipo file
     const handleFileTypeChange = (value: string) => {
         setSelectedFileType(value);
+        updateUrlParams({ fileType: value });
+        
         // Only trigger a new search if there's an active search query and it's not the first search
         if (searchQuery.trim() && initialSearchRef.current) {
             handleSearch(searchQuery);
         }
     }
 
-    // Modify useEffect for URL-based search
-    const isInitialMount = useRef(true)
-
+    // Update the useEffect for URL-based search
     useEffect(() => {
-        const query = searchParams?.get('q')
-        const type = searchParams?.get('type') as SearchType | null
+        // Sync state from URL on initial load and URL changes
+        syncStateFromUrl();
         
-        // Only proceed if we have a query and it's the initial mount
-        if (query && isInitialMount.current) {
-            isInitialMount.current = false
-            urlTriggeredRef.current = true
-            setSearchQuery(query)
-            setTypingQuery(query)
-            if (type && ['web', 'media', 'social'].includes(type)) {
-                setSearchType(type as SearchType)
-            }
-            handleSearch(query, type as SearchType)
+        // Perform search if we have a query
+        const query = searchParams?.get('q');
+        if (query && !searchInProgress) {
+            handleSearch(query);
         }
-    }, [searchParams])
+    }, [searchParams]);
+
+    // Add popstate event listener to handle browser back/forward
+    useEffect(() => {
+        const handlePopState = () => {
+            syncStateFromUrl();
+        };
+        
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
 
     // Add beta dialog check
     useEffect(() => {
