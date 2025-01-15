@@ -1621,7 +1621,7 @@ Keep responses focused on legitimate sources and official channels.`,
                             <div className="text-center py-5">
                                 <blockquote className="max-w-lg mx-auto mb-8">
                                     <p className="text-lg font-light text-muted-foreground leading-relaxed">
-                                        "Truth is not a single voice, but a symphony of perspectives."
+                                        "Truth is a symphony of perspectives."
                                     </p>
                                 </blockquote>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 max-w-3xl mx-auto px-4">
