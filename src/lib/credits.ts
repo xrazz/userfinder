@@ -87,12 +87,12 @@ export class UserCreditManager implements CreditManager {
         if (normalizedLevel === 'free') {
           creditsToSet = 10;
         } else if (normalizedLevel === 'pro' || normalizedLevel === 'basic') {
-          creditsToSet = 50;
+          creditsToSet = 9999;
         }
 
         // If user has an active subscription, ensure they get Pro credits
         if (userData?.isSubscribed && userData?.subscriptionStatus === 'active') {
-          creditsToSet = 50;
+          creditsToSet = 9999;
         }
 
         await updateDoc(userDocRef, {
