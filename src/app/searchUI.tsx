@@ -205,7 +205,7 @@ const MessageContent: React.FC<{
     onSearch?: (query: string) => void;
     email?: string;
     query?: string;
-    searchQuery?: string;
+    searchQuery?: string
 }> = ({ content, relatedResults, onSearch, email, query, searchQuery }) => {
     const [isSaved, setIsSaved] = useState(false);
     const [feedbackGiven, setFeedbackGiven] = useState<'up' | 'down' | null>(null);
@@ -535,7 +535,21 @@ const MessageContent: React.FC<{
     );
 };
 
-// Replace formatMessage with a wrapper that uses the new component
+const stripHtmlTags = (text: string): string => {
+    if (!text) return '';
+    return text
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&#x27;/g, "'")
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
 const formatMessage = (
     content: string, 
     relatedResults?: Post[], 
@@ -547,8 +561,12 @@ const formatMessage = (
     if (!content) return null;
     return (
         <MessageContent
-            content={content}
-            relatedResults={relatedResults}
+            content={stripHtmlTags(content)}
+            relatedResults={relatedResults?.map(result => ({
+                ...result,
+                title: stripHtmlTags(result.title),
+                snippet: stripHtmlTags(result.snippet)
+            }))}
             onSearch={onSearch}
             email={email}
             query={query}
