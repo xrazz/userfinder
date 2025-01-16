@@ -213,14 +213,80 @@ const MessageContent: React.FC<{
     const [discussionTitle, setDiscussionTitle] = useState('');
     const [discussionContent, setDiscussionContent] = useState('');
 
-    // Process text for bold formatting
+    // Process text for bold formatting and clickable follow-up questions
     const processText = (text: string) => {
-        return text.split(/(\*\*.*?\*\*)/).map((part, i) => {
-            if (part.startsWith('**') && part.endsWith('**')) {
-                return <strong key={i}>{part.slice(2, -2)}</strong>;
-            }
-            return part;
-        });
+        // Try different patterns to extract follow-up questions
+        let mainContent = text;
+        let followUpQuestions: string[] = [];
+
+        // Pattern 1: Split by "--- Follow-up Questions:"
+        if (text.includes('--- Follow-up Questions:')) {
+            const [content, questions] = text.split('--- Follow-up Questions:');
+            mainContent = content;
+            followUpQuestions = questions
+                .split(/[•\-]\s+/)
+                .map(q => q.trim())
+                .filter(q => q.length > 0);
+        }
+        // Pattern 2: Split by "Follow-up Questions:"
+        else if (text.includes('Follow-up Questions:')) {
+            const [content, questions] = text.split('Follow-up Questions:');
+            mainContent = content;
+            followUpQuestions = questions
+                .split(/[•\-]\s+/)
+                .map(q => q.trim())
+                .filter(q => q.length > 0);
+        }
+        // Pattern 3: Split by "---" and look for bullet points
+        else if (text.includes('---')) {
+            const [content, questions] = text.split('---');
+            mainContent = content;
+            followUpQuestions = questions
+                .split(/[•\-]\s+/)
+                .map(q => q.trim())
+                .filter(q => q.length > 0);
+        }
+
+        // Clean up questions (remove empty ones and duplicates)
+        followUpQuestions = Array.from(new Set(followUpQuestions.filter(q => 
+            q.length > 0 && !q.toLowerCase().includes('follow-up questions:')
+        )));
+
+        return (
+            <div>
+                {/* Main content with bold formatting */}
+                <div className="prose dark:prose-invert max-w-none">
+                    {mainContent.split(/(\*\*.*?\*\*)/).map((part, i) => {
+                        if (part.startsWith('**') && part.endsWith('**')) {
+                            return <strong key={i}>{part.slice(2, -2)}</strong>;
+                        }
+                        return part;
+                    })}
+                </div>
+
+                {/* Follow-up questions as clickable buttons */}
+                {followUpQuestions.length > 0 && (
+                    <div className="mt-6">
+                        <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2 mb-3">
+                            <SparklesIcon className="w-4 h-4" />
+                            Follow-up Questions
+                        </h4>
+                        <div className="grid gap-2">
+                            {followUpQuestions.map((question, idx) => (
+                                <Button
+                                    key={idx}
+                                    variant="outline"
+                                    className="justify-start text-left h-auto py-2 px-3 hover:bg-primary/10 hover:text-primary transition-colors"
+                                    onClick={() => onSearch?.(question)}
+                                >
+                                    <span className="line-clamp-2">{question}</span>
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
     };
 
     // Extract key topics from the content
