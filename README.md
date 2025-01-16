@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# UserFinder
 
-## Getting Started
+UserFinder is a powerful web application that provides an advanced search interface with AI-powered capabilities. It combines multiple search engines and intelligent features to help users find and analyze information more effectively.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Search Capabilities
+- Multi-source search combining results from different search engines (Google, Brave)
+- Advanced filtering options:
+  - Date-based filtering (24h, week, month, 3 months, 6 months, year, lifetime)
+  - File type filtering
+  - Site-specific search
+  - Media type filtering (videos, images)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### AI Integration
+- AI-powered search refinement
+- Smart result summarization
+- Interactive chat-like interface for search refinement
+- Topic extraction and categorization
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### User Features
+- Bookmarking system for saving interesting results
+- Search history tracking
+- Discussion system for sharing and discussing search results
+- Feedback system for search results and AI responses
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Membership Levels
+- Free tier
+- Basic subscription
+- Pro subscription
+Each tier comes with different credit allocations and feature access
 
-## Learn More
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Authentication and Credits System
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The application implements a credit-based system where:
+- Users can authenticate with their email
+- Each user gets daily credits
+- Different membership tiers have different credit allocations
+- Guest users have limited access
 
-## Deploy on Vercel
+## Search Features
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Real-time search results
+- Infinite scrolling
+- URL parameter synchronization
+- Media content extraction (videos, images)
+- Rich snippet support
+- Bookmark management
+- Search history tracking
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Data Privacy and Security
+
+- Secure authentication through Firebase
+- User data protection
+- Search history encryption
+- Secure API key management
+
+---
+
+This application is designed to provide a powerful, user-friendly search experience with AI-powered features and robust user management capabilities.

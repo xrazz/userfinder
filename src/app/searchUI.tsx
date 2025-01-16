@@ -15,8 +15,8 @@ import QueryTutorialModal from './docs/QueryModal'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History, ExternalLink, FileText, BookOpen, Code2, GraduationCap, Presentation, FileSpreadsheet, Share2, ImageIcon, ThumbsUp, ThumbsDown, Hash, Bookmark, MessageSquare, Globe, Calendar } from 'lucide-react'
-import { Popover, PopoverTrigger } from '@/components/ui/popover'
+import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History, ExternalLink, FileText, BookOpen, Code2, GraduationCap, Presentation, FileSpreadsheet, Share2, ImageIcon, ThumbsUp, ThumbsDown, Hash, Bookmark, MessageSquare, Globe, Calendar, Facebook, Twitter, Linkedin, Mail, Link2 } from 'lucide-react'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useInfiniteQuery } from '@tanstack/react-query'
@@ -641,6 +641,155 @@ const formatMessage = (
     );
 };
 
+const ShareButton = ({ searchQuery, searchResults, content }: { searchQuery: string, searchResults: Post[], content: string }) => {
+    const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+
+    const generateShareableLink = async () => {
+        setIsGeneratingLink(true);
+        try {
+            // Create a new shared result document
+            const sharedResultRef = collection(db, 'shared_results');
+            const docRef = await addDoc(sharedResultRef, {
+                content,
+                query: searchQuery,
+                results: searchResults,
+                timestamp: Date.now(),
+                topics: extractTopics(content)
+            });
+
+            // Construct the shareable URL
+            const shareUrl = `${window.location.origin}/share/${docRef.id}`;
+            return shareUrl;
+        } catch (error) {
+            console.error('Error generating shareable link:', error);
+            throw error;
+        } finally {
+            setIsGeneratingLink(false);
+        }
+    };
+
+    const shareLinks = [
+        {
+            name: 'Copy Link',
+            icon: Link2,
+            action: async () => {
+                try {
+                    const shareUrl = await generateShareableLink();
+                    await navigator.clipboard.writeText(shareUrl);
+                    toast.success("Link copied to clipboard");
+                } catch (error) {
+                    toast.error("Failed to generate shareable link");
+                }
+            }
+        },
+        {
+            name: 'Twitter',
+            icon: Twitter,
+            action: async () => {
+                try {
+                    const shareUrl = await generateShareableLink();
+                    const shareText = `Check out what I found on UserFinder about "${searchQuery}"`;
+                    window.open(
+                        `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
+                        '_blank',
+                        'width=600,height=400'
+                    );
+                } catch (error) {
+                    toast.error("Failed to share on Twitter");
+                }
+            }
+        },
+        {
+            name: 'Facebook',
+            icon: Facebook,
+            action: async () => {
+                try {
+                    const shareUrl = await generateShareableLink();
+                    window.open(
+                        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+                        '_blank',
+                        'width=600,height=400'
+                    );
+                } catch (error) {
+                    toast.error("Failed to share on Facebook");
+                }
+            }
+        },
+        {
+            name: 'LinkedIn',
+            icon: Linkedin,
+            action: async () => {
+                try {
+                    const shareUrl = await generateShareableLink();
+                    const shareTitle = `Search results for: ${searchQuery}`;
+                    window.open(
+                        `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle)}`,
+                        '_blank',
+                        'width=600,height=400'
+                    );
+                } catch (error) {
+                    toast.error("Failed to share on LinkedIn");
+                }
+            }
+        },
+        {
+            name: 'Email',
+            icon: Mail,
+            action: async () => {
+                try {
+                    const shareUrl = await generateShareableLink();
+                    const shareTitle = `Search results for: ${searchQuery}`;
+                    const shareText = `Check out what I found on UserFinder about "${searchQuery}"`;
+                    window.location.href = `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`;
+                } catch (error) {
+                    toast.error("Failed to share via email");
+                }
+            }
+        }
+    ];
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2"
+                    disabled={isGeneratingLink}
+                >
+                    {isGeneratingLink ? (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Generating...
+                        </>
+                    ) : (
+                        <>
+                            <Share2 className="w-4 h-4" />
+                            Share
+                        </>
+                    )}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-2" align="end">
+                <div className="grid gap-1">
+                    {shareLinks.map((link) => (
+                        <Button
+                            key={link.name}
+                            variant="ghost"
+                            className="w-full justify-start gap-2"
+                            onClick={link.action}
+                            disabled={isGeneratingLink}
+                        >
+                            <link.icon className="w-4 h-4" />
+                            {link.name}
+                        </Button>
+                    ))}
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
 export default function SearchTab({ Membership = '', name = '', email = '', userId = '', imageUrl = '' }: SearchUIProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -1139,14 +1288,48 @@ IMPORTANT: Modify the query based on these rules:
    Example: "research papers on AI" -> "research papers on AI site:scholar.google.com"
 
 4. For temporal queries:
-   - When user mentions specific time periods like "last week", "past month", "recent", "latest", "today", "this year":
-     * "news from last week" -> Add "after:YYYY-MM-DD before:YYYY-MM-DD" using appropriate dates
-     * "articles from last month" -> Calculate date range from current date
-     * "today's updates" -> Use today's date
-   Examples:
-     * "news from last week" -> "news after:2024-02-14 before:2024-02-21"
-     * "articles from last month" -> "articles after:2024-01-21 before:2024-02-21"
-     * "today's updates" -> "updates after:2024-02-21"
+   - When user mentions time-related keywords, add appropriate date ranges:
+     
+     * "latest", "newest", "recent", "last" (without specific timeframe) -> last 2 weeks
+       Example: "latest AI news" -> "AI news after:${(() => {
+           const date = new Date();
+           date.setDate(date.getDate() - 14);
+           return date.toISOString().split('T')[0];
+       })()}"
+     
+     * "last week" -> previous 7 days
+       Example: "news from last week" -> "news after:${(() => {
+           const date = new Date();
+           date.setDate(date.getDate() - 7);
+           return date.toISOString().split('T')[0];
+       })()} before:${new Date().toISOString().split('T')[0]}"
+     
+     * "last month" -> previous 30 days
+       Example: "articles from last month" -> "articles after:${(() => {
+           const date = new Date();
+           date.setDate(date.getDate() - 30);
+           return date.toISOString().split('T')[0];
+       })()} before:${new Date().toISOString().split('T')[0]}"
+     
+     * "this year" -> from January 1st of current year
+       Example: "events this year" -> "events after:${new Date().getFullYear()}-01-01"
+     
+     * "today", "24h", "24 hours" -> last 24 hours
+       Example: "today's news" -> "news after:${(() => {
+           const date = new Date();
+           date.setDate(date.getDate() - 1);
+           return date.toISOString().split('T')[0];
+       })()}"
+     
+     * "this week" -> last 7 days
+       Example: "updates this week" -> "updates after:${(() => {
+           const date = new Date();
+           date.setDate(date.getDate() - 7);
+           return date.toISOString().split('T')[0];
+       })()}"
+     
+     * "this month" -> current month
+       Example: "releases this month" -> "releases after:${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01"
 
 5. For all other queries:
    - Return the query EXACTLY as provided by the user
@@ -1704,6 +1887,17 @@ Keep responses focused on legitimate sources and official channels.`,
                     />
                 </div>
 
+                {/* Add ShareButton after the search bar if there are results */}
+                {hasResults && (
+                    <div className="flex justify-end mb-4">
+                        {/* <ShareButton 
+                            searchQuery={searchQuery} 
+                            searchResults={searchResults} 
+                            content={isAiMode && messages.length > 0 ? messages[messages.length - 1].content : searchResults[0].snippet} 
+                        /> */}
+                    </div>
+                )}
+
                 {/* Content Area */}
                 {isAiMode ? (
                     <div className="py-6">
@@ -1794,6 +1988,11 @@ Keep responses focused on legitimate sources and official channels.`,
                                                     <Bookmark className={`w-4 h-4 ${messages[messages.length - 1].isSaved ? 'fill-current' : ''}`} />
                                                     {messages[messages.length - 1].isSaved ? 'Saved' : 'Save'}
                                                 </Button>
+                                                <ShareButton 
+                                                    searchQuery={searchQuery} 
+                                                    searchResults={searchResults} 
+                                                    content={messages[messages.length - 1].content} 
+                                                />
                                             </div>
                                         </div>
                                         {formatMessage(
