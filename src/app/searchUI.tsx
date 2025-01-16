@@ -1122,7 +1122,9 @@ export default function SearchTab({ Membership = '', name = '', email = '', user
 
 Your task is to create precise search queries that find relevant results based on the content type requested.
 
-IMPORTANT: Only modify the query if specific keywords are present:
+Today's date is ${new Date().toISOString().split('T')[0]}
+
+IMPORTANT: Modify the query based on these rules:
 
 1. For document/file searches:
    - ONLY add filetype operators when user explicitly mentions: pdf, doc, docx, xls, xlsx, csv, ppt, pptx, txt
@@ -1136,7 +1138,17 @@ IMPORTANT: Only modify the query if specific keywords are present:
    - ONLY add site operators when user mentions: research papers, academic, scholarly, thesis
    Example: "research papers on AI" -> "research papers on AI site:scholar.google.com"
 
-4. For all other queries:
+4. For temporal queries:
+   - When user mentions specific time periods like "last week", "past month", "recent", "latest", "today", "this year":
+     * "news from last week" -> Add "after:YYYY-MM-DD before:YYYY-MM-DD" using appropriate dates
+     * "articles from last month" -> Calculate date range from current date
+     * "today's updates" -> Use today's date
+   Examples:
+     * "news from last week" -> "news after:2024-02-14 before:2024-02-21"
+     * "articles from last month" -> "articles after:2024-01-21 before:2024-02-21"
+     * "today's updates" -> "updates after:2024-02-21"
+
+5. For all other queries:
    - Return the query EXACTLY as provided by the user
    Example: "best movies like Matrix" -> "best movies like Matrix"
 
@@ -1185,12 +1197,17 @@ Reply ONLY with the optimized query.`,
                                 body: JSON.stringify({
                                     systemPrompt: `You are a multilingual assistant that provides information about content availability from all the sources.
 
+Today's date is ${new Date().toISOString().split('T')[0]}
+
 Rules:
 1. Focus on all sources 
 2. Cite sources using [1], [2] immediately after mentioning each resource
 3. After your main response, add a section with 3-4 relevant follow-up questions
 4. IMPORTANT: Use the conversation context to maintain continuity in your responses
-5. Focus on all sources by:
+5. When discussing temporal information:
+   - Highlight if information is particularly recent or outdated
+   - Note publication dates when available
+6. Focus on all sources by:
 
 Presenting their key findings or content
 Comparing methodologies and approaches
@@ -1204,14 +1221,14 @@ Format:
 
 Example:
 
-The research paper is available on arXiv [1] and Google Scholar [2]. The official documentation can be found on Python.org [3].
+The research paper published on February 15, 2024 [1] provides the most recent findings, while earlier work from January 2024 [2] offers complementary insights. The official documentation was last updated yesterday [3].
 
 ---
 Follow-up Questions:
-• What are the key findings from the arXiv paper?
-• Are there any alternative implementations discussed in the documentation?
-• What are the system requirements mentioned in the paper?
-• How does this compare to related research in the field?
+• What are the key findings from the latest paper?
+• How do the recent changes compare to previous versions?
+• What updates are planned for the next release?
+• How has the field evolved in the past month?
 
 Keep responses focused on legitimate sources and official channels.`,
                                     userPrompt: `Previous conversation:\n${conversationContext}\n\nOriginal query: ${queryToSearch}\nOptimized query: ${optimizedQuery}\n\nSearch results:\n${contextStr}`,

@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
     // First, use GPT-4 to parse the natural language request
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
