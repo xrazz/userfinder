@@ -15,7 +15,7 @@ import QueryTutorialModal from './docs/QueryModal'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History, ExternalLink, FileText, BookOpen, Code2, GraduationCap, Presentation, FileSpreadsheet, Share2, ImageIcon, ThumbsUp, ThumbsDown, Hash, Bookmark, MessageSquare, Globe, Calendar, Facebook, Twitter, Linkedin, Mail, Link2, Sparkles } from 'lucide-react'
+import { Settings2, Search, ShieldCheck, ShieldOff, SparklesIcon, History, ExternalLink, FileText, BookOpen, Code2, GraduationCap, Presentation, FileSpreadsheet, Share2, ImageIcon, ThumbsUp, ThumbsDown, Hash, Bookmark, MessageSquare, Globe, Calendar, Facebook, Twitter, Linkedin, Mail, Link2 } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Badge } from '@radix-ui/themes'
 import { motion, useScroll, useTransform } from 'framer-motion'
@@ -1903,84 +1903,65 @@ Keep responses focused on legitimate sources and official channels.`,
                     <div className="py-6">
                         {messages.length === 0 ? (
                             <div className="text-center py-5">
-                                <div className="max-w-2xl mx-auto mb-12 px-4">
-                                    {/* <h1 className="text-2xl font-semibold mb-3 bg-gradient-to-r from-purple-600 to-blue-600 text-transparent bg-clip-text">
-                                        Explore the web with AI-enhanced search
-                                    </h1> */}
-                                    <p className="text-sm text-muted-foreground">
-                                        Lexy helps you explore web content by refining searches and organizing information from reliable sources.
-                                    </p>
-                                </div>
-                                
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto px-4">
-                                    <div className="bg-card hover:bg-accent/50 transition-colors rounded-xl p-6 text-left">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="p-2.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
-                                                <Search className="w-4 h-4" />
-                                            </div>
-                                            <h3 className="font-medium">Web Search</h3>
+                                <blockquote className="max-w-lg mx-auto mb-8">
+                                 
+                                </blockquote>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 max-w-3xl mx-auto px-4">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                                            <Globe className="w-5 h-5" />
                                         </div>
-                                        <div className="space-y-2 text-sm text-muted-foreground">
-                                            <p>"best practices for react development"</p>
-                                            <p>"latest AI breakthroughs 2024"</p>
-                                            <p>"sustainable energy solutions"</p>
-                                        </div>
+                                        <span className="text-sm font-medium">Web Search</span>
+                                        <span className="text-xs text-muted-foreground">Research & analysis</span>
                                     </div>
-
-                                    <div className="bg-card hover:bg-accent/50 transition-colors rounded-xl p-6 text-left">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="p-2.5 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
-                                                <Calendar className="w-4 h-4" />
-                                            </div>
-                                            <h3 className="font-medium">Time-based Search</h3>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                                            <FileText className="w-5 h-5" />
                                         </div>
-                                        <div className="space-y-2 text-sm text-muted-foreground">
-                                            <p>"TikTok trends this month"</p>
-                                            <p>"AI developments in last 3 months"</p>
-                                            <p>"Major tech news from 2023"</p>
-                                        </div>
+                                        <span className="text-sm font-medium">Document Search</span>
+                                        <span className="text-xs text-muted-foreground">PDFs, docs, sheets</span>
                                     </div>
-
-                                    <div className="bg-card hover:bg-accent/50 transition-colors rounded-xl p-6 text-left">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="p-2.5 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
-                                                <Globe className="w-4 h-4" />
-                                            </div>
-                                            <h3 className="font-medium">Source Search</h3>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400">
+                                            <Share2 className="w-5 h-5" />
                                         </div>
-                                        <div className="space-y-2 text-sm text-muted-foreground">
-                                            <p>"React tutorials on GitHub"</p>
-                                            <p>"Best laptops discussion on Reddit"</p>
-                                            <p>"Python solutions on Stack Overflow"</p>
-                                        </div>
+                                        <span className="text-sm font-medium">Social Search</span>
+                                        <span className="text-xs text-muted-foreground">Community insights</span>
                                     </div>
-
-                                    <div className="bg-card hover:bg-accent/50 transition-colors rounded-xl p-6 text-left">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="p-2.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                                                <FileText className="w-4 h-4" />
-                                            </div>
-                                            <h3 className="font-medium">Document Search</h3>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+                                            <Code2 className="w-5 h-5" />
                                         </div>
-                                        <div className="space-y-2 text-sm text-muted-foreground">
-                                            <p>"Machine learning research papers"</p>
-                                            <p>"Business presentation templates"</p>
-                                            <p>"Financial report examples"</p>
-                                        </div>
+                                        <span className="text-sm font-medium">Code Search</span>
+                                        <span className="text-xs text-muted-foreground">Repos & snippets</span>
                                     </div>
-
-                                    <div className="bg-card hover:bg-accent/50 transition-colors rounded-xl p-6 text-left">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="p-2.5 rounded-lg bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400">
-                                                <ImageIcon className="w-4 h-4" />
-                                            </div>
-                                            <h3 className="font-medium">Visual Search</h3>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                                            <GraduationCap className="w-5 h-5" />
                                         </div>
-                                        <div className="space-y-2 text-sm text-muted-foreground">
-                                            <p>Upload an image to find:</p>
-                                            <p>• Similar images</p>
-                                            <p>• Visual information</p>
+                                        <span className="text-sm font-medium">Academic Search</span>
+                                        <span className="text-xs text-muted-foreground">Papers & research</span>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                                            <MessageSquare className="w-5 h-5" />
                                         </div>
+                                        <span className="text-sm font-medium">Forum Search</span>
+                                        <span className="text-xs text-muted-foreground">Discussions & QA</span>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                                            <ImageIcon className="w-5 h-5" />
+                                        </div>
+                                        <span className="text-sm font-medium">Visual Search</span>
+                                        <span className="text-xs text-muted-foreground">Images & designs</span>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 rounded-lg bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400">
+                                            <Presentation className="w-5 h-5" />
+                                        </div>
+                                        <span className="text-sm font-medium">Media Search</span>
+                                        <span className="text-xs text-muted-foreground">Videos & slides</span>
                                     </div>
                                 </div>
                             </div>
