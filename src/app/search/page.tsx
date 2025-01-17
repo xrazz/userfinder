@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function SearchPage() {
+function SearchPageContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     
@@ -19,4 +19,12 @@ export default function SearchPage() {
     }, [searchParams, router])
     
     return null // This page doesn't render anything, it just handles redirection
+}
+
+export default function SearchPage() {
+    return (
+        <Suspense fallback={null}>
+            <SearchPageContent />
+        </Suspense>
+    )
 } 
