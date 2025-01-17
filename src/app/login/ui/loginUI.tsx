@@ -7,7 +7,8 @@ import { signInWithPopup } from "firebase/auth"
 import { Loader2 } from "lucide-react"
 import Cookies from "js-cookie"
 import { Button } from "@/components/ui/button"
-import { auth, createUserSettings, googleProvider } from "@/app/firebaseClient"
+import { Input } from "@/components/ui/input"
+import { auth, createUserSettings, googleProvider, signUpWithEmail, signInWithEmail, resetPassword } from "@/app/firebaseClient"
 
 const gradientTextStyle = {
   backgroundSize: '200% auto',
@@ -43,6 +44,10 @@ const Navbar = () => {
 export default function LoginUI() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [forgotPassword, setForgotPassword] = useState(false)
 
   const handleGoogleLogin = async () => {
     setLoading(true)
@@ -69,7 +74,40 @@ export default function LoginUI() {
     }
   }
 
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
 
+    try {
+      let user;
+      if (forgotPassword) {
+        await resetPassword(email)
+        setError("Password reset email sent. Please check your inbox.")
+        setForgotPassword(false)
+        setLoading(false)
+        return
+      }
+
+      if (isSignUp) {
+        user = await signUpWithEmail(email, password)
+      } else {
+        user = await signInWithEmail(email, password)
+      }
+
+      const token = await user.getIdToken()
+      const expirationTime = (Date.now() + 86400000).toString()
+
+      Cookies.set('token', token, { expires: 30, secure: true, sameSite: 'strict' })
+      Cookies.set('token_expiration', expirationTime, { secure: true, sameSite: 'strict' })
+
+      window.location.href = '/'
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
@@ -80,18 +118,117 @@ export default function LoginUI() {
           <p className="text-xl text-muted-foreground">Log in to Lexy</p>
         </div>
 
+        {error && (
+          <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleEmailAuth} className="space-y-4">
+          {!forgotPassword && (
+            <>
+              <Input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </>
+          )}
+
+          {forgotPassword ? (
+            <>
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 text-base font-medium"
+              >
+                {loading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  'Send Reset Link'
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setForgotPassword(false)}
+                className="w-full"
+              >
+                Back to Login
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 text-base font-medium"
+              >
+                {loading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  isSignUp ? 'Sign Up' : 'Log In'
+                )}
+              </Button>
+              <div className="flex justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="text-primary hover:underline"
+                >
+                  {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForgotPassword(true)}
+                  className="text-primary hover:underline"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            </>
+          )}
+        </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or continue with
+            </span>
+          </div>
+        </div>
+
         <div className="space-y-4">
           <Button
             onClick={handleGoogleLogin}
             disabled={loading}
-            variant="default"
+            variant="outline"
             className="w-full h-12 text-base font-medium"
           >
             {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <svg
-                className="mr-1 h-8 w-8"
+                className="mr-2 h-5 w-5"
                 viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
               >
@@ -115,6 +252,29 @@ export default function LoginUI() {
             )}
             {loading ? 'Logging in...' : 'Continue with Google'}
           </Button>
+
+          {/* Comment out Apple sign in button for now
+          <Button
+            onClick={handleAppleLogin}
+            disabled={loading}
+            variant="outline"
+            className="w-full h-12 text-base font-medium"
+          >
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <svg
+                className="mr-2 h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.52-3.2 0-1.39.68-2.12.53-3.02-.36-5.16-5.38-3.54-13.36 2.68-13.17 1.25.04 2.12.62 2.95.65.89.03 1.73-.54 3.05-.61 2.7-.14 4.56 1.5 5.41 3.68-5.02 2.45-4.25 8.83.7 10.01-.7 1.45-1.51 2.46-2.49 3.4ZM12.03 7.25c-.15-2.66 2.15-4.94 4.8-5.1.31 2.82-2.56 5.13-4.8 5.1Z" />
+              </svg>
+            )}
+            {loading ? 'Logging in...' : 'Continue with Apple'}
+          </Button>
+          */}
         </div>
       </div>
 

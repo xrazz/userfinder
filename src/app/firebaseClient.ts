@@ -1,5 +1,5 @@
 import { initializeApp, getApps, FirebaseApp, FirebaseOptions } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, User } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, User } from 'firebase/auth';
 import { doc, getDoc, getFirestore, setDoc, updateDoc, deleteField } from "firebase/firestore";
 import { getAnalytics, logEvent, Analytics } from 'firebase/analytics';
 
@@ -43,6 +43,7 @@ export const firebaseAnalytics = {
 
 const auth = getAuth(firebaseApp);
 export const googleProvider = new GoogleAuthProvider();
+// export const appleProvider = new OAuthProvider('apple.com');
 const db = getFirestore(firebaseApp);
 
 export { auth, db };
@@ -238,5 +239,32 @@ export const addCommentToPost = async (
   } catch (error) {
     console.error('Error adding comment:', error);
     throw error;
+  }
+};
+
+export const signUpWithEmail = async (email: string, password: string) => {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    await createUserSettings(result.user);
+    return result.user;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+export const signInWithEmail = async (email: string, password: string) => {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result.user;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+export const resetPassword = async (email: string) => {
+  try {
+    await sendPasswordResetEmail(auth, email);
+  } catch (error: any) {
+    throw new Error(error.message);
   }
 };
